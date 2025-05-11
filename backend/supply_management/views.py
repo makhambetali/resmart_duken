@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.views.generic.base import TemplateView
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -12,7 +13,7 @@ from .services.supply import SupplyService
 
 class SupplierViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierSerializer
-    pagination_class = SupplierResultsPaginationPage
+    # pagination_class = SupplierResultsPaginationPage
     def get_queryset(self):
         queryset = Supplier.objects.all()
         q = self.request.query_params.get('q')
@@ -33,3 +34,7 @@ class SupplyViewSet(viewsets.ModelViewSet):
         images = supply.images.all()
         serializer = SupplyImageSerializer(images, many=True, context={'request': request})
         return Response(serializer.data)
+    
+
+class HomePageView(TemplateView):
+    template_name = 'home-page.html'

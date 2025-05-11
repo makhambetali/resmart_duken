@@ -20,7 +20,7 @@ class SupplySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Supply
-        fields = ['id','supplier', 'price', 'bonus', 'exchange', 'delivery_date']
+        fields = ['id','supplier', 'price', 'bonus', 'exchange', 'delivery_date', 'date_added']
 
     def create(self, validated_data):
         request = self.context.get('request')

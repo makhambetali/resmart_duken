@@ -57,7 +57,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR.parent / 'frontend/templates/'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -68,7 +68,6 @@ TEMPLATES = [
         },
     },
 ]
-
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
@@ -122,7 +121,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    BASE_DIR.parent / 'frontend/static',  # Путь к вашим статическим файлам
+]
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # Для сбора статики в production
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
