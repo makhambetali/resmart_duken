@@ -376,3 +376,60 @@ textarea:focus-visible {
 .image-preview .delete-btn:hover {
   background-color: rgba(255, 0, 0, 0.9);
 }
+.supplier-input-wrapper {
+  position: relative;
+}
+
+.supplier-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ced4da;
+  border-radius: 0.25rem;
+  z-index: 1000;
+  display: none;
+}
+
+.supplier-dropdown.show {
+  display: block;
+}
+
+.supplier-option {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.supplier-option:hover, .supplier-option.highlighted {
+  background-color: #f8f9fa;
+}
+
+.is-invalid ~ .supplier-dropdown {
+  border-color: #dc3545;
+}
+/* Стили для форматированных денежных значений */
+.currency-input {
+  text-align: right;
+  padding-right: 30px !important;
+}
+
+.currency-text {
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+.currency-symbol {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #6c757d;
+}
+
+.input-group-currency {
+  position: relative;
+}

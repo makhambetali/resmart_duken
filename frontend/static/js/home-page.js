@@ -1,4 +1,110 @@
+
 // Loader simulation
+function formatCurrency(value) {
+  if (value === null || value === undefined || value === '') return '0 ₸';
+  const num = typeof value === 'string' ? parseFloat(value.replace(/\./g, '')) : value;
+  if (isNaN(num)) return '0 ₸';
+  
+  // Форматируем с точками как разделителями тысяч
+  return num.toString()
+    .replace(/\D/g, '') // Оставляем только цифры
+    .replace(/\B(?=(\d{3})+(?!\d))/g, '.') // Добавляем точки как разделители
+    .replace(/^0+/, '') + ' ₸'; // Убираем ведущие нули и добавляем символ валюты
+}
+
+// Преобразование форматированной строки обратно в число
+function parseCurrency(value) {
+  if (!value) return 0;
+  
+  // Удаляем символ валюты, пробелы и точки (разделители тысяч)
+  const numStr = value.replace(/[^\d]/g, '');
+  
+  // Преобразуем в число
+  const num = parseFloat(numStr);
+  
+  return isNaN(num) ? 0 : num;
+}
+
+function setupCurrencyInput(inputId) {
+  const input = document.getElementById(inputId);
+  
+  // Форматирование значения с разделителями
+  const formatValue = (value) => {
+    // Удаляем все нецифровые символы
+    const numStr = value.replace(/\D/g, '');
+    // Добавляем разделители тысяч
+    return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+  
+  // Обработчик ввода - форматируем в реальном времени
+  input.addEventListener('input', function(e) {
+    // Сохраняем позицию курсора до форматирования
+    const cursorPosition = this.selectionStart;
+    const originalLength = this.value.length;
+    
+    // Получаем неформатированное значение
+    const rawValue = this.value.replace(/\./g, '');
+    
+    // Форматируем значение
+    this.value = formatValue(rawValue);
+    
+    // Корректируем позицию курсора
+    const newLength = this.value.length;
+    const lengthDiff = newLength - originalLength;
+    const newCursorPosition = cursorPosition + lengthDiff;
+    
+    // Устанавливаем курсор на новую позицию
+    this.setSelectionRange(newCursorPosition, newCursorPosition);
+  });
+  
+  // При фокусе - показываем чистое число для удобства редактирования
+  input.addEventListener('focus', function() {
+    this.value = this.value.replace(/\./g, '');
+  });
+  
+  // При потере фокуса - форматируем окончательно
+  input.addEventListener('blur', function() {
+    const numValue = this.value.replace(/\./g, '');
+    if (numValue === '') {
+      this.value = '0 ₸';
+    } else {
+      this.value = formatValue(numValue) + ' ₸';
+    }
+  });
+  
+  // Инициализация начального значения
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      this.blur(); // Применяем форматирование при нажатии Enter
+    }
+  });
+  
+  // Устанавливаем начальное значение
+  input.value = input.value === '' ? '0 ₸' : formatValue(input.value.replace(/\./g, '')) + ' ₸';
+}
+document.getElementById('supplierInput').addEventListener('keydown', (e) => {
+  const options = document.querySelectorAll('.supplier-option');
+  let highlighted = document.querySelector('.supplier-option.highlighted');
+  
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (!highlighted) {
+      options[0]?.classList.add('highlighted');
+    } else {
+      highlighted.classList.remove('highlighted');
+      highlighted.nextElementSibling?.classList.add('highlighted');
+    }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (highlighted) {
+      highlighted.classList.remove('highlighted');
+      highlighted.previousElementSibling?.classList.add('highlighted');
+    }
+  } else if (e.key === 'Enter' && highlighted) {
+    e.preventDefault();
+    selectSupplier(highlighted.dataset.value);
+  }
+});
 window.addEventListener('load', function() {
   fetchSupplies();
   setTimeout(function() {
@@ -144,7 +250,7 @@ function renderSupplies(supplies) {
           </div>
         </td>
         <td class="cost_cat" cost="${supply.price}" confirmed="true">
-          <span class="currency-text">${supply.price}</span>
+          <span class="currency-text">${formatCurrency(supply.price)}</span>
         </td>
         <td class="secondary-data" ${bonusClass}>
           ${supply.bonus > 0 ? '+' + supply.bonus : supply.bonus}
@@ -239,37 +345,108 @@ async function fetchSuppliers() {
 }
 
 
-// Initialize add supply modal
-// Initialize add supply modal
+let allSuppliers = [];
+let currentSuppliers = [];
+let selectedSupplier = null;
+
 async function initAddSupplyModal() {
-  const suppliers = await fetchSuppliers();
-  const supplierSelect = document.getElementById('supplierSelect');
+  // Загружаем поставщиков
+  allSuppliers = await fetchSuppliers();
   
-  suppliers.forEach(supplier => {
-    const option = document.createElement('option');
-    option.value = supplier.name;
-    option.textContent = supplier.name;
-    supplierSelect.appendChild(option);
+  // Находим элементы
+  const supplierInput = document.getElementById('supplierInput');
+  const dropdown = document.querySelector('.supplier-dropdown');
+  
+  // Обработчики событий
+  supplierInput.addEventListener('input', handleSupplierInput);
+  supplierInput.addEventListener('focus', handleSupplierFocus);
+  supplierInput.addEventListener('blur', () => {
+    setTimeout(() => dropdown.classList.remove('show'), 200);
   });
   
-  // Set default delivery date to today
+  // Остальная инициализация (дата, изображения и т.д.)
   const today = new Date().toISOString().split('T')[0];
-  const deliveryDateInput = document.getElementById('deliveryDate');
-  deliveryDateInput.value = today;
-  
-  // Check if date is today and show/hide image upload
+  document.getElementById('deliveryDate').value = today;
   checkDateForImageUpload();
-  deliveryDateInput.addEventListener('change', checkDateForImageUpload);
-  
-  // Handle image upload
+  document.getElementById('deliveryDate').addEventListener('change', checkDateForImageUpload);
   document.getElementById('supplyImages').addEventListener('change', handleImageUpload);
+  document.getElementById('saveSupplyBtn').addEventListener('click', saveSupply);
+}
+
+function handleSupplierInput(e) {
+  const input = e.target;
+  const dropdown = document.querySelector('.supplier-dropdown');
+  const searchTerm = input.value.trim().toLowerCase();
   
-  // Save button handler
-  document.getElementById('saveSupplyBtn').addEventListener('click', async () => {
-    await saveSupply();
+  // Фильтруем поставщиков
+  currentSuppliers = allSuppliers.filter(supplier => 
+    supplier.name.toLowerCase().includes(searchTerm)
+  );
+  
+  // Показываем варианты
+  renderSupplierOptions(currentSuppliers);
+  
+  // Сбрасываем выбранного поставщика если текст изменился
+  if (selectedSupplier !== input.value) {
+    selectedSupplier = null;
+    input.classList.remove('is-valid');
+    input.classList.add('is-invalid');
+  }
+  
+  // Показываем/скрываем dropdown
+  if (searchTerm.length > 0 && currentSuppliers.length > 0) {
+    dropdown.classList.add('show');
+  } else {
+    dropdown.classList.remove('show');
+  }
+}
+
+function handleSupplierFocus() {
+  const dropdown = document.querySelector('.supplier-dropdown');
+  if (currentSuppliers.length > 0) {
+    dropdown.classList.add('show');
+  }
+}
+
+function renderSupplierOptions(suppliers) {
+  const dropdown = document.querySelector('.supplier-dropdown');
+  dropdown.innerHTML = '';
+  
+  if (suppliers.length === 0) {
+    const noResults = document.createElement('div');
+    noResults.className = 'supplier-option';
+    noResults.textContent = 'Совпадений не найдено';
+    dropdown.appendChild(noResults);
+    return;
+  }
+  
+  suppliers.forEach((supplier, index) => {
+    const option = document.createElement('div');
+    option.className = 'supplier-option';
+    option.textContent = supplier.name;
+    option.dataset.value = supplier.name;
+    
+    option.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      selectSupplier(supplier.name);
+    });
+    
+    dropdown.appendChild(option);
   });
 }
 
+function selectSupplier(supplierName) {
+  const input = document.getElementById('supplierInput');
+  const dropdown = document.querySelector('.supplier-dropdown');
+  
+  input.value = supplierName;
+  selectedSupplier = supplierName;
+  dropdown.classList.remove('show');
+  
+  // Валидация
+  input.classList.remove('is-invalid');
+  input.classList.add('is-valid');
+}
 // Check if selected date is today and show image upload section
 function checkDateForImageUpload() {
   const deliveryDate = document.getElementById('deliveryDate').value;
@@ -289,15 +466,15 @@ function handleImageUpload(event) {
   // alert()
   const files = event.target.files;
   const previewContainer = document.getElementById('imagePreviewContainer');
-  console.log(event)
+  console.log(files[0])
   const MAX_SIZE = 5 * 1024 * 1024; // 5MB
   const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
   
-  clearImagePreviews();
-  
+  // clearImagePreviews();
+  previewContainer.innerHTML = '';  
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    
+    console.log(file)
     // Validate file type and size
     if (!allowedTypes.includes(file.type)) {
       alert(`Файл ${file.name} не является изображением (PNG, JPG, JPEG)`);
@@ -312,6 +489,7 @@ function handleImageUpload(event) {
     // Create preview
     const reader = new FileReader();
     reader.onload = function(e) {
+      console.log(1)
       const previewDiv = document.createElement('div');
       previewDiv.className = 'image-preview';
       previewDiv.innerHTML = `
@@ -351,14 +529,27 @@ function clearImagePreviews() {
 // Update saveSupply function to handle images
 async function saveSupply() {
   const form = document.getElementById('addSupplyForm');
+  const supplierInput = document.getElementById('supplierInput');
+  
+  // Проверяем, что выбран существующий поставщик
+  const isValidSupplier = allSuppliers.some(
+    supplier => supplier.name === supplierInput.value.trim()
+  );
+  
+  if (!isValidSupplier) {
+    supplierInput.classList.add('is-invalid');
+    supplierInput.focus();
+    return;
+  }
+  
   if (!form.checkValidity()) {
     form.classList.add('was-validated');
     return;
   }
 
   const formData = new FormData();
-  formData.append('supplier', document.getElementById('supplierSelect').value);
-  formData.append('price', document.getElementById('priceInput').value);
+  formData.append('supplier', supplierInput.value.trim());
+  formData.append('price', parseCurrency(document.getElementById('priceInput').value));
   formData.append('bonus', document.getElementById('bonusInput').value);
   formData.append('exchange', document.getElementById('exchangeInput').value);
   formData.append('delivery_date', document.getElementById('deliveryDate').value);
@@ -399,6 +590,7 @@ async function saveSupply() {
     
     // Reset form
     form.reset();
+    currentSuppliers = []
     form.classList.remove('was-validated');
     document.getElementById('deliveryDate').value = new Date().toISOString().split('T')[0];
     clearImagePreviews();
@@ -428,4 +620,20 @@ function getCookie(name) {
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
   initAddSupplyModal();
+  
+  IMask(
+        document.querySelector('.currency-mask'),
+        {
+            mask: '₸ num',
+            blocks: {
+                num: {
+                    mask: Number,
+                    thousandsSeparator: '.'
+                }
+            }
+        }
+    );
+  
+  // Форматируем начальные значения
+  document.getElementById('priceInput').value = '';
 });

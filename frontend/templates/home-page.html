@@ -103,16 +103,28 @@
       </div>
       <div class="modal-body">
         <form id="addSupplyForm">
-          <div class="mb-3">
-            <label for="supplierSelect" class="form-label">Поставщик</label>
-            <select class="form-select" id="supplierSelect" required>
-              <option value="" selected disabled>Выберите поставщика</option>
-            </select>
+          <div class="mb-3 supplier-input-container">
+            <label for="supplierInput" class="form-label">Поставщик</label>
+            <div class="supplier-input-wrapper">
+              <input 
+                type="text" 
+                class="form-control supplier-input" 
+                id="supplierInput" 
+                placeholder="Начните вводить имя поставщика"
+                autocomplete="off"
+                required
+              >
+              <div class="supplier-dropdown">
+                <!-- Варианты будут появляться здесь -->
+              </div>
+            </div>
+            <div class="invalid-feedback">Пожалуйста, выберите поставщика из списка</div>
           </div>
-          <div class="mb-3">
-            <label for="priceInput" class="form-label">Сумма</label>
-            <input type="number" class="form-control" id="priceInput" required>
-          </div>
+        <div class="mb-3 input-group-currency">
+          <label for="priceInput" class="form-label">Сумма</label>
+          <input type="text" class="form-control  currency-mask" id="priceInput" required maxlength="10">
+         
+        </div>
           <div class="row mb-3">
             <div class="col-md-6">
               <label for="bonusInput" class="form-label">Бонус</label>
@@ -154,6 +166,7 @@
 </div>
   </div>
 
+  <script src="{% static 'js/imask.js' %}"></script>
   <script src="{% static 'js/home-page.js' %}"></script>
   <link rel="stylesheet" href="{% static 'css/home-page.css' %}">
 </body>
