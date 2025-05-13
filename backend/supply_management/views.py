@@ -13,14 +13,40 @@ from .services.supply import SupplyService
 
 class SupplierViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierSerializer
-    # pagination_class = SupplierResultsPaginationPage
+    
     def get_queryset(self):
-        queryset = Supplier.objects.all()
+        queryset = Supplier.objects.all().order_by('-last_accessed')
         q = self.request.query_params.get('q')
         if q:
-            return queryset.filter(name__icontains = q)
+            return queryset.filter(name__icontains=q)
         
         return queryset
+        
+    # def create(self, request, *args, **kwargs):
+    #     """Переопределяем метод создания для немедленного возврата"""
+    #     serializer = self.get_serializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     self.perform_create(serializer)
+    #     headers = self.get_success_headers(serializer.data)
+    #     return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        
+    # def update(self, request, *args, **kwargs):
+    #     """Переопределяем метод обновления для немедленного возврата"""
+    #     partial = kwargs.pop('partial', False)
+    #     instance = self.get_object()
+    #     serializer = self.get_serializer(instance, data=request.data, partial=partial)
+    #     serializer.is_valid(raise_exception=True)
+    #     self.perform_update(serializer)
+    #     return Response(serializer.data)
+
+    
+    
+    # @action(detail=False, methods=['get'])
+    # def last_accessed(self, request, pk=None):
+    #     queryset = Supplier.objects.all().order_by('last_accessed')[:5]
+    #     results = SupplierSerializer(queryset, many=True)
+    #     return Response({'results':results.data})
+
 
 class SupplyViewSet(viewsets.ModelViewSet):
     serializer_class = SupplySerializer
@@ -58,8 +84,8 @@ class SupplyViewSet(viewsets.ModelViewSet):
                                 status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
-class ImageDeleteView(generics.DestroyAPIView):
-    queryset = SupplyImage.objects.all()
-    serializer_class = SupplyImageSerializer
 class HomePageView(TemplateView):
     template_name = 'home-page.html'
+
+class SuppliersPageView(TemplateView):
+    template_name = 'suppliers-page.html'

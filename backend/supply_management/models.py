@@ -3,7 +3,7 @@ from django.db import models
 class Supplier(models.Model):
     name = models.CharField(max_length=30, db_index=True, unique=True)
     description = models.TextField(blank=True, null=True)
-
+    last_accessed = models.DateTimeField(auto_now=True)
     date_added = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
