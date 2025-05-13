@@ -1,4 +1,28 @@
 
+async function deleteSupply() {
+  const supplyId = document.getElementById('editSupplyId').value;
+  
+  if (!confirm('Вы уверены, что хотите удалить эту поставку?')) return;
+  
+  try {
+    const response = await fetch(`/api/v1/supplies/${supplyId}/`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+      }
+    });
+    
+    if (!response.ok) throw new Error('Network response was not ok');
+    
+    // Закрываем модальное окно и обновляем данные
+    bootstrap.Modal.getInstance(document.getElementById('editSupplyModal')).hide();
+    fetchSupplies();
+    
+  } catch (error) {
+    console.error('Error deleting supply:', error);
+    alert('Ошибка при удалении поставки');
+  }
+}
 // Loader simulation
 function formatCurrency(value) {
   if (value === null || value === undefined || value === '') return '0 ₸';
@@ -325,10 +349,156 @@ window.addEventListener("click", function(event) {
 
 // Redirect to edit page
 function redirectTo(id) {
-  console.log(`Redirecting to edit page for product ${id}`);
-  window.location.href = `/supply/edit/${id}`;
+  fetchSupplyDetails(id).then(supply => {
+    // Заполняем форму данными поставки
+    document.getElementById('editSupplyId').value = supply.id;
+    document.getElementById('editSupplierInput').value = supply.supplier;
+    document.getElementById('editPriceInput').value = formatCurrency(supply.price);
+    document.getElementById('editBonusInput').value = supply.bonus;
+    document.getElementById('editExchangeInput').value = supply.exchange;
+    document.getElementById('editDeliveryDate').value = supply.delivery_date;
+    document.getElementById('editCommentInput').value = supply.comment || '';
+    
+    // Проверяем дату и показываем/скрываем загрузку изображений
+    const today = new Date().toISOString().split('T')[0];
+    const imageSection = document.getElementById('editImageUploadSection');
+    imageSection.style.display = supply.delivery_date === today ? 'block' : 'none';
+    
+    // Загружаем изображения, если они есть
+    if (supply.images && supply.images.length > 0) {
+      renderEditImages(supply.images, supply.id);
+    } else {
+      document.getElementById('editImagePreviewContainer').innerHTML = '';
+    }
+    
+    // Показываем модальное окно
+    const modal = new bootstrap.Modal(document.getElementById('editSupplyModal'));
+    modal.show();
+  }).catch(error => {
+    console.error('Error fetching supply details:', error);
+    alert('Ошибка при загрузке данных поставки');
+  });
 }
-// Fetch suppliers for dropdown
+
+// Функция для загрузки деталей поставки
+async function fetchSupplyDetails(id) {
+  try {
+    // Загружаем основные данные поставки
+    const supplyResponse = await fetch(`/api/v1/supplies/${id}/`);
+    if (!supplyResponse.ok) throw new Error('Failed to fetch supply');
+    
+    // Загружаем изображения поставки
+    const imagesResponse = await fetch(`/api/v1/supplies/${id}/images/`);
+    if (!imagesResponse.ok) throw new Error('Failed to fetch supply images');
+    
+    const supply = await supplyResponse.json();
+    supply.images = await imagesResponse.json();
+    
+    return supply;
+  } catch (error) {
+    console.error('Error fetching supply details:', error);
+    throw error;
+  }
+}
+
+// Функция для отображения изображений в модальном окне редактирования
+function renderEditImages(images, supply_id) {
+  const container = document.getElementById('editImagePreviewContainer');
+  container.innerHTML = '';
+  
+  if (!images || images.length === 0) return;
+  
+  images.forEach((image) => {
+    const previewDiv = document.createElement('div');
+    previewDiv.className = 'image-preview';
+    previewDiv.innerHTML = `
+      <img src="${image.image}" alt="Preview">
+      <button type="button" class="delete-btn" data-image-id="${image.id}">&times;</button>
+    `;
+    container.appendChild(previewDiv);
+    
+    previewDiv.querySelector('.delete-btn').addEventListener('click', function() {
+      deleteSupplyImage(image.id, supply_id);
+      // removeImageFromList(image.id, id='editSupplyImages')
+    });
+  });
+  return images
+}
+// Удаление изображения поставки
+async function deleteSupplyImage(imageId, supply_id) {
+  try {
+    const response = await fetch(`/api/v1/supplies/${supply_id}/images/${imageId}/`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+      }
+    });
+    
+    if (!response.ok) throw new Error('Failed to delete image');
+    
+    // Обновляем список изображений
+    const supplyId = document.getElementById('editSupplyId').value;
+    const supply = await fetchSupplyDetails(supplyId);
+    renderEditImages(supply.images, supplyId);
+    
+  } catch (error) {
+    console.error('Error deleting image:', error);
+    alert('Ошибка при удалении изображения');
+  }
+}
+
+// Обновление поставки
+async function updateSupply() {
+  const supplyId = document.getElementById('editSupplyId').value;
+  
+  try {
+    // 1. Обновляем основные данные поставки
+    const supplyData = {
+      supplier: document.getElementById('editSupplierInput').value,
+      price: parseCurrency(document.getElementById('editPriceInput').value),
+      bonus: parseCurrency(document.getElementById('editBonusInput').value),
+      exchange: parseCurrency(document.getElementById('editExchangeInput').value),
+      delivery_date: document.getElementById('editDeliveryDate').value,
+      comment: document.getElementById('editCommentInput').value
+    };
+    const formData = new FormData();
+    formData.append('supplier', supplyData.supplier)
+    formData.append('price', supplyData.price)
+    formData.append('bonus', supplyData.bonus)
+    formData.append('exchange', supplyData.exchange)
+    formData.append('comment', supplyData.comment)
+    formData.append('delivery_date', supplyData.delivery_date)
+    const files = document.getElementById('editSupplyImages').files;
+    if (files.length > 0) {
+      
+      for (let i = 0; i < files.length; i++) {
+        formData.append('images', files[i]);
+      }
+    }
+    const supplyResponse = await fetch(`/api/v1/supplies/${supplyId}/`, {
+      method: 'PUT',
+      headers: {
+        // 'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: formData
+    });
+    
+    if (!supplyResponse.ok) throw new Error('Failed to update supply');
+    
+    // 2. Загружаем новые изображения, если они есть
+    
+    
+    // Закрываем модальное окно и обновляем данные
+    bootstrap.Modal.getInstance(document.getElementById('editSupplyModal')).hide();
+    fetchSupplies();
+    
+  } catch (error) {
+    console.error('Error updating supply:', error);
+    alert('Ошибка при обновлении поставки');
+  }
+}
+
 async function fetchSuppliers() {
   try {
     const response = await fetch('/api/v1/suppliers/');
@@ -462,20 +632,17 @@ function checkDateForImageUpload() {
 }
 
 // Handle image upload and preview
-function handleImageUpload(event) {
-  // alert()
+function handleImageUpload(event, containerId = 'imagePreviewContainer') {
   const files = event.target.files;
-  const previewContainer = document.getElementById('imagePreviewContainer');
-  console.log(files[0])
+  const previewContainer = document.getElementById(containerId);
   const MAX_SIZE = 5 * 1024 * 1024; // 5MB
   const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
   
-  // clearImagePreviews();
-  previewContainer.innerHTML = '';  
+  previewContainer.innerHTML = '';
+  
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    console.log(file)
-    // Validate file type and size
+    
     if (!allowedTypes.includes(file.type)) {
       alert(`Файл ${file.name} не является изображением (PNG, JPG, JPEG)`);
       continue;
@@ -486,10 +653,8 @@ function handleImageUpload(event) {
       continue;
     }
     
-    // Create preview
     const reader = new FileReader();
     reader.onload = function(e) {
-      console.log(1)
       const previewDiv = document.createElement('div');
       previewDiv.className = 'image-preview';
       previewDiv.innerHTML = `
@@ -498,19 +663,26 @@ function handleImageUpload(event) {
       `;
       previewContainer.appendChild(previewDiv);
       
-      // Add delete button handler
       previewDiv.querySelector('.delete-btn').addEventListener('click', function() {
-        removeImageFromList(i);
+        removeImageFromList(event.target.id, i);
         previewDiv.remove();
       });
     };
     reader.readAsDataURL(file);
   }
 }
-
+// function removeImageFromList(inputId, index) {
+//   const input = document.getElementById(inputId);
+//   const files = Array.from(input.files);
+//   files.splice(index, 1);
+  
+//   const dataTransfer = new DataTransfer();
+//   files.forEach(file => dataTransfer.items.add(file));
+//   input.files = dataTransfer.files;
+// }
 // Remove image from file list
-function removeImageFromList(index) {
-  const input = document.getElementById('supplyImages');
+function removeImageFromList(index, id = 'supplyImages') {
+  const input = document.getElementById(id);
   const files = Array.from(input.files);
   files.splice(index, 1);
   
@@ -518,6 +690,7 @@ function removeImageFromList(index) {
   const dataTransfer = new DataTransfer();
   files.forEach(file => dataTransfer.items.add(file));
   input.files = dataTransfer.files;
+  console.log(input.files)
 }
 
 // Clear all image previews
@@ -621,8 +794,9 @@ function getCookie(name) {
 document.addEventListener('DOMContentLoaded', function() {
   initAddSupplyModal();
   
-  IMask(
-        document.querySelector('.currency-mask'),
+  document.querySelectorAll('.currency-mask').forEach(each => {
+    IMask(
+        each,
         {
             mask: '₸ num',
             blocks: {
@@ -633,7 +807,25 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     );
+  })
   
   // Форматируем начальные значения
   document.getElementById('priceInput').value = '';
+  document.getElementById('updateSupplyBtn').addEventListener('click', updateSupply);
+  document.getElementById('deleteSupplyBtn').addEventListener('click', deleteSupply);
+  
+  // Инициализация полей ввода в модальном окне редактирования
+  // setupCurrencyInput('editPriceInput');
+  
+  // Обработчик загрузки изображений в модальном окне редактирования
+  document.getElementById('editSupplyImages').addEventListener('change', function(e) {
+    handleImageUpload(e, 'editImagePreviewContainer');
+  });
+  
+  // Проверка даты при изменении
+  document.getElementById('editDeliveryDate').addEventListener('change', function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('editImageUploadSection').style.display = 
+      this.value === today ? 'block' : 'none';
+  });
 });

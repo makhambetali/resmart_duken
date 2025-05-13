@@ -334,7 +334,7 @@ textarea:focus-visible {
 }
 
 /* Image Upload Styles */
-#imagePreviewContainer {
+#imagePreviewContainer, #editImagePreviewContainer {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;

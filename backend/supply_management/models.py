@@ -15,7 +15,7 @@ class Supply(models.Model):
     bonus = models.SmallIntegerField(default=0)
     exchange = models.SmallIntegerField(default=0)
     delivery_date = models.DateField(db_index=True)
-
+    comment = models.TextField(blank=True, null=True)
     date_added = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

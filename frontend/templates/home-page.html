@@ -164,6 +164,62 @@
     </div>
   </div>
 </div>
+<!-- Добавить после существующего модального окна -->
+<div class="modal fade" id="editSupplyModal" tabindex="-1" aria-labelledby="editSupplyModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editSupplyModalLabel">Редактировать поставку</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editSupplyForm">
+          <input type="hidden" id="editSupplyId">
+          <div class="mb-3">
+            <label for="editSupplierSelect" class="form-label">Поставщик</label>
+            <input type="text" class="form-control" id="editSupplierInput" readonly>
+          </div>
+          <div class="mb-3">
+            <label for="editPriceInput" class="form-label">Сумма</label>
+            <input type="text" class="form-control currency-mask" id="editPriceInput" required>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="editBonusInput" class="form-label">Бонус</label>
+              <input type="number" max="999" min="0" class="form-control " id="editBonusInput" value="0">
+            </div>
+            <div class="col-md-6">
+              <label for="editExchangeInput" class="form-label">Обмен</label>
+              <input type="number" max="999" min="0" class="form-control" id="editExchangeInput" value="0">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="editDeliveryDate" class="form-label">Дата поставки</label>
+            <input type="date" class="form-control" id="editDeliveryDate" required>
+          </div>
+          <div class="mb-3">
+            <label for="editCommentInput" class="form-label">Комментарий</label>
+            <textarea class="form-control" id="editCommentInput" rows="3"></textarea>
+          </div>
+          <div class="mb-3" id="editImageUploadSection">
+            <label class="form-label">Документы поставки</label>
+            <div class="border rounded p-3">
+              <div class="mb-3">
+                <input type="file" class="form-control" id="editSupplyImages" accept="image/png, image/jpeg, image/jpg" multiple>
+                <div class="form-text">Можно загрузить PNG, JPG, JPEG (макс. 5 МБ)</div>
+              </div>
+              <div class="image-preview-container" id="editImagePreviewContainer"></div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" id="deleteSupplyBtn">Удалить</button>
+        <button type="button" class="btn btn-primary" id="updateSupplyBtn">Изменить</button>
+      </div>
+    </div>
+  </div>
+</div>
   </div>
 
   <script src="{% static 'js/imask.js' %}"></script>
