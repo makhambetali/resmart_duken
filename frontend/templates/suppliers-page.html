@@ -16,6 +16,7 @@
 
   <!-- Таблица -->
   <div class="table-responsive">
+    <div style="margin:auto 7px 10px 7px">Найдено: <span class="res_count"></span></div>
     <table class="table table-hover align-middle" id="suppliers-table">
       <thead class="table-light">
         <tr>
@@ -113,7 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await response.json();
       
       console.log('Получены данные:', data.length);
-      
+      document.querySelector('.res_count').innerHTML = data.length
       // Кэширование ответа
       requestCache.set(cacheKey, data);
       allSuppliers = data;
