@@ -6,7 +6,7 @@
   margin: auto;
   min-height: 100vh;
   height: auto;
-  background-color: #f8f9fa;
+  background-color: #e3e3e3 !important;
   position: relative !important;
 }
 

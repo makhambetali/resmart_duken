@@ -4,6 +4,8 @@
 <head>
   <title>User Dashboard</title>
   <meta charset="UTF-8">
+  <link rel="icon" href="data:;base64,iVBORwOKGO=" />
+
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -29,7 +31,7 @@
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Контрагенты</a>
             <ul class="dropdown-menu">
-              <li><a href="#" class="dropdown-item">Покупатели</a></li>
+              <li><a href="{% url 'clients-page' %}" class="dropdown-item">Покупатели</a></li>
               <li><a href="{% url 'suppliers-page' %}" class="dropdown-item">Поставщики</a></li>
             </ul>
           </li>

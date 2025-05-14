@@ -1,4 +1,6 @@
 
+
+
 async function deleteSupply() {
   const supplyId = document.getElementById('editSupplyId').value;
   
@@ -501,7 +503,7 @@ async function updateSupply() {
 
 async function fetchSuppliers() {
   try {
-    const response = await fetch('/api/v1/suppliers/');
+    const response = await fetch('/api/v1/all_suppliers/');
     if (!response.ok) {
       throw new Error('Network response was not ok');
     }
