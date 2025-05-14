@@ -1,0 +1,398 @@
+document.addEventListener("DOMContentLoaded", () => {
+  const tableBody = document.querySelector("#suppliers-table tbody");
+  const searchInput = document.getElementById("searchInput");
+  const searchBtn = document.getElementById("searchBtn");
+  const resetSearchBtn = document.getElementById("resetSearchBtn");
+  const addBtn = document.getElementById("addSupplierBtn");
+  const noDataAlert = document.getElementById("noDataAlert");
+  const addNewSupplierLink = document.getElementById("addNewSupplierLink");
+  const perPageSelect = document.getElementById("perPageSelect");
+  const paginationElement = document.getElementById("pagination");
+
+  // Модальное окно
+  const supplierModal = new bootstrap.Modal(document.getElementById("supplierModal"));
+  const supplierForm = document.getElementById("supplierForm");
+  const modalTitle = document.getElementById("modalTitle");
+  const supplierIdInput = document.getElementById("supplierId");
+  const nameInput = document.getElementById("supplierName");
+  const descInput = document.getElementById("supplierDescription");
+  const deleteBtn = document.getElementById("deleteBtn");
+
+  // Состояние приложения
+  let searchQuery = '';
+  let currentPage = 1;
+  let perPage = 25;
+  let totalItems = 0;
+  let lastRequestKey = '';
+  const requestCache = new Map();
+
+  // Инициализация
+  function init() {
+    perPage = parseInt(perPageSelect.value);
+    loadSuppliers();
+    
+    // Настройка обработчиков событий
+    setupEventListeners();
+  }
+
+  function setupEventListeners() {
+    // Поиск
+    const debouncedSearch = debounce(() => {
+      const newQuery = searchInput.value.trim();
+      if (newQuery !== searchQuery) {
+        searchQuery = newQuery;
+        currentPage = 1; // Сброс на первую страницу при новом поиске
+        loadSuppliers();
+      }
+    }, 300);
+    
+    searchBtn.addEventListener("click", debouncedSearch);
+    searchInput.addEventListener("keypress", (e) => e.key === "Enter" && debouncedSearch());
+
+    resetSearchBtn.addEventListener("click", () => {
+      if (searchQuery !== '') {
+        searchInput.value = '';
+        searchQuery = '';
+        currentPage = 1;
+        loadSuppliers();
+      }
+    });
+
+    // Пагинация
+    perPageSelect.addEventListener("change", () => {
+      perPage = parseInt(perPageSelect.value);
+      currentPage = 1;
+      loadSuppliers();
+    });
+
+    // Добавление поставщика
+    addBtn.addEventListener("click", () => {
+      modalTitle.textContent = "Добавить поставщика";
+      nameInput.classList.remove('is-invalid');
+      nameInput.nextElementSibling.textContent = '';
+      supplierIdInput.value = "";
+      nameInput.value = "";
+      descInput.value = "";
+      deleteBtn.classList.add("d-none");
+      supplierModal.show();
+    });
+
+    addNewSupplierLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      addBtn.click();
+    });
+
+    // Форма
+    supplierForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      saveSupplier();
+    });
+
+    // Удаление
+    deleteBtn.addEventListener("click", deleteSupplier);
+
+    // Валидация
+    nameInput.addEventListener("input", () => {
+      if (nameInput.value.trim()) {
+        nameInput.classList.remove("is-invalid");
+      }
+    });
+  }
+
+  // Загрузка данных с пагинацией
+  async function loadSuppliers() {
+    const params = new URLSearchParams();
+    if (searchQuery) params.append('q', searchQuery);
+    params.append('page', currentPage);
+    params.append('page_size', perPage);
+    
+    const url = `/api/v1/suppliers/?${params.toString()}`;
+    const cacheKey = `${searchQuery}-${currentPage}-${perPage}`;
+
+    // Проверка кэша
+    if (requestCache.has(cacheKey)) {
+      const cachedData = requestCache.get(cacheKey);
+      processResponse(cachedData);
+      return;
+    }
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Ошибка загрузки данных');
+      const data = await response.json();
+      
+      // Кэширование ответа
+      requestCache.set(cacheKey, data);
+      processResponse(data);
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Произошла ошибка при загрузке данных');
+    }
+  }
+
+  function processResponse(data) {
+    console.log('Обработка данных:', data);
+    
+    if (data.results && Array.isArray(data.results)) {
+      totalItems = data.count || data.results.length;
+      document.querySelector('.res_count').textContent = totalItems;
+      renderSuppliers(data.results);
+      renderPagination(data);
+      toggleNoDataAlert(data.results.length === 0);
+    } else {
+      console.error('Неверный формат данных:', data);
+      toggleNoDataAlert(true);
+    }
+  }
+
+  // Отображение списка поставщиков
+  function renderSuppliers(suppliers) {
+    tableBody.innerHTML = '';
+    
+    if (!suppliers || suppliers.length === 0) {
+      noDataAlert.classList.remove("d-none");
+      return;
+    }
+
+    noDataAlert.classList.add("d-none");
+    suppliers.forEach(supplier => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${escapeHtml(supplier.name)}</td>
+        <td>${supplier.description ? escapeHtml(supplier.description) : "-"}</td>
+        <td>${formatDate(supplier.date_added)}</td>
+        <td>${formatDate(supplier.last_accessed)}</td>
+      `;
+      row.addEventListener("click", () => openModal(supplier));
+      row.style.cursor = "pointer";
+      tableBody.appendChild(row);
+    });
+  }
+
+  // Отображение пагинации
+  function renderPagination(data) {
+    paginationElement.innerHTML = '';
+    
+    if (!data || !data.count || data.count <= perPage) return;
+
+    const totalPages = Math.ceil(data.count / perPage);
+    const maxVisiblePages = 5;
+    let startPage, endPage;
+
+    if (totalPages <= maxVisiblePages) {
+      startPage = 1;
+      endPage = totalPages;
+    } else {
+      const maxPagesBeforeCurrent = Math.floor(maxVisiblePages / 2);
+      const maxPagesAfterCurrent = Math.ceil(maxVisiblePages / 2) - 1;
+      
+      if (currentPage <= maxPagesBeforeCurrent) {
+        startPage = 1;
+        endPage = maxVisiblePages;
+      } else if (currentPage + maxPagesAfterCurrent >= totalPages) {
+        startPage = totalPages - maxVisiblePages + 1;
+        endPage = totalPages;
+      } else {
+        startPage = currentPage - maxPagesBeforeCurrent;
+        endPage = currentPage + maxPagesAfterCurrent;
+      }
+    }
+
+    // Кнопка "Назад"
+    const prevLi = createPaginationItem(
+      'Предыдущая', 
+      currentPage > 1 ? currentPage - 1 : 1, 
+      currentPage === 1, 
+      false
+    );
+    paginationElement.appendChild(prevLi);
+
+    // Первая страница
+    if (startPage > 1) {
+      const firstLi = createPaginationItem('1', 1, false, 1 === currentPage);
+      paginationElement.appendChild(firstLi);
+      
+      if (startPage > 2) {
+        const ellipsisLi = document.createElement('li');
+        ellipsisLi.className = 'page-item disabled';
+        ellipsisLi.innerHTML = '<span class="page-link">...</span>';
+        paginationElement.appendChild(ellipsisLi);
+      }
+    }
+
+    // Основные страницы
+    for (let i = startPage; i <= endPage; i++) {
+      const li = createPaginationItem(i.toString(), i, false, i === currentPage);
+      paginationElement.appendChild(li);
+    }
+
+    // Последняя страница
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        const ellipsisLi = document.createElement('li');
+        ellipsisLi.className = 'page-item disabled';
+        ellipsisLi.innerHTML = '<span class="page-link">...</span>';
+        paginationElement.appendChild(ellipsisLi);
+      }
+      
+      const lastLi = createPaginationItem(totalPages.toString(), totalPages, false, totalPages === currentPage);
+      paginationElement.appendChild(lastLi);
+    }
+
+    // Кнопка "Вперед"
+    const nextLi = createPaginationItem(
+      'Следующая', 
+      currentPage < totalPages ? currentPage + 1 : totalPages, 
+      currentPage === totalPages, 
+      false
+    );
+    paginationElement.appendChild(nextLi);
+  }
+
+  function createPaginationItem(text, page, disabled, active) {
+    const li = document.createElement('li');
+    li.className = `page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
+    
+    const a = document.createElement('a');
+    a.className = 'page-link';
+    a.href = '#';
+    a.textContent = text;
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!disabled && page !== currentPage) {
+        currentPage = page;
+        loadSuppliers();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+    
+    li.appendChild(a);
+    return li;
+  }
+
+  // Открытие модального окна для редактирования
+  function openModal(supplier) {
+    modalTitle.textContent = "Редактировать поставщика";
+    supplierIdInput.value = supplier.id;
+    nameInput.value = supplier.name;
+    descInput.value = supplier.description || "";
+    deleteBtn.classList.remove("d-none");
+    supplierModal.show();
+  }
+
+  // Сохранение поставщика
+  function saveSupplier() {
+    const id = supplierIdInput.value;
+    const method = id ? "PUT" : "POST";
+    const url = id ? `/api/v1/suppliers/${id}/` : "/api/v1/suppliers/";
+    
+    if (!nameInput.value.trim()) {
+      nameInput.classList.add("is-invalid");
+      return;
+    }
+    
+    fetch(url, {
+      method: method,
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCSRFToken()
+      },
+      body: JSON.stringify({
+        name: nameInput.value.trim(),
+        description: descInput.value.trim()
+      })
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => { 
+          if (err.name && err.name[0].includes('уже существует')) {
+            nameInput.classList.add("is-invalid");
+            nameInput.nextElementSibling.textContent = err.name[0];
+          }
+          throw err; 
+        });
+      }
+      return response.json();
+    })
+    .then(() => {
+      supplierModal.hide();
+      // Очищаем кэш и перезагружаем данные
+      requestCache.clear();
+      loadSuppliers();
+    })
+    .catch(error => {
+      console.error("Error:", error);
+      if (!error.name) {
+        alert(error.detail || "Произошла ошибка при сохранении");
+      }
+    });
+  }
+
+  // Удаление поставщика
+  function deleteSupplier() {
+    const id = supplierIdInput.value;
+    if (!id || !confirm("Вы уверены, что хотите удалить этого поставщика?")) return;
+    
+    fetch(`/api/v1/suppliers/${id}/`, {
+      method: "DELETE",
+      headers: {
+        "X-CSRFToken": getCSRFToken()
+      }
+    })
+    .then(response => {
+      if (!response.ok) throw new Error("Ошибка при удалении");
+      supplierModal.hide();
+      // Очищаем кэш и перезагружаем данные
+      requestCache.clear();
+      loadSuppliers();
+    })
+    .catch(error => {
+      console.error("Error:", error);
+      alert("Произошла ошибка при удалении");
+    });
+  }
+
+  // Вспомогательные функции
+  function debounce(func, delay) {
+    let timeout;
+    return (...args) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(this, args), delay);
+    };
+  }
+
+  function toggleNoDataAlert(show) {
+    if (show) {
+      noDataAlert.classList.remove("d-none");
+      tableBody.innerHTML = '';
+      paginationElement.innerHTML = '';
+    } else {
+      noDataAlert.classList.add("d-none");
+    }
+  }
+
+  function getCSRFToken() {
+    const cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+    return cookie ? cookie.split('=')[1] : '';
+  }
+
+  function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  }
+
+  function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+      .toString()
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // Запуск приложения
+  init();
+});

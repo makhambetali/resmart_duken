@@ -13,12 +13,12 @@ from .services.supply import SupplyService
 
 class SupplierViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierSerializer
-    
+    pagination_class = SupplierResultsPaginationPage
     def get_queryset(self):
         queryset = Supplier.objects.all().order_by('-last_accessed')
         q = self.request.query_params.get('q')
         if q:
-            return queryset.filter(name__icontains=q)
+            return queryset.filter(name__contains=q)
         
         return queryset
         
