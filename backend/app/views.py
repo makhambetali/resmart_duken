@@ -93,6 +93,10 @@ class CashFlowViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         date = request.query_params.get('date', timezone.now().date())
         return Response(CashFlowService().get_instance(date))
+    
+    @action(detail=False, methods=['get'])
+    def sum(self, request):
+        return Response({"total_sum": CashFlowService().find_sum()})
 
 class SupplierCustomAPIView(generics.ListAPIView):
     serializer_class = SupplierCustomSerializer
