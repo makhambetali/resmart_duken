@@ -92,8 +92,6 @@ class CashFlowViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         date = request.query_params.get('date', timezone.now().date())
-        # return super().list(request, *args, **kwargs)
-        # print(dae)
         return Response(CashFlowService().get_instance(date))
 
 class SupplierCustomAPIView(generics.ListAPIView):
