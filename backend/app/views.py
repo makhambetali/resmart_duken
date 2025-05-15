@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.views.generic.base import TemplateView
+from django.utils import timezone
 
 from rest_framework import viewsets, generics, status
 from rest_framework.decorators import action
@@ -12,6 +13,7 @@ from .models import *
 from .services.supply import SupplyService
 from .services.supplier import SupplierService
 from .services.client import ClientService
+from .services.cashflow import CashFlowService
 
 class SupplierViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierSerializer
@@ -83,11 +85,16 @@ class ClientViewSet(viewsets.ModelViewSet):
         client = self.get_object()
         results = ClientService().get_debts(client)
         return Response(results)
-    
-    
-class DebtDeleteAPIView(generics.DestroyAPIView):
-    serializer_class = ClientDebtSerializer
-    queryset = ClientDebt.objects.all()
+
+class CashFlowViewSet(viewsets.ModelViewSet):
+    serializer_class = CashFlowSerializer
+    queryset = CashFlow.objects.all()
+
+    def list(self, request, *args, **kwargs):
+        date = request.query_params.get('date', timezone.now().date())
+        # return super().list(request, *args, **kwargs)
+        # print(dae)
+        return Response(CashFlowService().get_instance(date))
 
 class SupplierCustomAPIView(generics.ListAPIView):
     serializer_class = SupplierCustomSerializer

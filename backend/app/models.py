@@ -47,3 +47,11 @@ class ClientDebt(models.Model):
     debt_value = models.IntegerField()
     date_added = models.DateTimeField(auto_now_add=True)
 
+
+class CashFlow(models.Model):
+    amount = models.IntegerField()
+    description = models.TextField(blank=True)
+    date_added = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    def __str__(self):
+        return f'{self.amount}'

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Supplier, Supply, SupplyImage, Client, ClientDebt
+from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow
 
 
 class ClientSerializer(serializers.ModelSerializer):
@@ -27,7 +27,6 @@ class SupplySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Supply
-        # fields = ['id','supplier', 'price', 'bonus', 'exchange', 'delivery_date', 'date_added', 'comment']
         fields = '__all__'
 
     def create(self, validated_data):
@@ -54,11 +53,17 @@ class SupplierCustomSerializer(serializers.ModelSerializer):
         fields = ['name']
 
 class ClientDebtSerializer(serializers.ModelSerializer):
-    # client = serializers.SlugRelatedField(
-    #     queryset=Client.objects.all(),
-    #     slug_field='name'
-    # )
     class Meta:
         model = ClientDebt
-        # fields = '__all__'
         exclude = ['client']
+
+class CashFlowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CashFlow
+        fields = '__all__'
+    
+    def validate_amount(self, value):
+        if value == 0:
+            raise serializers.ValidationError('Сумма не должна быть равна нулю')
+        
+        return value

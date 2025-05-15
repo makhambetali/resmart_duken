@@ -1,4 +1,104 @@
+const cashFlowForm = document.querySelector('#cashFlowModal form');
+const amountInput = document.getElementById('amountInput');
+const descriptionText = document.getElementById('descriptionText');
+const submitBtn = document.getElementById('submitCashFlow');
+cashFlowForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const amount = parseInt(amountInput.value);
+    const description = descriptionText.value.trim();
+    
+    if (!amount) {
+      alert('Пожалуйста, введите сумму');
+      return;
+    }
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Сохранение...';
+    
+    try {
+      const response = await fetch('/api/v1/cashflows/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+          amount: amount,
+          description: description
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Ошибка сохранения');
+      }
+      
+      const result = await response.json();
+      console.log('Успешно сохранено:', result);
+      
+      // Закрываем модальное окно
+      const modal = bootstrap.Modal.getInstance(document.getElementById('cashFlowModal'));
+      modal.hide();
+      
+      // Очищаем форму
+      cashFlowForm.reset();
+      
+      // Обновляем список операций (если нужно)
+      // refreshCashFlows();
+      
+      // Показываем уведомление
+      showToast('Операция успешно сохранена!', 'success');
+      
+    } catch (error) {
+      console.error('Ошибка:', error);
+      showToast(error.message, 'danger');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Сохранить';
+    }
+  });
+  function getCsrfToken() {
+  const cookie = document.cookie.match(/csrftoken=([^ ;]+)/);
+  return cookie ? cookie[1] : '';
+}
+  // Валидация суммы при вводе
+  amountInput.addEventListener('input', function() {
+    this.value = this.value.replace(/[^0-9-]/g, '');
+  });
+  
+  // Автоматическое закрытие при успешном сохранении
+  document.getElementById('cashFlowModal').addEventListener('hidden.bs.modal', function() {
+    cashFlowForm.reset();
+  });
+function showToast(message, type = 'success') {
+  const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+  const toast = document.createElement('div');
+  toast.className = `toast align-items-center text-white bg-${type} border-0 show`;
+  toast.setAttribute('role', 'alert');
+  toast.setAttribute('aria-live', 'assertive');
+  toast.setAttribute('aria-atomic', 'true');
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">${message}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  `;
+  toastContainer.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.remove();
+  }, 5000);
+}
 
+function createToastContainer() {
+  const container = document.createElement('div');
+  container.id = 'toastContainer';
+  container.className = 'position-fixed bottom-0 end-0 p-3';
+  container.style.zIndex = '1100';
+  document.body.appendChild(container);
+  return container;
+}
 
 
 async function deleteSupply() {
@@ -18,11 +118,12 @@ async function deleteSupply() {
     
     // Закрываем модальное окно и обновляем данные
     bootstrap.Modal.getInstance(document.getElementById('editSupplyModal')).hide();
+    showToast('Поставка успешно удалена')
     fetchSupplies();
     
   } catch (error) {
     console.error('Error deleting supply:', error);
-    alert('Ошибка при удалении поставки');
+    showToast(error.message, 'danger');
   }
 }
 // Loader simulation
@@ -149,7 +250,7 @@ async function fetchSupplies() {
     renderSupplies(supplies);
   } catch (error) {
     console.error('Error fetching supplies:', error);
-    alert('Ошибка при загрузке данных');
+    showToast(`Ошибка при загрузке данных: ${error.message}`, 'danger');
   }
 }
 
@@ -378,7 +479,7 @@ function redirectTo(id) {
     modal.show();
   }).catch(error => {
     console.error('Error fetching supply details:', error);
-    alert('Ошибка при загрузке данных поставки');
+    showToast(`Ошибка при загрузке данных поставки: ${error.message}`, 'danger');
   });
 }
 
@@ -437,15 +538,16 @@ async function deleteSupplyImage(imageId, supply_id) {
     });
     
     if (!response.ok) throw new Error('Failed to delete image');
-    
+    showToast('Изображение успешно удалено')
     // Обновляем список изображений
     const supplyId = document.getElementById('editSupplyId').value;
     const supply = await fetchSupplyDetails(supplyId);
+    
     renderEditImages(supply.images, supplyId);
     
   } catch (error) {
     console.error('Error deleting image:', error);
-    alert('Ошибка при удалении изображения');
+    showToast(`Ошибка при удалении изображения: ${error.message}`, 'danger');
   }
 }
 
@@ -488,16 +590,13 @@ async function updateSupply() {
     
     if (!supplyResponse.ok) throw new Error('Failed to update supply');
     
-    // 2. Загружаем новые изображения, если они есть
-    
-    
-    // Закрываем модальное окно и обновляем данные
     bootstrap.Modal.getInstance(document.getElementById('editSupplyModal')).hide();
+    showToast(`Данные о поставке ${supplyData.supplier} успешно изменены!`)
     fetchSupplies();
     
   } catch (error) {
     console.error('Error updating supply:', error);
-    alert('Ошибка при обновлении поставки');
+    showToast(`Ошибка при обновлении поставки: ${error}`, 'danger')
   }
 }
 
@@ -673,16 +772,6 @@ function handleImageUpload(event, containerId = 'imagePreviewContainer') {
     reader.readAsDataURL(file);
   }
 }
-// function removeImageFromList(inputId, index) {
-//   const input = document.getElementById(inputId);
-//   const files = Array.from(input.files);
-//   files.splice(index, 1);
-  
-//   const dataTransfer = new DataTransfer();
-//   files.forEach(file => dataTransfer.items.add(file));
-//   input.files = dataTransfer.files;
-// }
-// Remove image from file list
 function removeImageFromList(index, id = 'supplyImages') {
   const input = document.getElementById(id);
   const files = Array.from(input.files);
@@ -758,7 +847,7 @@ async function saveSupply() {
 
     const result = await response.json();
     console.log('Supply created:', result);
-    
+    showToast(`Поставка ${supplierInput.value.trim()} успешно создана`)
     // Close modal and refresh data
     bootstrap.Modal.getInstance(document.getElementById('addSupplyModal')).hide();
     fetchSupplies();
@@ -772,7 +861,7 @@ async function saveSupply() {
     
   } catch (error) {
     console.error('Error saving supply:', error);
-    alert('Ошибка при сохранении поставки');
+    showToast(`Ошибка при создании поставки:`, error)
   }
 }
 
@@ -831,3 +920,4 @@ document.addEventListener('DOMContentLoaded', function() {
       this.value === today ? 'block' : 'none';
   });
 });
+

@@ -10,17 +10,37 @@
   position: relative !important;
 }
 
+/* Стили для кнопки добавления */
 .floating-action-button {
-  width: 50px; 
-  height: 50px; 
-  display: flex; 
-  justify-content: center; 
-  align-items: center; 
-  border-radius: 50%; 
-  font-size: larger; 
-  position: fixed; 
-  bottom: 50px; 
-  left: 20px;
+  position: fixed;
+  bottom: 30px;
+  left: 30px;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  transition: all 0.3s;
+}
+
+.floating-action-button:hover {
+  transform: scale(1.1);
+}
+
+/* Анимация модального окна */
+.modal.fade .modal-dialog {
+  transform: translateY(-50px);
+  transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+  transform: translateY(0);
+}
+
+/* Стили для toast-уведомлений */
+.toast {
+  transition: opacity 0.3s ease;
 }
 
 /* Navigation Buttons */

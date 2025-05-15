@@ -3,29 +3,38 @@
 
 {% block content %}
 <div class="container-custom">
-    <button type="button" class="btn btn-primary floating-action-button" data-bs-toggle="modal" data-bs-target="#staticBackdrop">
-      <i class="bi bi-lightning-charge-fill"></i>
-    </button>
+   <button type="button" class="btn btn-primary floating-action-button rounded-circle shadow-lg" data-bs-toggle="modal" data-bs-target="#cashFlowModal" style="width: 56px; height: 56px; position: fixed; bottom: 30px; right: 30px;">
+  <i class="bi bi-lightning-charge-fill fs-4"></i>
+</button>
 
-    <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" tabindex="-1">
-      <div class="modal-dialog">
-        <form class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Вложение/расходы</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <label for="moneyInput">Введите сумму*</label>
-            <input type="text" class="form-control moneyInput" id="moneyInput" placeholder="Введите сумму">
-            <label for="moneyText">Доп. информация</label>
-            <textarea class="form-control" id="moneyText"></textarea>
-          </div>
-          <div class="modal-footer">
-            <button type="submit" class="btn btn-primary money_create_btn">Отправить</button>
-          </div>
-        </form>
+<div class="modal fade" id="cashFlowModal" data-bs-backdrop="static" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content shadow">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">Добавить операцию</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-    </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="amountInput" class="form-label fw-bold">Сумма*</label>
+          <div class="input-group">
+            <span class="input-group-text">₸</span>
+            <input type="number" class="form-control" id="amountInput" placeholder="Введите сумму" required>
+          </div>
+          <div class="form-text">Положительное число - доход, отрицательное - расход</div>
+        </div>
+        <div class="mb-3">
+          <label for="descriptionText" class="form-label fw-bold">Описание</label>
+          <textarea class="form-control" id="descriptionText" rows="3" placeholder="Дополнительная информация"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="submit" class="btn btn-primary" id="submitCashFlow">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
 
     <!-- Home Page Content -->
     <div class="custom-modal" id="customModal">
