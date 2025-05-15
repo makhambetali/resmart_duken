@@ -10,15 +10,45 @@
     </button>
   </div>
 
-  <!-- Поиск клиентов -->
-  <div class="input-group mb-4 shadow-sm">
-    <input type="text" class="form-control border-primary" placeholder="Поиск по имени клиента" id="searchInput">
-    <button class="btn btn-outline-primary" type="button" id="searchBtn">
-      <i class="fas fa-search me-2"></i>Найти
-    </button>
-    <button class="btn btn-outline-secondary" type="button" id="resetSearchBtn">
-      <i class="fas fa-times me-2"></i>Сбросить
-    </button>
+  <!-- Фильтры и поиск -->
+  <div class="card mb-4 shadow-sm">
+    <div class="card-body">
+      <div class="row">
+        <!-- Поиск клиентов -->
+        <div class="col-md-6 mb-3 mb-md-0">
+          <div class="input-group">
+            <input type="text" class="form-control border-primary" placeholder="Поиск по имени клиента" id="searchInput">
+            <button class="btn btn-outline-primary" type="button" id="searchBtn">
+              <i class="fas fa-search me-2"></i>Найти
+            </button>
+            <button class="btn btn-outline-secondary" type="button" id="resetSearchBtn">
+              <i class="fas fa-times me-2"></i>Сбросить
+            </button>
+          </div>
+        </div>
+        
+        <!-- Фильтры -->
+        <div class="col-md-6">
+          <div class="d-flex align-items-center">
+            <span class="me-2">Сортировка:</span>
+            <select class="form-select form-select-sm w-auto" id="filterSelect">
+              <option value="latest">Последние</option>
+              <option value="oldest">Старые</option>
+              <option value="max">Макс. долг</option>
+              <option value="min">Мин. долг</option>
+            </select>
+            
+            <span class="ms-3 me-2">На странице:</span>
+            <select class="form-select form-select-sm w-auto" id="perPageSelect">
+              <option value="10" selected>10</option>
+              <option value="25" >25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Таблица клиентов -->
@@ -26,13 +56,8 @@
     <div class="d-flex justify-content-between align-items-center p-2 bg-light border-bottom">
       <div>Найдено: <span class="res_count fw-bold">0</span> клиентов</div>
       <div class="d-flex align-items-center">
-        <span class="me-2">На странице:</span>
-        <select class="form-select form-select-sm w-auto" id="perPageSelect">
-          <option value="10">10</option>
-          <option value="25" selected>25</option>
-          <option value="50">50</option>
-          <option value="100">100</option>
-        </select>
+        <span class="me-2">Страница:</span>
+        <span id="currentPageInfo" class="fw-bold">1</span>
       </div>
     </div>
     
@@ -63,6 +88,7 @@
     Клиенты не найдены. Хотите <a href="#" class="alert-link" id="addNewClientLink">добавить нового клиента</a>?
   </div>
 </div>
+
 
 <!-- Модальное окно клиента -->
 <div class="modal fade" id="clientModal" tabindex="-1" aria-hidden="true">
@@ -211,14 +237,32 @@
   }
 </style>
 
+
 <script>
-// Глобальный кэш данных
+  // Глобальный кэш данных
 const clientsCache = {
   data: null,
   lastFetch: 0,
   currentPage: 1,
-  perPage: 25,
-  searchQuery: ''
+  perPage: 10,
+  searchQuery: '',
+  filterType: 'latest',
+  cacheKey: function() {
+    return `${this.searchQuery}-${this.filterType}-${this.currentPage}-${this.perPage}`;
+  },
+  storage: {
+    get: function(key) {
+      const item = localStorage.getItem(key);
+      if (item) {
+        return JSON.parse(item);
+      }
+      return null;
+    },
+    set: function(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+  },
+  abortController: null
 };
 
 // Инициализация при загрузке страницы
@@ -231,13 +275,96 @@ async function initClientsPage() {
   await loadClients();
 }
 
-function setupEventListeners() {
-  // Поиск клиентов
-  document.getElementById('searchBtn').addEventListener('click', debouncedSearch);
-  document.getElementById('searchInput').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') debouncedSearch();
+function debounce(func, wait, immediate = false) {
+  let timeout;
+  return function() {
+    const context = this;
+    const args = arguments;
+    const later = function() {
+      timeout = null;
+      if (!immediate) func.apply(context, args);
+    };
+    const callNow = immediate && !timeout;
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+    if (callNow) func.apply(context, args);
+  };
+}
+function clearRelatedCache(clientId) {
+  // Удаляем кэш клиентов
+  for (const key in localStorage) {
+    if (key.startsWith('clients-')) {
+      localStorage.removeItem(key);
+    }
+  }
+  
+  // Удаляем кэш долгов для этого клиента
+  localStorage.removeItem(`debts-${clientId}`);
+  
+  // Очищаем кэш строк таблицы
+  clientsCache.rowsCache = {};
+}
+
+function renderClients() {
+  const tbody = document.querySelector('#clients-table tbody');
+  tbody.innerHTML = '';
+  
+  if (!clientsCache.data || clientsCache.data.results.length === 0) {
+    document.getElementById('noDataAlert').classList.remove('d-none');
+    document.getElementById('pagination').innerHTML = '';
+    document.querySelector('.res_count').textContent = '0';
+    document.getElementById('currentPageInfo').textContent = '0';
+    return;
+  }
+  
+  document.getElementById('noDataAlert').classList.add('d-none');
+  document.querySelector('.res_count').textContent = clientsCache.data.count;
+  document.getElementById('currentPageInfo').textContent = clientsCache.currentPage;
+  
+  // Кэшируем созданные строки таблицы
+  if (!clientsCache.rowsCache) {
+    clientsCache.rowsCache = {};
+  }
+  
+  clientsCache.data.results.forEach(client => {
+    let row = clientsCache.rowsCache[client.id];
+    
+    if (!row) {
+      row = document.createElement('tr');
+      row.dataset.id = client.id;
+      row.innerHTML = `
+        <td>${escapeHtml(client.name)}</td>
+        <td>${client.phone_number || '-'}</td>
+        <td class="${client.debt > 0 ? 'debt-positive' : 'debt-negative'}">
+          ${formatCurrency(client.debt)}
+        </td>
+        <td>${formatDateTime(client.last_accessed)}</td>
+      `;
+      row.addEventListener('click', () => openClientModal(client));
+      clientsCache.rowsCache[client.id] = row;
+    }
+    
+    tbody.appendChild(row);
   });
+  
+  renderPagination();
+}
+
+
+function setupEventListeners() {
+  // Поиск клиентов с дебаунсом
+  const searchInput = document.getElementById('searchInput');
+  searchInput.addEventListener('input', debounce(handleSearch, 300));
+  document.getElementById('searchBtn').addEventListener('click', handleSearch);
   document.getElementById('resetSearchBtn').addEventListener('click', resetSearch);
+  
+  // Фильтрация
+  document.getElementById('filterSelect').addEventListener('change', function() {
+    clientsCache.filterType = this.value;
+    clientsCache.currentPage = 1;
+    // alert(clientsCache.filterType)
+    loadClients();
+  });
   
   // Пагинация
   document.getElementById('perPageSelect').addEventListener('change', function() {
@@ -257,79 +384,102 @@ function setupEventListeners() {
   document.getElementById('saveClientBtn').addEventListener('click', saveClient);
   document.getElementById('deleteClientBtn').addEventListener('click', deleteClient);
   
+  // Предотвращаем отправку формы при нажатии Enter
+  document.getElementById('clientForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    saveClient();
+  });
+  
   // Управление долгами
   document.getElementById('addDebtBtn').addEventListener('click', showDebtForm);
   document.getElementById('saveDebtBtn').addEventListener('click', saveDebt);
   document.getElementById('cancelDebtBtn').addEventListener('click', hideDebtForm);
 }
-
-// Загрузка клиентов с кэшированием
 async function loadClients() {
+  // Отменяем предыдущий запрос, если он есть
+  if (clientsCache.abortController) {
+    clientsCache.abortController.abort();
+  }
+  
   const now = Date.now();
+  const cacheKey = clientsCache.cacheKey();
   const cacheExpired = now - clientsCache.lastFetch > 300000; // 5 минут
   
-  if (!clientsCache.data || cacheExpired || clientsCache.forceReload) {
-    showLoader(true);
-    try {
-      const params = new URLSearchParams({
-        page: clientsCache.currentPage,
-        page_size: clientsCache.perPage,
-        q: clientsCache.searchQuery
-      });
-      console.log(params)
-      const response = await fetch(`/api/v1/clients/?${params}`);
-      if (!response.ok) throw new Error('Ошибка загрузки клиентов');
+  // Пытаемся получить данные из локального кэша
+  const cachedData = clientsCache.storage.get(`clients-${cacheKey}`);
+  console.log(cachedData && !cacheExpired && !clientsCache.forceReload)
+  // if (cachedData && !cacheExpired && !clientsCache.forceReload) {
+  //   clientsCache.data = cachedData;
+  //   renderClients();
+  //   return;
+  // }
+  
+  showLoader(true);
+  
+  // Создаем новый AbortController для текущего запроса
+  clientsCache.abortController = new AbortController();
+  
+  try {
+    const params = new URLSearchParams({
+      filter_tag: clientsCache.filterType,
+      page: clientsCache.currentPage,
+      page_size: clientsCache.perPage,
       
-      clientsCache.data = await response.json();
-      clientsCache.lastFetch = now;
-      clientsCache.forceReload = false;
-      
-      renderClients();
-    } catch (error) {
+    });
+    
+    if (clientsCache.searchQuery) {
+      params.append('q', clientsCache.searchQuery);
+    }
+    
+    const response = await fetch(`/api/v1/clients/?${params}`, {
+      signal: clientsCache.abortController.signal
+    });
+    
+    if (!response.ok) throw new Error('Ошибка загрузки клиентов');
+    
+    clientsCache.data = await response.json();
+    clientsCache.lastFetch = now;
+    clientsCache.forceReload = false;
+    
+    // Сохраняем в локальное хранилище
+    clientsCache.storage.set(`clients-${cacheKey}`, clientsCache.data);
+    
+    renderClients();
+  } catch (error) {
+    if (error.name !== 'AbortError') {
       console.error('Error loading clients:', error);
       alert('Ошибка при загрузке клиентов');
-    } finally {
-      showLoader(false);
     }
-  } else {
-    renderClients();
+  } finally {
+    showLoader(false);
+    clientsCache.abortController = null;
   }
 }
-
+function handleSearch() {
+  const searchValue = document.getElementById('searchInput').value.trim();
+  if (clientsCache.searchQuery !== searchValue) {
+    clientsCache.searchQuery = searchValue;
+    clientsCache.currentPage = 1;
+    clientsCache.forceReload = true;
+    loadClients();
+  }
+}
 // Отображение клиентов в таблице
-function renderClients() {
-  const tbody = document.querySelector('#clients-table tbody');
-  tbody.innerHTML = '';
+function resetSearch() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('filterSelect').value = 'latest';
   
-  if (!clientsCache.data || clientsCache.data.results.length === 0) {
-    document.getElementById('noDataAlert').classList.remove('d-none');
-    document.getElementById('pagination').innerHTML = '';
-    return;
+  if (clientsCache.searchQuery || clientsCache.filterType !== 'latest') {
+    clientsCache.searchQuery = '';
+    clientsCache.filterType = 'latest';
+    clientsCache.currentPage = 1;
+    clientsCache.forceReload = true;
+    loadClients();
   }
-  
-  document.getElementById('noDataAlert').classList.add('d-none');
-  document.querySelector('.res_count').textContent = clientsCache.data.count;
-  
-  clientsCache.data.results.forEach(client => {
-    const row = document.createElement('tr');
-    row.dataset.id = client.id;
-    row.innerHTML = `
-      <td>${escapeHtml(client.name)}</td>
-      <td>${client.phone_number || '-'}</td>
-      <td class="${client.debt > 0 ? 'debt-positive' : 'debt-negative'}">
-        ${formatCurrency(client.debt)}
-      </td>
-      <td>${formatDateTime(client.last_accessed)}</td>
-    `;
-    row.addEventListener('click', () => openClientModal(client));
-    tbody.appendChild(row);
-  });
-  
-  renderPagination();
 }
-
 // Открытие модального окна клиента
 async function openClientModal(client) {
+  console.log(123)
   const modal = new bootstrap.Modal(document.getElementById('clientModal'));
   document.getElementById('clientModalTitle').textContent = client.name;
   document.getElementById('clientId').value = client.id;
@@ -346,12 +496,23 @@ async function openClientModal(client) {
 
 // Загрузка долгов клиента
 async function loadClientDebts(clientId) {
+  // Проверяем кэш
+  const cacheKey = `debts-${clientId}`;
+  const cachedDebts = clientsCache.storage.get(cacheKey);
+  
+  if (cachedDebts) {
+    renderDebts(cachedDebts);
+    return;
+  }
+  
   showLoader(true);
   try {
     const response = await fetch(`/api/v1/clients/${clientId}/get_debts/`);
     if (!response.ok) throw new Error('Ошибка загрузки долгов');
     
     const debts = await response.json();
+    // Сохраняем в кэш
+    clientsCache.storage.set(cacheKey, debts);
     renderDebts(debts);
   } catch (error) {
     console.error('Error loading debts:', error);
@@ -360,7 +521,6 @@ async function loadClientDebts(clientId) {
     showLoader(false);
   }
 }
-
 // Отображение долгов клиента
 function renderDebts(debts) {
   const tbody = document.getElementById('debtsTableBody');
@@ -426,17 +586,27 @@ async function saveClient() {
       body: JSON.stringify(clientData)
     });
     
-    if (!response.ok) throw new Error('Ошибка сохранения клиента');
-    
+    if (!response.ok) {
+      // Обработка возможных ошибок, включая ошибку уникальности имени
+      const errorData = await response.json();
+      if (response.status === 400 && errorData.name && errorData.name.includes("already exists")) {
+        alert('Клиент с таким именем уже существует');
+      } else {
+        throw new Error('Ошибка сохранения клиента');
+      }
+      return;
+    }
+    clearRelatedCache(clientId);
     clientsCache.forceReload = true;
     bootstrap.Modal.getInstance(document.getElementById('clientModal')).hide();
     await loadClients();
   } catch (error) {
     console.error('Error saving client:', error);
-    alert('Ошибка при сохранении клиента');
+    alert('Ошибка при сохранении клиента: ' + error.message);
   } finally {
     showLoader(false);
   }
+  
 }
 
 // Удаление клиента
@@ -454,7 +624,7 @@ async function deleteClient() {
     });
     
     if (!response.ok) throw new Error('Ошибка удаления клиента');
-    
+    clearRelatedCache(clientId);
     clientsCache.forceReload = true;
     bootstrap.Modal.getInstance(document.getElementById('clientModal')).hide();
     await loadClients();
@@ -469,10 +639,16 @@ async function deleteClient() {
 // Добавление долга
 async function saveDebt() {
   const clientId = document.getElementById('clientId').value;
-  const debtValue = parseInt(document.getElementById('debtValue').value);
+  const debtValueStr = document.getElementById('debtValue').value;
   
-  if (!clientId || isNaN(debtValue)) {
+  if (!clientId || !debtValueStr) {
     alert('Пожалуйста, укажите сумму долга');
+    return;
+  }
+  
+  const debtValue = parseInt(debtValueStr);
+  if (isNaN(debtValue)) {
+    alert('Пожалуйста, укажите корректную сумму долга');
     return;
   }
   
@@ -508,7 +684,7 @@ async function deleteDebt(debtId) {
   
   showLoader(true);
   try {
-    const response = await fetch(`/api/v1/client-debts/${debtId}/`, {
+    const response = await fetch(`/api/v1/clients/delete_debt/${debtId}/`, {
       method: 'DELETE',
       headers: {
         'X-CSRFToken': getCsrfToken()
@@ -532,6 +708,7 @@ async function deleteDebt(debtId) {
 // Вспомогательные функции
 function showDebtForm() {
   document.getElementById('debtFormContainer').classList.remove('d-none');
+  document.getElementById('debtValue').focus();
 }
 
 function hideDebtForm() {
@@ -542,11 +719,17 @@ function openAddClientModal() {
   document.getElementById('clientModalTitle').textContent = 'Добавление клиента';
   document.getElementById('clientForm').reset();
   document.getElementById('clientId').value = '';
-  document.getElementById('debtsTableBody').innerHTML = '';
+  
+  document.getElementById('debtsTableBody').innerHTML = '<tr><td colspan="3" class="text-center">Нет записей о долгах</td></tr>';
   hideDebtForm();
   
   const modal = new bootstrap.Modal(document.getElementById('clientModal'));
   modal.show();
+  
+  // Фокус на поле имени
+  setTimeout(() => {
+    document.getElementById('clientName').focus();
+  }, 500);
 }
 
 function formatCurrency(value) {
@@ -563,6 +746,7 @@ function formatDate(dateString) {
 }
 
 function escapeHtml(unsafe) {
+  if (unsafe === null || unsafe === undefined) return '';
   return unsafe.toString()
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -646,28 +830,18 @@ function addPaginationButton(container, text, page, disabled = false, active = f
   container.appendChild(li);
 }
 
-// Поиск с debounce
-const debouncedSearch = debounce(function() {
-    console.log(document.getElementById('searchInput').value.trim())
-  clientsCache.searchQuery = document.getElementById('searchInput').value.trim();
-  clientsCache.currentPage = 1;
-  loadClients();
-}, 300);
-
+// Сброс поиска
 function resetSearch() {
-  document.getElementById('searchInput').value = '';
-  clientsCache.searchQuery = '';
-  clientsCache.currentPage = 1;
-  loadClients();
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput.value || clientsCache.searchQuery) {
+    searchInput.value = '';
+    clientsCache.searchQuery = '';
+    clientsCache.currentPage = 1;
+    clientsCache.forceReload = true;
+    loadClients();
+  }
 }
 
-function debounce(func, wait) {
-  let timeout;
-  return function() {
-    const context = this, args = arguments;
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(context, args), wait);
-  };
-}
 </script>
+
 {% endblock %}

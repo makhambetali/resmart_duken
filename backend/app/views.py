@@ -55,6 +55,40 @@ class SupplyViewSet(viewsets.ModelViewSet):
                 return Response({'detail': 'Method not allowed without image_id.'},
                                 status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
+class ClientViewSet(viewsets.ModelViewSet):
+    serializer_class = ClientSerializer
+    pagination_class = SupplierResultsPaginationPage
+
+    def get_queryset(self):
+        q = self.request.query_params.get('q', '')
+        filter_tag = self.request.query_params.get('filter_tag', 'latest')  # значение по умолчанию
+        return ClientService().search(q, filter_tag)
+
+    @action(detail=True, methods=['post'])
+    def add_debt(self, request, pk=None):
+        client = self.get_object()
+        debt_value = request.data.get('debt_value')
+        results = ClientService().add_debt(client, debt_value)
+        return Response(results)
+    
+    @action(detail=False, methods = ['delete'], url_path='delete_debt(?:/(?P<debt_id>[^/.]+))?')
+    def delete_debt(self, request, debt_id=None):
+        if debt_id:
+            ClientService().delete_one_debt(debt_id)
+
+        return Response({'r':'r'})
+
+    @action(detail=True, methods=['get'])
+    def get_debts(self, request, pk=None):
+        client = self.get_object()
+        results = ClientService().get_debts(client)
+        return Response(results)
+    
+    
+class DebtDeleteAPIView(generics.DestroyAPIView):
+    serializer_class = ClientDebtSerializer
+    queryset = ClientDebt.objects.all()
+
 class SupplierCustomAPIView(generics.ListAPIView):
     serializer_class = SupplierCustomSerializer
     queryset = Supplier.objects.all()
@@ -65,26 +99,6 @@ class HomePageView(TemplateView):
 class SuppliersPageView(TemplateView):
     template_name = 'suppliers-page.html'
 
-class ClientViewSet(viewsets.ModelViewSet):
-    serializer_class = ClientSerializer
-    pagination_class = SupplierResultsPaginationPage
 
-    def get_queryset(self):
-        q = self.request.query_params.get('q')
-        return ClientService().search(q)
-
-    @action(detail=True, methods=['post'])
-    def add_debt(self, request, pk=None):
-        client = self.get_object()
-        debt_value = request.data.get('debt_value')
-        results = ClientService().add_debt(client, debt_value)
-        return Response(results)
-
-    @action(detail=True, methods=['get'])
-    def get_debts(self, request, pk=None):
-        client = self.get_object()
-        results = ClientService().get_debts(client)
-        return Response(results)
-    
 class ClientsPageView(TemplateView):
     template_name = 'clients-page.html'
