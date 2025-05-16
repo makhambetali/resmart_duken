@@ -17,6 +17,7 @@ class Supply(models.Model):
     exchange = models.SmallIntegerField(default=0)
     delivery_date = models.DateField(db_index=True)
     comment = models.TextField(blank=True, null=True)
+    is_confirmed = models.BooleanField(default=False)
     date_added = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

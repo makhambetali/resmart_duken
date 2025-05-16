@@ -1,5 +1,5 @@
 from django.utils import timezone
-
+from django.db.models import Q
 from app.models import Supply
 
 class SupplyService:
@@ -10,5 +10,5 @@ class SupplyService:
         else:
             return Supply.objects.filter(delivery_date__gte=today)
     def get_supplies_by_date(self, date = timezone.now().date()):
-        queryset = Supply.objects.all().filter(delivery_date = date)
+        queryset = Supply.objects.all().filter(Q(delivery_date = date) & Q(is_confirmed=True))
         return queryset

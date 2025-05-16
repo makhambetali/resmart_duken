@@ -6,7 +6,25 @@
    <button type="button" class="btn btn-primary floating-action-button rounded-circle shadow-lg" data-bs-toggle="modal" data-bs-target="#cashFlowModal" style="width: 56px; height: 56px; position: fixed; bottom: 30px; right: 30px;">
   <i class="bi bi-lightning-charge-fill fs-4"></i>
 </button>
-
+<div class="today-supplies-filter mb-3" id="todaySuppliesFilter" style="display: none;">
+    <div class="row g-2">
+      <div class="col-md-6">
+        <input type="text" class="form-control" id="supplySearchInput" placeholder="Поиск по поставщику или комментарию">
+      </div>
+      <div class="col-md-3">
+        <select class="form-select" id="confirmationFilter">
+          <option value="all">Все поставки</option>
+          <option value="confirmed">Подтвержденные</option>
+          <option value="unconfirmed">Не подтвержденные</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button class="btn btn-outline-secondary w-100" id="clearFiltersBtn">
+          <i class="bi bi-x-circle"></i> Сбросить
+        </button>
+      </div>
+    </div>
+  </div>
 <div class="modal fade" id="cashFlowModal" data-bs-backdrop="static" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <form class="modal-content shadow">
@@ -52,18 +70,17 @@
     <button class="button-nav button-up-page bi bi-arrow-up" onclick="window.scrollTo(0,0)"></button>
     <button class="button-nav button-down-page bi bi-arrow-down" onclick="window.scrollTo(0, document.body.scrollHeight)"></button>
   
-<!-- Модальное окно добавления поставки -->
 <div class="modal fade" id="addSupplyModal" tabindex="-1" aria-labelledby="addSupplyModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="addSupplyModalLabel">Добавить поставку</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <form id="addSupplyForm">
-          <!-- Поставщик -->
-          <div class="mb-3 supplier-input-container">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addSupplyModalLabel">Добавить поставку</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="addSupplyForm">
+            <!-- ... (существующие поля формы) ... -->
+            <div class="mb-3 supplier-input-container">
             <label for="supplierInput" class="form-label">Поставщик</label>
             <div class="supplier-input-wrapper">
               <input type="text" class="form-control supplier-input" id="supplierInput" 
@@ -141,27 +158,38 @@
               <div class="image-preview-container mt-2" id="imagePreviewContainer"></div>
             </div>
           </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
-        <button type="button" class="btn btn-primary" id="saveSupplyBtn">Сохранить</button>
+            <!-- Добавляем чекбокс подтверждения только для сегодняшней даты -->
+            <div class="mb-3" id="confirmationCheckboxContainer" style="display: none;">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="isConfirmedCheckbox">
+                <label class="form-check-label" for="isConfirmedCheckbox">
+                  Подтвержденная поставка
+                </label>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+          <button type="button" class="btn btn-primary" id="saveSupplyBtn">Сохранить</button>
+        </div>
       </div>
     </div>
   </div>
-</div>
+
 
 <!-- Модальное окно редактирования поставки -->
 <div class="modal fade" id="editSupplyModal" tabindex="-1" aria-labelledby="editSupplyModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="editSupplyModalLabel">Редактировать поставку</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <form id="editSupplyForm">
-          <input type="hidden" id="editSupplyId">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editSupplyModalLabel">Редактировать поставку</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="editSupplyForm">
+            <!-- ... (существующие поля формы) ... -->
+            <input type="hidden" id="editSupplyId">
           
           <!-- Поставщик (только для чтения) -->
           <div class="mb-3">
@@ -235,11 +263,21 @@
               <div class="image-preview-container mt-2" id="editImagePreviewContainer"></div>
             </div>
           </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-danger" id="deleteSupplyBtn">Удалить</button>
-        <button type="button" class="btn btn-primary" id="updateSupplyBtn">Изменить</button>
+            <!-- Чекбокс подтверждения для редактирования -->
+            <div class="mb-3" id="editConfirmationCheckboxContainer" style="display: none;">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="editIsConfirmedCheckbox">
+                <label class="form-check-label" for="editIsConfirmedCheckbox">
+                  Подтвержденная поставка
+                </label>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger" id="deleteSupplyBtn">Удалить</button>
+          <button type="button" class="btn btn-primary" id="updateSupplyBtn">Изменить</button>
+        </div>
       </div>
     </div>
   </div>

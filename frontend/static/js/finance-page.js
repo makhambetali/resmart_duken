@@ -76,6 +76,7 @@ function calculateSupplyTotals(supplies) {
     let total = 0;
 
     supplies.forEach(supply => {
+        console.log(supply.is_confirmed)
         cashTotal += supply.price_cash;
         bankTotal += supply.price_bank;
         total += supply.price_cash + supply.price_bank;

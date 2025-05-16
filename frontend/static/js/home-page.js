@@ -167,6 +167,11 @@ async function deleteSupply() {
     showToast(error.message, 'danger');
   }
 }
+function isToday(dateStr) {
+  const today = new Date().toISOString().split('T')[0];
+  return dateStr === today;
+}
+
 // Loader simulation
 function formatCurrency(value) {
   if (value === null || value === undefined || value === '') return '0 ₸';
@@ -327,7 +332,7 @@ function timeAgo(dateTimeStr) {
 
 // Function to render supplies grouped by date
 function renderSupplies(supplies) {
-  // Group supplies by delivery date
+  // Группируем поставки по дате
   const groupedSupplies = {};
   supplies.forEach(supply => {
     const date = supply.delivery_date;
@@ -337,17 +342,17 @@ function renderSupplies(supplies) {
     groupedSupplies[date].push(supply);
   });
 
-  // Sort dates (newest first)
+  // Сортируем даты (новые сначала)
   const sortedDates = Object.keys(groupedSupplies).sort((a, b) => new Date(a) - new Date(b));
   
-  // Get container element
+  // Получаем контейнер
   const container = document.querySelector('.container-custom');
   
-  // Find the insert point before navigation buttons
+  // Находим точку вставки перед кнопками навигации
   const buttons = document.querySelectorAll('.button-nav');
   const insertPoint = buttons.length > 0 ? buttons[0] : null;
   
-  // Clear existing date groups
+  // Очищаем существующие группы
   const dateGroups = document.querySelectorAll('.date-title-general, .date_group');
   dateGroups.forEach(group => {
     if (!group.classList.contains('button-nav') && 
@@ -358,7 +363,12 @@ function renderSupplies(supplies) {
     }
   });
 
-  // Render each date group
+  // Показываем фильтры, если есть сегодняшние поставки
+  const todaySupplies = groupedSupplies[new Date().toISOString().split('T')[0]] || [];
+  const filterSection = document.getElementById('todaySuppliesFilter');
+  filterSection.style.display = todaySupplies.length > 0 ? 'block' : 'none';
+
+  // Рендерим каждую группу дат
   sortedDates.forEach((date, index) => {
     const dateObj = new Date(date);
     const dateString = dateObj.toLocaleDateString('ru-RU', { 
@@ -368,21 +378,19 @@ function renderSupplies(supplies) {
     });
     const dayName = dateObj.toLocaleDateString('ru-RU', { weekday: 'long' });
     
-    // Create date title
+    // Создаем заголовок даты
     const dateTitleDiv = document.createElement('div');
     dateTitleDiv.className = 'date-title-general';
     dateTitleDiv.innerHTML = `
       <div class="date-title" onclick="show_date_group('date_group_${index}')">
         ${dateString}, ${dayName}
+        ${isToday(date) ? '<span class="badge bg-info ms-2">Сегодня</span>' : ''}
       </div>
-      <button class="sum_button bi bi-calculator" 
-              date="${date}" date_f="${dateString}" today="${new Date().toISOString().split('T')[0]}" 
-              date_group="date_group_${index}" title="Посчитать сумму">
-      </button>
+     
     `;
     container.insertBefore(dateTitleDiv, insertPoint);
 
-    // Create table
+    // Создаем таблицу
     const table = document.createElement('table');
     table.className = `date_group_${index} date_group show_group table table-hover`;
     table.innerHTML = `
@@ -393,22 +401,24 @@ function renderSupplies(supplies) {
           <th class="secondary-data">Бонус</th>
           <th class="secondary-data">Обмен</th>
           <th class="secondary-data">Комментарии</th>
+          ${isToday(date) ? `<th class="secondary-data">Статус</th>` : ``}
         </tr>
       </thead>
       <tbody></tbody>
     `;
 
-    // Add supplies to table
+    // Добавляем поставки в таблицу
     const tbody = table.querySelector('tbody');
     groupedSupplies[date].forEach(supply => {
       const bonusClass = supply.bonus > 0 ? 'style="color:#218838; font-weight: bold;"' : '';
       const exchangeClass = supply.exchange > 0 ? 'style="color:#c82333; font-weight: bold;"' : '';
       const addedTime = formatDateTime(supply.date_added);
       const timeAgoStr = timeAgo(supply.date_added);
+      const isTodaySupply = isToday(supply.delivery_date);
       
       const row = document.createElement('tr');
       row.id = `product${supply.id}`;
-      row.setAttribute('confirmed', 'true');
+      row.setAttribute('confirmed', supply.is_confirmed);
       row.className = 'sessionSensible';
       row.innerHTML = `
         <td>
@@ -417,7 +427,7 @@ function renderSupplies(supplies) {
             <span class="supplier-added-time secondary-data" title="${addedTime}">${timeAgoStr}</span>
           </div>
         </td>
-        <td class="cost_cat" cost="${supply.price_cash+supply.price_bank}" confirmed="true">
+        <td class="cost_cat" cost="${supply.price_cash+supply.price_bank}" confirmed="${supply.is_confirmed}">
           <span class="currency-text">${formatCurrency(supply.price_cash+supply.price_bank)}</span>
         </td>
         <td class="secondary-data" ${bonusClass}>
@@ -429,10 +439,16 @@ function renderSupplies(supplies) {
         <td class="secondary-data" title="${supply.comment || ''}">
           ${supply.comment ? supply.comment.substring(0, 50) + (supply.comment.length > 50 ? '...' : '') : ''}
         </td>
+        
+          ${isTodaySupply ? 
+            `<td class="secondary-data"><span class="badge ${supply.is_confirmed ? 'bg-success' : 'bg-warning text-dark'}">
+              ${supply.is_confirmed ? 'Подтверждено' : 'Ожидает'}
+            </span></td>` : ''}
+        
       `;
       
-      // Add click handlers
-      row.querySelectorAll('td:not(:first-child)').forEach(td => {
+      // Добавляем обработчики кликов
+      row.querySelectorAll('td:not(:last-child)').forEach(td => {
         td.addEventListener('click', () => redirectTo(supply.id));
       });
       
@@ -442,23 +458,64 @@ function renderSupplies(supplies) {
     container.insertBefore(table, insertPoint);
   });
 
-  // Re-attach event listeners to new elements
+  // Прикрепляем обработчики событий
   attachEventListeners();
+  setupTodaySuppliesFilter();
 }
 
+function setupTodaySuppliesFilter() {
+  const searchInput = document.getElementById('supplySearchInput');
+  const confirmationFilter = document.getElementById('confirmationFilter');
+  const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+  
+  searchInput.addEventListener('input', filterTodaySupplies);
+  confirmationFilter.addEventListener('change', filterTodaySupplies);
+  clearFiltersBtn.addEventListener('click', clearFilters);
+}
+function filterTodaySupplies() {
+  const searchTerm = document.getElementById('supplySearchInput').value.toLowerCase();
+  const confirmationStatus = document.getElementById('confirmationFilter').value;
+  
+  const today = new Date().toISOString().split('T')[0];
+  const todayTable = document.querySelector(`table[class*="date_group"]`);
+  
+  if (!todayTable) return;
+  
+  const rows = todayTable.querySelectorAll('tbody tr');
+  rows.forEach(row => {
+    const supplier = row.querySelector('.supplier-name').textContent.toLowerCase();
+    const comment = row.querySelector('td:nth-child(5)').textContent.toLowerCase();
+    const isConfirmed = row.getAttribute('confirmed') === 'true';
+    
+    const matchesSearch = supplier.includes(searchTerm) || comment.includes(searchTerm);
+    const matchesConfirmation = 
+      confirmationStatus === 'all' || 
+      (confirmationStatus === 'confirmed' && isConfirmed) ||
+      (confirmationStatus === 'unconfirmed' && !isConfirmed);
+    
+    row.style.display = matchesSearch && matchesConfirmation ? '' : 'none';
+  });
+}
+
+// Сброс фильтров
+function clearFilters() {
+  document.getElementById('supplySearchInput').value = '';
+  document.getElementById('confirmationFilter').value = 'all';
+  filterTodaySupplies();
+}
 // Reattach event listeners after dynamic content load
 function attachEventListeners() {
-  const calcButtons = document.querySelectorAll('.sum_button');
-  calcButtons.forEach(button => {
-    button.addEventListener('click', function() {
-      openCalcOptionsModal();
-      date = this.getAttribute('date');
-      const options = document.querySelectorAll('.custom-option');
-      if (options[1]) {
-        options[1].disabled = (this.getAttribute('today') != this.getAttribute('date_f'));
-      }
-    });
-  });
+  // const calcButtons = document.querySelectorAll('.sum_button');
+  // calcButtons.forEach(button => {
+  //   button.addEventListener('click', function() {
+  //     openCalcOptionsModal();
+  //     date = this.getAttribute('date');
+  //     const options = document.querySelectorAll('.custom-option');
+  //     if (options[1]) {
+  //       options[1].disabled = (this.getAttribute('today') != this.getAttribute('date_f'));
+  //     }
+  //   });
+  // });
 }
 
 // Toggle date group visibility
@@ -470,26 +527,9 @@ function show_date_group(arg) {
 }
 
 // Modal functions
-const calcOptionsModal = document.getElementById('customModal');
 
-function openCalcOptionsModal() {
-  if (calcOptionsModal) {
-    calcOptionsModal.style.display = 'flex';
-  }
-}
 
-function closeCalcOptionsModal() {
-  if (calcOptionsModal) {
-    calcOptionsModal.style.display = 'none';
-  }
-}
 
-// Close modal when clicking outside
-window.addEventListener("click", function(event) {
-  if (event.target === calcOptionsModal) {
-    closeCalcOptionsModal();
-  }
-});
 
 // Redirect to edit page
 
@@ -824,14 +864,18 @@ async function saveSupply() {
   formData.append('exchange', document.getElementById('exchangeInput').value);
   formData.append('delivery_date', deliveryDate);
   formData.append('comment', document.getElementById('commentInput').value);
-
-  // Загрузка изображений только для сегодняшней даты
-  if (deliveryDate === today) {
+  if (isToday(deliveryDate)) {
+    formData.append('is_confirmed', document.getElementById('isConfirmedCheckbox').checked);
     const files = document.getElementById('supplyImages').files;
     for (let i = 0; i < files.length; i++) {
       formData.append('images', files[i]);
     }
   }
+
+  // // Загрузка изображений только для сегодняшней даты
+  // if (deliveryDate === today) {
+    
+  // }
 
   try {
     const response = await fetch('/api/v1/supplies/', {
@@ -883,6 +927,7 @@ async function updateSupply() {
     } else {
       formData.append('price_cash', parseCurrency(document.getElementById('editPriceCashInput').value));
       formData.append('price_bank', parseCurrency(document.getElementById('editPriceBankInput').value));
+      formData.append('is_confirmed', document.getElementById('editIsConfirmedCheckbox').checked);
     }
     
     formData.append('bonus', document.getElementById('editBonusInput').value);
@@ -930,7 +975,13 @@ function redirectTo(id) {
     const today = new Date().toISOString().split('T')[0];
     const isToday = supply.delivery_date === today;
     const paymentTypeGroup = document.querySelector('input[name="editPaymentType"]').closest('.btn-group');
+     const isTodaySupply = isToday;
+    const editConfirmationContainer = document.getElementById('editConfirmationCheckboxContainer');
     
+    editConfirmationContainer.style.display = isTodaySupply ? 'block' : 'none';
+    if (isTodaySupply) {
+      document.getElementById('editIsConfirmedCheckbox').checked = supply.is_confirmed;
+    }
     // Устанавливаем тип оплаты
     if (isToday) {
       if (supply.price_cash > 0 && supply.price_bank > 0) {
@@ -1072,7 +1123,14 @@ document.getElementById('deliveryDate').addEventListener('change', function() {
       }
     });
   }
-  
+  const isToday = isToday(this.value);
+    const confirmationContainer = document.getElementById('confirmationCheckboxContainer');
+    
+    // Показываем чекбокс подтверждения только для сегодняшней даты
+    confirmationContainer.style.display = isToday ? 'block' : 'none';
+    if (!isToday) {
+      document.getElementById('isConfirmedCheckbox').checked = false;
+    }
   // Проверяем нужно ли показывать загрузку изображений
   checkDateForImageUpload();
 });
