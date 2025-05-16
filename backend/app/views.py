@@ -29,6 +29,12 @@ class SupplyViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         supply_type = self.request.query_params.get('type')
         return self.service_layer.get_supplies(supply_type)
+    
+    @action(detail=False, methods=['get'])
+    def get_by_date(self, request):
+        date = self.request.query_params.get("date", timezone.now().date())
+        queryset = self.service_layer.get_supplies_by_date(date)
+        return Response(SupplySerializer(queryset, many=True).data)
 
     @action(detail=True, methods=['get', 'delete'], url_path='images(?:/(?P<image_id>[^/.]+))?')
     def images(self, request, pk=None, image_id=None):
@@ -114,3 +120,6 @@ class SuppliersPageView(TemplateView):
 
 class ClientsPageView(TemplateView):
     template_name = 'clients-page.html'
+
+class FinancePageView(TemplateView):
+    template_name = 'finance-page.html'

@@ -15,5 +15,6 @@ urlpatterns = [
     path('', HomePageView.as_view(), name='home-page'),
     path('suppliers-page/', SuppliersPageView.as_view(), name='suppliers-page'),
     path('clients-page/', ClientsPageView.as_view(), name='clients-page'),
+    path('finance-page/',FinancePageView.as_view(),name='finance-page' ),
 ]
  
