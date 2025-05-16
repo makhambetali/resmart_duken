@@ -18,15 +18,17 @@ from .services.cashflow import CashFlowService
 class SupplierViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierSerializer
     pagination_class = SupplierResultsPaginationPage
+    service_layer = SupplierService()
     def get_queryset(self):
         q = self.request.query_params.get('q')
-        return SupplierService().search(q)
+        return self.service_layer.search(q)
     
 class SupplyViewSet(viewsets.ModelViewSet):
     serializer_class = SupplySerializer
+    service_layer = SupplyService()
     def get_queryset(self):
         supply_type = self.request.query_params.get('type')
-        return SupplyService().get_supplies(supply_type)
+        return self.service_layer.get_supplies(supply_type)
 
     @action(detail=True, methods=['get', 'delete'], url_path='images(?:/(?P<image_id>[^/.]+))?')
     def images(self, request, pk=None, image_id=None):
@@ -45,7 +47,7 @@ class SupplyViewSet(viewsets.ModelViewSet):
 
             if request.method == 'DELETE':
                 image.delete()
-                return Response({'detail': 'Deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
+                return Response(status=status.HTTP_204_NO_CONTENT)
 
         else:
             # Обработка всех изображений
@@ -60,43 +62,44 @@ class SupplyViewSet(viewsets.ModelViewSet):
 class ClientViewSet(viewsets.ModelViewSet):
     serializer_class = ClientSerializer
     pagination_class = SupplierResultsPaginationPage
-
+    service_layer = ClientService()
     def get_queryset(self):
         q = self.request.query_params.get('q', '')
         filter_tag = self.request.query_params.get('filter_tag', 'latest')  # значение по умолчанию
-        return ClientService().search(q, filter_tag)
+        return self.service_layer.search(q, filter_tag)
 
     @action(detail=True, methods=['post'])
     def add_debt(self, request, pk=None):
         client = self.get_object()
         debt_value = request.data.get('debt_value')
-        results = ClientService().add_debt(client, debt_value)
+        results = self.service_layer.add_debt(client, debt_value)
         return Response(results)
     
     @action(detail=False, methods = ['delete'], url_path='delete_debt(?:/(?P<debt_id>[^/.]+))?')
     def delete_debt(self, request, debt_id=None):
         if debt_id:
-            ClientService().delete_one_debt(debt_id)
+            self.service_layer.delete_one_debt(debt_id)
 
-        return Response({'r':'r'})
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['get'])
     def get_debts(self, request, pk=None):
         client = self.get_object()
-        results = ClientService().get_debts(client)
+        results = self.service_layer.get_debts(client)
         return Response(results)
 
 class CashFlowViewSet(viewsets.ModelViewSet):
     serializer_class = CashFlowSerializer
     queryset = CashFlow.objects.all()
+    service_layer = CashFlowService()
 
     def list(self, request, *args, **kwargs):
         date = request.query_params.get('date', timezone.now().date())
-        return Response(CashFlowService().get_instance(date))
+        return Response(self.service_layer.get_instance(date))
     
     @action(detail=False, methods=['get'])
     def sum(self, request):
-        return Response({"total_sum": CashFlowService().find_sum()})
+        return Response({"total_sum": self.service_layer.find_sum()})
 
 class SupplierCustomAPIView(generics.ListAPIView):
     serializer_class = SupplierCustomSerializer

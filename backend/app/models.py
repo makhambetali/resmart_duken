@@ -11,7 +11,8 @@ class Supplier(models.Model):
 
 class Supply(models.Model):
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='supplier')
-    price = models.PositiveIntegerField(default=0)
+    price_cash = models.PositiveIntegerField(default=0)
+    price_bank = models.PositiveIntegerField(default=0)
     bonus = models.SmallIntegerField(default=0)
     exchange = models.SmallIntegerField(default=0)
     delivery_date = models.DateField(db_index=True)
@@ -19,7 +20,7 @@ class Supply(models.Model):
     date_added = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.supplier}: {self.price}"
+        return f"{self.supplier}: {self.price_bank + self.price_cash}"
     
 class SupplyImage(models.Model):
     supply = models.ForeignKey(Supply, on_delete=models.CASCADE, related_name='images')

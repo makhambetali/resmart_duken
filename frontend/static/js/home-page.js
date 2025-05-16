@@ -2,6 +2,47 @@ const cashFlowForm = document.querySelector('#cashFlowModal form');
 const amountInput = document.getElementById('amountInput');
 const descriptionText = document.getElementById('descriptionText');
 const submitBtn = document.getElementById('submitCashFlow');
+
+document.querySelectorAll('input[name="paymentType"]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    const cashGroup = document.getElementById('cashAmountGroup');
+    const bankGroup = document.getElementById('bankAmountGroup');
+    
+    if (this.id === 'cashPayment') {
+      cashGroup.style.display = 'block';
+      bankGroup.style.display = 'none';
+      document.getElementById('priceBankInput').value = '0';
+    } else if (this.id === 'bankPayment') {
+      cashGroup.style.display = 'none';
+      bankGroup.style.display = 'block';
+      document.getElementById('priceCashInput').value = '0';
+    } else {
+      cashGroup.style.display = 'block';
+      bankGroup.style.display = 'block';
+    }
+  });
+});
+
+// Аналогично для редактирования
+document.querySelectorAll('input[name="editPaymentType"]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    const cashGroup = document.getElementById('editCashAmountGroup');
+    const bankGroup = document.getElementById('editBankAmountGroup');
+    
+    if (this.id === 'editCashPayment') {
+      cashGroup.style.display = 'block';
+      bankGroup.style.display = 'none';
+      document.getElementById('editPriceBankInput').value = '0';
+    } else if (this.id === 'editBankPayment') {
+      cashGroup.style.display = 'none';
+      bankGroup.style.display = 'block';
+      document.getElementById('editPriceCashInput').value = '0';
+    } else {
+      cashGroup.style.display = 'block';
+      bankGroup.style.display = 'block';
+    }
+  });
+});
 cashFlowForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -136,7 +177,7 @@ function formatCurrency(value) {
   return num.toString()
     .replace(/\D/g, '') // Оставляем только цифры
     .replace(/\B(?=(\d{3})+(?!\d))/g, '.') // Добавляем точки как разделители
-    .replace(/^0+/, '') + ' ₸'; // Убираем ведущие нули и добавляем символ валюты
+    .replace(/^0+/, ''); // Убираем ведущие нули и добавляем символ валюты
 }
 
 // Преобразование форматированной строки обратно в число
@@ -376,8 +417,8 @@ function renderSupplies(supplies) {
             <span class="supplier-added-time secondary-data" title="${addedTime}">${timeAgoStr}</span>
           </div>
         </td>
-        <td class="cost_cat" cost="${supply.price}" confirmed="true">
-          <span class="currency-text">${formatCurrency(supply.price)}</span>
+        <td class="cost_cat" cost="${supply.price_cash+supply.price_bank}" confirmed="true">
+          <span class="currency-text">${formatCurrency(supply.price_cash+supply.price_bank)}</span>
         </td>
         <td class="secondary-data" ${bonusClass}>
           ${supply.bonus > 0 ? '+' + supply.bonus : supply.bonus}
@@ -451,37 +492,6 @@ window.addEventListener("click", function(event) {
 });
 
 // Redirect to edit page
-function redirectTo(id) {
-  fetchSupplyDetails(id).then(supply => {
-    // Заполняем форму данными поставки
-    document.getElementById('editSupplyId').value = supply.id;
-    document.getElementById('editSupplierInput').value = supply.supplier;
-    document.getElementById('editPriceInput').value = formatCurrency(supply.price);
-    document.getElementById('editBonusInput').value = supply.bonus;
-    document.getElementById('editExchangeInput').value = supply.exchange;
-    document.getElementById('editDeliveryDate').value = supply.delivery_date;
-    document.getElementById('editCommentInput').value = supply.comment || '';
-    
-    // Проверяем дату и показываем/скрываем загрузку изображений
-    const today = new Date().toISOString().split('T')[0];
-    const imageSection = document.getElementById('editImageUploadSection');
-    imageSection.style.display = supply.delivery_date === today ? 'block' : 'none';
-    
-    // Загружаем изображения, если они есть
-    if (supply.images && supply.images.length > 0) {
-      renderEditImages(supply.images, supply.id);
-    } else {
-      document.getElementById('editImagePreviewContainer').innerHTML = '';
-    }
-    
-    // Показываем модальное окно
-    const modal = new bootstrap.Modal(document.getElementById('editSupplyModal'));
-    modal.show();
-  }).catch(error => {
-    console.error('Error fetching supply details:', error);
-    showToast(`Ошибка при загрузке данных поставки: ${error.message}`, 'danger');
-  });
-}
 
 // Функция для загрузки деталей поставки
 async function fetchSupplyDetails(id) {
@@ -551,54 +561,7 @@ async function deleteSupplyImage(imageId, supply_id) {
   }
 }
 
-// Обновление поставки
-async function updateSupply() {
-  const supplyId = document.getElementById('editSupplyId').value;
-  
-  try {
-    // 1. Обновляем основные данные поставки
-    const supplyData = {
-      supplier: document.getElementById('editSupplierInput').value,
-      price: parseCurrency(document.getElementById('editPriceInput').value),
-      bonus: parseCurrency(document.getElementById('editBonusInput').value),
-      exchange: parseCurrency(document.getElementById('editExchangeInput').value),
-      delivery_date: document.getElementById('editDeliveryDate').value,
-      comment: document.getElementById('editCommentInput').value
-    };
-    const formData = new FormData();
-    formData.append('supplier', supplyData.supplier)
-    formData.append('price', supplyData.price)
-    formData.append('bonus', supplyData.bonus)
-    formData.append('exchange', supplyData.exchange)
-    formData.append('comment', supplyData.comment)
-    formData.append('delivery_date', supplyData.delivery_date)
-    const files = document.getElementById('editSupplyImages').files;
-    if (files.length > 0) {
-      
-      for (let i = 0; i < files.length; i++) {
-        formData.append('images', files[i]);
-      }
-    }
-    const supplyResponse = await fetch(`/api/v1/supplies/${supplyId}/`, {
-      method: 'PUT',
-      headers: {
-        // 'Content-Type': 'application/json',
-        'X-CSRFToken': getCookie('csrftoken'),
-      },
-      body: formData
-    });
-    
-    if (!supplyResponse.ok) throw new Error('Failed to update supply');
-    
-    bootstrap.Modal.getInstance(document.getElementById('editSupplyModal')).hide();
-    showToast(`Данные о поставке ${supplyData.supplier} успешно изменены!`)
-    fetchSupplies();
-    
-  } catch (error) {
-    console.error('Error updating supply:', error);
-    showToast(`Ошибка при обновлении поставки: ${error}`, 'danger')
-  }
-}
+
 
 async function fetchSuppliers() {
   try {
@@ -635,14 +598,43 @@ async function initAddSupplyModal() {
     setTimeout(() => dropdown.classList.remove('show'), 200);
   });
   
-  // Остальная инициализация (дата, изображения и т.д.)
+  // Устанавливаем сегодняшнюю дату по умолчанию
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('deliveryDate').value = today;
+  
+  // Инициализируем тип оплаты (разблокирован, так как дата сегодняшняя)
+  const paymentTypeGroup = document.querySelector('.btn-group[role="group"]');
+  paymentTypeGroup.querySelectorAll('input').forEach(radio => {
+    radio.disabled = false;
+  });
+  
+  // Остальная инициализация
   checkDateForImageUpload();
   document.getElementById('deliveryDate').addEventListener('change', checkDateForImageUpload);
   document.getElementById('supplyImages').addEventListener('change', handleImageUpload);
   document.getElementById('saveSupplyBtn').addEventListener('click', saveSupply);
+  
+  // Инициализация масок ввода
+  document.querySelectorAll('.currency-mask').forEach(each => {
+    IMask(
+      each,
+      {
+        mask: 'num',
+        blocks: {
+          num: {
+            mask: Number,
+            thousandsSeparator: '.'
+          }
+        }
+      }
+    );
+  });
+  
+  // Форматируем начальные значения
+  document.getElementById('priceCashInput').value = '';
+  document.getElementById('priceBankInput').value = '';
 }
+
 
 function handleSupplierInput(e) {
   const input = e.target;
@@ -723,11 +715,14 @@ function checkDateForImageUpload() {
   const deliveryDate = document.getElementById('deliveryDate').value;
   const today = new Date().toISOString().split('T')[0];
   const imageUploadSection = document.getElementById('imageUploadSection');
-  
+  const priceBankSection = document.getElementById('priceBankInput')
   if (deliveryDate === today) {
     imageUploadSection.style.display = 'block';
+    
+    priceBankSection.setAttribute('readonly', false)
   } else {
     imageUploadSection.style.display = 'none';
+    priceBankSection.setAttribute('readonly', true)
     clearImagePreviews();
   }
 }
@@ -790,12 +785,13 @@ function clearImagePreviews() {
   document.getElementById('supplyImages').value = '';
 }
 
-// Update saveSupply function to handle images
 async function saveSupply() {
   const form = document.getElementById('addSupplyForm');
   const supplierInput = document.getElementById('supplierInput');
+  const deliveryDate = document.getElementById('deliveryDate').value;
+  const today = new Date().toISOString().split('T')[0];
   
-  // Проверяем, что выбран существующий поставщик
+  // Проверка поставщика
   const isValidSupplier = allSuppliers.some(
     supplier => supplier.name === supplierInput.value.trim()
   );
@@ -803,6 +799,7 @@ async function saveSupply() {
   if (!isValidSupplier) {
     supplierInput.classList.add('is-invalid');
     supplierInput.focus();
+    showToast('Пожалуйста, выберите поставщика из списка', 'warning');
     return;
   }
   
@@ -813,16 +810,22 @@ async function saveSupply() {
 
   const formData = new FormData();
   formData.append('supplier', supplierInput.value.trim());
-  formData.append('price', parseCurrency(document.getElementById('priceInput').value));
+  
+  // Для не сегодняшних дат - только наличные
+  if (deliveryDate !== today) {
+    formData.append('price_cash', parseCurrency(document.getElementById('priceCashInput').value));
+    formData.append('price_bank', '0');
+  } else {
+    formData.append('price_cash', parseCurrency(document.getElementById('priceCashInput').value));
+    formData.append('price_bank', parseCurrency(document.getElementById('priceBankInput').value));
+  }
+  
   formData.append('bonus', document.getElementById('bonusInput').value);
   formData.append('exchange', document.getElementById('exchangeInput').value);
-  formData.append('delivery_date', document.getElementById('deliveryDate').value);
+  formData.append('delivery_date', deliveryDate);
   formData.append('comment', document.getElementById('commentInput').value);
-  
-  // Add images if today's date
-  const deliveryDate = document.getElementById('deliveryDate').value;
-  const today = new Date().toISOString().split('T')[0];
-  
+
+  // Загрузка изображений только для сегодняшней даты
   if (deliveryDate === today) {
     const files = document.getElementById('supplyImages').files;
     for (let i = 0; i < files.length; i++) {
@@ -840,30 +843,152 @@ async function saveSupply() {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Ошибка от сервера:', errorText);
-      throw new Error('Network response was not ok');
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Ошибка сохранения');
     }
 
     const result = await response.json();
-    console.log('Supply created:', result);
-    showToast(`Поставка ${supplierInput.value.trim()} успешно создана`)
-    // Close modal and refresh data
+    showToast(`Поставка для ${supplierInput.value.trim()} успешно добавлена!`, 'success');
+    
+    // Закрываем модальное окно и обновляем данные
     bootstrap.Modal.getInstance(document.getElementById('addSupplyModal')).hide();
     fetchSupplies();
     
-    // Reset form
+    // Сбрасываем форму
     form.reset();
-    currentSuppliers = []
-    form.classList.remove('was-validated');
-    document.getElementById('deliveryDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('deliveryDate').value = today;
     clearImagePreviews();
     
   } catch (error) {
     console.error('Error saving supply:', error);
-    showToast(`Ошибка при создании поставки:`, error)
+    showToast(error.message || 'Ошибка при сохранении поставки', 'danger');
   }
 }
+
+// Обновленная функция редактирования поставки
+async function updateSupply() {
+  const supplyId = document.getElementById('editSupplyId').value;
+  const deliveryDate = document.getElementById('editDeliveryDate').value;
+  const today = new Date().toISOString().split('T')[0];
+  const isToday = deliveryDate === today;
+  
+  try {
+    const formData = new FormData();
+    formData.append('supplier', document.getElementById('editSupplierInput').value);
+    
+    // Для не сегодняшних дат - только наличные
+    if (!isToday) {
+      formData.append('price_cash', parseCurrency(document.getElementById('editPriceCashInput').value));
+      formData.append('price_bank', '0');
+    } else {
+      formData.append('price_cash', parseCurrency(document.getElementById('editPriceCashInput').value));
+      formData.append('price_bank', parseCurrency(document.getElementById('editPriceBankInput').value));
+    }
+    
+    formData.append('bonus', document.getElementById('editBonusInput').value);
+    formData.append('exchange', document.getElementById('editExchangeInput').value);
+    formData.append('delivery_date', deliveryDate);
+    formData.append('comment', document.getElementById('editCommentInput').value);
+
+    // Загрузка новых изображений только для сегодняшней даты
+    if (isToday) {
+      const files = document.getElementById('editSupplyImages').files;
+      for (let i = 0; i < files.length; i++) {
+        formData.append('images', files[i]);
+      }
+    }
+
+    const response = await fetch(`/api/v1/supplies/${supplyId}/`, {
+      method: 'PUT',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Ошибка обновления');
+    }
+
+    showToast('Поставка успешно обновлена!', 'success');
+    bootstrap.Modal.getInstance(document.getElementById('editSupplyModal')).hide();
+    fetchSupplies();
+    
+  } catch (error) {
+    console.error('Error updating supply:', error);
+    showToast(error.message || 'Ошибка при обновлении поставки', 'danger');
+  }
+}
+
+// Обновленная функция redirectTo (заполнение формы редактирования)
+function redirectTo(id) {
+  fetchSupplyDetails(id).then(supply => {
+    document.getElementById('editSupplyId').value = supply.id;
+    document.getElementById('editSupplierInput').value = supply.supplier;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const isToday = supply.delivery_date === today;
+    const paymentTypeGroup = document.querySelector('input[name="editPaymentType"]').closest('.btn-group');
+    
+    // Устанавливаем тип оплаты
+    if (isToday) {
+      if (supply.price_cash > 0 && supply.price_bank > 0) {
+        document.getElementById('editMixedPayment').checked = true;
+        document.getElementById('editCashAmountGroup').style.display = 'block';
+        document.getElementById('editBankAmountGroup').style.display = 'block';
+      } else if (supply.price_bank > 0) {
+        document.getElementById('editBankPayment').checked = true;
+        document.getElementById('editCashAmountGroup').style.display = 'none';
+        document.getElementById('editBankAmountGroup').style.display = 'block';
+      } else {
+        document.getElementById('editCashPayment').checked = true;
+        document.getElementById('editCashAmountGroup').style.display = 'block';
+        document.getElementById('editBankAmountGroup').style.display = 'none';
+      }
+      
+      // Разблокируем выбор типа оплаты
+      paymentTypeGroup.querySelectorAll('input').forEach(radio => {
+        radio.disabled = false;
+      });
+    } else {
+      // Блокируем выбор типа оплаты и устанавливаем наличные
+      document.getElementById('editCashPayment').checked = true;
+      document.getElementById('editCashAmountGroup').style.display = 'block';
+      document.getElementById('editBankAmountGroup').style.display = 'none';
+      
+      paymentTypeGroup.querySelectorAll('input').forEach(radio => {
+        if (radio.id !== 'editCashPayment') {
+          radio.disabled = true;
+        }
+      });
+    }
+    
+    document.getElementById('editPriceCashInput').value = formatCurrency(supply.price_cash);
+    document.getElementById('editPriceBankInput').value = formatCurrency(supply.price_bank);
+    document.getElementById('editBonusInput').value = supply.bonus;
+    document.getElementById('editExchangeInput').value = supply.exchange;
+    document.getElementById('editDeliveryDate').value = supply.delivery_date;
+    document.getElementById('editCommentInput').value = supply.comment || '';
+    
+    // Показываем/скрываем загрузку изображений
+    document.getElementById('editImageUploadSection').style.display = 
+      isToday ? 'block' : 'none';
+    
+    // Загружаем изображения
+    renderEditImages(supply.images || [], supply.id);
+    
+    // Показываем модальное окно
+    const modal = new bootstrap.Modal(document.getElementById('editSupplyModal'));
+    modal.show();
+    
+  }).catch(error => {
+    console.error('Error fetching supply details:', error);
+    showToast('Ошибка при загрузке данных поставки', 'danger');
+  });
+}
+
+
 
 // Helper function to get CSRF token
 function getCookie(name) {
@@ -885,39 +1010,69 @@ function getCookie(name) {
 document.addEventListener('DOMContentLoaded', function() {
   initAddSupplyModal();
   
-  document.querySelectorAll('.currency-mask').forEach(each => {
-    IMask(
-        each,
-        {
-            mask: '₸ num',
-            blocks: {
-                num: {
-                    mask: Number,
-                    thousandsSeparator: '.'
-                }
-            }
-        }
-    );
-  })
-  
-  // Форматируем начальные значения
-  document.getElementById('priceInput').value = '';
   document.getElementById('updateSupplyBtn').addEventListener('click', updateSupply);
   document.getElementById('deleteSupplyBtn').addEventListener('click', deleteSupply);
-  
-  // Инициализация полей ввода в модальном окне редактирования
-  // setupCurrencyInput('editPriceInput');
   
   // Обработчик загрузки изображений в модальном окне редактирования
   document.getElementById('editSupplyImages').addEventListener('change', function(e) {
     handleImageUpload(e, 'editImagePreviewContainer');
   });
   
-  // Проверка даты при изменении
+  // Проверка даты при изменении в модальном окне редактирования
   document.getElementById('editDeliveryDate').addEventListener('change', function() {
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('editImageUploadSection').style.display = 
-      this.value === today ? 'block' : 'none';
+    const selectedDate = this.value;
+    const paymentTypeGroup = document.querySelector('input[name="editPaymentType"]').closest('.btn-group');
+    
+    if (selectedDate === today) {
+      // Разблокируем выбор типа оплаты
+      paymentTypeGroup.querySelectorAll('input').forEach(radio => {
+        radio.disabled = false;
+      });
+      document.getElementById('editImageUploadSection').style.display = 'block';
+    } else {
+      // Блокируем выбор типа оплаты и устанавливаем наличные
+      document.getElementById('editCashPayment').checked = true;
+      document.getElementById('editCashAmountGroup').style.display = 'block';
+      document.getElementById('editBankAmountGroup').style.display = 'none';
+      document.getElementById('editPriceBankInput').value = '0';
+      
+      paymentTypeGroup.querySelectorAll('input').forEach(radio => {
+        if (radio.id !== 'editCashPayment') {
+          radio.disabled = true;
+        }
+      });
+      document.getElementById('editImageUploadSection').style.display = 'none';
+    }
   });
 });
 
+
+document.getElementById('deliveryDate').addEventListener('change', function() {
+  const today = new Date().toISOString().split('T')[0];
+  const selectedDate = this.value;
+  // const paymentTypeGroup = document.querySelector('.btn-group[name="paymentType"]');
+   const paymentTypeGroup = document.querySelector('.btn-group[role="group"]');
+  console.log(paymentTypeGroup)
+  if (selectedDate === today) {
+    // Разблокируем выбор типа оплаты
+    paymentTypeGroup.querySelectorAll('input').forEach(radio => {
+      radio.disabled = false;
+    });
+  } else {
+    // Блокируем выбор типа оплаты и устанавливаем наличные
+    document.getElementById('cashPayment').checked = true;
+    document.getElementById('cashAmountGroup').style.display = 'block';
+    document.getElementById('bankAmountGroup').style.display = 'none';
+    document.getElementById('priceBankInput').value = '0';
+    
+    paymentTypeGroup.querySelectorAll('input').forEach(radio => {
+      if (radio.id !== 'cashPayment') {
+        radio.disabled = true;
+      }
+    });
+  }
+  
+  // Проверяем нужно ли показывать загрузку изображений
+  checkDateForImageUpload();
+});

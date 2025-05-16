@@ -1,5 +1,6 @@
 from app.serializers import ClientSerializer, ClientDebtSerializer
 from app.models import ClientDebt, Client   
+from rest_framework.serializers import ValidationError
 class ClientService:
     def _delete_all_debts(self, client):
         client.debts.all().delete()
@@ -18,6 +19,8 @@ class ClientService:
         self._create_debt(client, debt_value)
 
         client.debt += debt_value
+        if debt_value == 0:
+            raise ValidationError("Сумма не должна быть равна нулю")
         if client.debt == 0:
             self._delete_all_debts(client)
         client.save()

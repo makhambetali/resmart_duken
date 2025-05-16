@@ -56,6 +56,7 @@ class ClientDebtSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClientDebt
         exclude = ['client']
+    
 
 class CashFlowSerializer(serializers.ModelSerializer):
     class Meta:

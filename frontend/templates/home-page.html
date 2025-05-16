@@ -52,10 +52,9 @@
     <button class="button-nav button-up-page bi bi-arrow-up" onclick="window.scrollTo(0,0)"></button>
     <button class="button-nav button-down-page bi bi-arrow-down" onclick="window.scrollTo(0, document.body.scrollHeight)"></button>
   
-   <!-- Modal for Add Supply -->
-<!-- Modal for Add Supply -->
+<!-- Модальное окно добавления поставки -->
 <div class="modal fade" id="addSupplyModal" tabindex="-1" aria-labelledby="addSupplyModalLabel" aria-hidden="true">
-  <div class="modal-dialog ">
+  <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="addSupplyModalLabel">Добавить поставку</h5>
@@ -63,56 +62,83 @@
       </div>
       <div class="modal-body">
         <form id="addSupplyForm">
+          <!-- Поставщик -->
           <div class="mb-3 supplier-input-container">
             <label for="supplierInput" class="form-label">Поставщик</label>
             <div class="supplier-input-wrapper">
-              <input 
-                type="text" 
-                class="form-control supplier-input" 
-                id="supplierInput" 
-                placeholder="Начните вводить имя поставщика"
-                autocomplete="off"
-                required
-              >
-              <div class="supplier-dropdown">
-                <!-- Варианты будут появляться здесь -->
-              </div>
+              <input type="text" class="form-control supplier-input" id="supplierInput" 
+                     placeholder="Начните вводить имя поставщика" autocomplete="off" required>
+              <div class="supplier-dropdown"></div>
             </div>
             <div class="invalid-feedback">Пожалуйста, выберите поставщика из списка</div>
           </div>
-        <div class="mb-3 input-group-currency">
-          <label for="priceInput" class="form-label">Сумма</label>
-          <input type="text" class="form-control  currency-mask" id="priceInput" required maxlength="10">
-         
-        </div>
+          
+          <!-- Тип оплаты -->
+          <div class="mb-3">
+            <label class="form-label">Тип оплаты</label>
+            <div class="btn-group w-100" role="group">
+              <input type="radio" class="btn-check" name="paymentType" id="cashPayment" autocomplete="off" checked>
+              <label class="btn btn-outline-primary" for="cashPayment">Наличные</label>
+              
+              <input type="radio" class="btn-check" name="paymentType" id="bankPayment" autocomplete="off">
+              <label class="btn btn-outline-primary" for="bankPayment">Банковская карта</label>
+              
+              <input type="radio" class="btn-check" name="paymentType" id="mixedPayment" autocomplete="off">
+              <label class="btn btn-outline-primary" for="mixedPayment">Смешанная</label>
+            </div>
+          </div>
+          
+          <!-- Суммы (показываются в зависимости от выбранного типа) -->
+          <div class="row mb-3" id="cashAmountGroup">
+            <div class="col-12">
+              <label for="priceCashInput" class="form-label">Сумма (наличные)</label>
+              <div class="input-group">
+                <span class="input-group-text">₸</span>
+                <input type="text" class="form-control currency-mask" id="priceCashInput">
+              </div>
+            </div>
+          </div>
+          
+          <div class="row mb-3" id="bankAmountGroup" style="display: none;">
+            <div class="col-12">
+              <label for="priceBankInput" class="form-label">Сумма (банковская карта)</label>
+              <div class="input-group">
+                <span class="input-group-text">₸</span>
+                <input type="text" class="form-control currency-mask" id="priceBankInput" >
+              </div>
+            </div>
+          </div>
+          
+          <!-- Бонусы и обмен -->
           <div class="row mb-3">
             <div class="col-md-6">
               <label for="bonusInput" class="form-label">Бонус</label>
-              <input type="number" class="form-control" id="bonusInput" value="0">
+              <input type="number" class="form-control" id="bonusInput" value="0" min="0">
             </div>
             <div class="col-md-6">
               <label for="exchangeInput" class="form-label">Обмен</label>
-              <input type="number" class="form-control" id="exchangeInput" value="0">
+              <input type="number" class="form-control" id="exchangeInput" value="0" min="0">
             </div>
           </div>
+          
+          <!-- Дата и комментарий -->
           <div class="mb-3">
             <label for="deliveryDate" class="form-label">Дата поставки</label>
             <input type="date" class="form-control" id="deliveryDate" required>
           </div>
+          
           <div class="mb-3">
             <label for="commentInput" class="form-label">Комментарий</label>
-            <textarea class="form-control" id="commentInput" rows="3"></textarea>
+            <textarea class="form-control" id="commentInput" rows="2"></textarea>
           </div>
           
-          <!-- Image Upload Section (only visible for today's date) -->
+          <!-- Загрузка изображений -->
           <div class="mb-3" id="imageUploadSection" style="display: none;">
             <label class="form-label">Документы поставки</label>
             <div class="border rounded p-3">
-              <div class="mb-3">
-                <input type="file" class="form-control" id="supplyImages" accept="image/png, image/jpeg, image/jpg" multiple>
-                <div class="form-text">Можно загрузить PNG, JPG, JPEG (макс. 5 МБ)</div>
-              </div>
-              <div class="image-preview-container" id="imagePreviewContainer"></div>
+              <input type="file" class="form-control" id="supplyImages" accept="image/*" multiple>
+              <div class="form-text">Можно загрузить изображения (макс. 5 МБ)</div>
+              <div class="image-preview-container mt-2" id="imagePreviewContainer"></div>
             </div>
           </div>
         </form>
@@ -124,7 +150,8 @@
     </div>
   </div>
 </div>
-<!-- Добавить после существующего модального окна -->
+
+<!-- Модальное окно редактирования поставки -->
 <div class="modal fade" id="editSupplyModal" tabindex="-1" aria-labelledby="editSupplyModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -135,40 +162,77 @@
       <div class="modal-body">
         <form id="editSupplyForm">
           <input type="hidden" id="editSupplyId">
+          
+          <!-- Поставщик (только для чтения) -->
           <div class="mb-3">
-            <label for="editSupplierSelect" class="form-label">Поставщик</label>
+            <label for="editSupplierInput" class="form-label">Поставщик</label>
             <input type="text" class="form-control" id="editSupplierInput" readonly>
           </div>
+          
+          <!-- Тип оплаты -->
           <div class="mb-3">
-            <label for="editPriceInput" class="form-label">Сумма</label>
-            <input type="text" class="form-control currency-mask" id="editPriceInput" required>
+            <label class="form-label">Тип оплаты</label>
+            <div class="btn-group w-100" role="group">
+              <input type="radio" class="btn-check" name="editPaymentType" id="editCashPayment" autocomplete="off">
+              <label class="btn btn-outline-primary" for="editCashPayment">Наличные</label>
+              
+              <input type="radio" class="btn-check" name="editPaymentType" id="editBankPayment" autocomplete="off">
+              <label class="btn btn-outline-primary" for="editBankPayment">Банковская карта</label>
+              
+              <input type="radio" class="btn-check" name="editPaymentType" id="editMixedPayment" autocomplete="off">
+              <label class="btn btn-outline-primary" for="editMixedPayment">Смешанная</label>
+            </div>
           </div>
+          
+          <!-- Суммы -->
+          <div class="row mb-3" id="editCashAmountGroup">
+            <div class="col-12">
+              <label for="editPriceCashInput" class="form-label">Сумма (наличные)</label>
+              <div class="input-group">
+                <span class="input-group-text">₸</span>
+                <input type="text" class="form-control currency-mask" id="editPriceCashInput">
+              </div>
+            </div>
+          </div>
+          
+          <div class="row mb-3" id="editBankAmountGroup" style="display: none;">
+            <div class="col-12">
+              <label for="editPriceBankInput" class="form-label">Сумма (банковская карта)</label>
+              <div class="input-group">
+                <span class="input-group-text">₸</span>
+                <input type="text" class="form-control currency-mask" id="editPriceBankInput">
+              </div>
+            </div>
+          </div>
+          
+          <!-- Остальные поля -->
           <div class="row mb-3">
             <div class="col-md-6">
               <label for="editBonusInput" class="form-label">Бонус</label>
-              <input type="number" max="999" min="0" class="form-control " id="editBonusInput" value="0">
+              <input type="number" class="form-control" id="editBonusInput" value="0" min="0">
             </div>
             <div class="col-md-6">
               <label for="editExchangeInput" class="form-label">Обмен</label>
-              <input type="number" max="999" min="0" class="form-control" id="editExchangeInput" value="0">
+              <input type="number" class="form-control" id="editExchangeInput" value="0" min="0">
             </div>
           </div>
+          
           <div class="mb-3">
             <label for="editDeliveryDate" class="form-label">Дата поставки</label>
             <input type="date" class="form-control" id="editDeliveryDate" required>
           </div>
+          
           <div class="mb-3">
             <label for="editCommentInput" class="form-label">Комментарий</label>
-            <textarea class="form-control" id="editCommentInput" rows="3"></textarea>
+            <textarea class="form-control" id="editCommentInput" rows="2"></textarea>
           </div>
+          
           <div class="mb-3" id="editImageUploadSection">
             <label class="form-label">Документы поставки</label>
             <div class="border rounded p-3">
-              <div class="mb-3">
-                <input type="file" class="form-control" id="editSupplyImages" accept="image/png, image/jpeg, image/jpg" multiple>
-                <div class="form-text">Можно загрузить PNG, JPG, JPEG (макс. 5 МБ)</div>
-              </div>
-              <div class="image-preview-container" id="editImagePreviewContainer"></div>
+              <input type="file" class="form-control" id="editSupplyImages" accept="image/*" multiple>
+              <div class="form-text">Можно загрузить изображения (макс. 5 МБ)</div>
+              <div class="image-preview-container mt-2" id="editImagePreviewContainer"></div>
             </div>
           </div>
         </form>
