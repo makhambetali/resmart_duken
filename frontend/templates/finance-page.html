@@ -6,19 +6,21 @@
     <h2>Управление финансами</h2>
     
     <!-- Фильтр по дате -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <input type="date" id="dateFilter" class="form-control" value="{{ today|date:'Y-m-d' }}">
-        </div>
-        <div class="col-md-2">
-            <button id="filterBtn" class="btn btn-primary">Фильтровать</button>
-        </div>
-        <div class="col-md-6 text-end">
-            <button id="addCashFlowBtn" class="btn btn-success">
-                <i class="bi bi-plus-circle"></i> Добавить операцию
-            </button>
-        </div>
+  <div class="row mb-4 flex-wrap">
+    <div class="col-12 col-md-4 d-flex align-items-center mb-2 mb-md-0">
+        <input type="date" id="dateFilter" class="form-control me-2 w-100" value="{{ today|date:'Y-m-d' }}">
+        <button id="filterBtn" class="btn btn-primary ms-2 d-md-none">Фильтр</button> <!-- Кнопка только для мобилок -->
     </div>
+    <div class="col-12 col-md-2 d-none d-md-block">
+        <button id="filterBtn" class="btn btn-primary w-100">Фильтровать</button>
+    </div>
+    <div class="col-12 col-md-6 text-end">
+        <button id="addCashFlowBtn" class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> Добавить операцию
+        </button>
+    </div>
+</div>
+
 
     <!-- Статистика -->
     <div class="card mb-4">
@@ -103,7 +105,7 @@
             <!-- Таблица поставок -->
             <div class="table-responsive">
                 <table class="table table-hover" id="supplyTable">
-                    <thead>
+                    <thead id="supplyHead">
                         <tr>
                             <th>Поставщик</th>
                             <th>Наличные</th>
@@ -148,6 +150,9 @@
                 </form>
             </div>
             <div class="modal-footer">
+                  <button type="button" class="btn btn-danger me-auto" id="deleteCashFlowBtn">
+          <i class="fas fa-trash-alt me-1"></i>Удалить
+        </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                 <button type="button" class="btn btn-primary" id="saveCashFlowBtn">Сохранить</button>
             </div>

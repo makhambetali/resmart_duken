@@ -406,9 +406,9 @@ function renderSupplies(supplies) {
         <tr>
           <th>Поставщик</th>
           <th>Сумма</th>
-          <th class="secondary-data">Бонус</th>
-          <th class="secondary-data">Обмен</th>
-          <th class="secondary-data">Комментарии</th>
+          <th class="secondary-data hide-on-mobile">Бонус</th>
+          <th class="secondary-data hide-on-mobile">Обмен</th>
+          <th class="secondary-data hide-on-mobile">Комментарии</th>
           ${isToday(date) ? `<th class="secondary-data">Статус</th>` : ``}
         </tr>
       </thead>
@@ -438,19 +438,19 @@ function renderSupplies(supplies) {
         <td class="cost_cat" cost="${supply.price_cash+supply.price_bank}" confirmed="${supply.is_confirmed}">
           <span class="currency-text">${formatCurrency(supply.price_cash+supply.price_bank)}</span>
         </td>
-        <td class="secondary-data" ${bonusClass}>
+        <td class="secondary-data hide-on-mobile" ${bonusClass}>
           ${supply.bonus > 0 ? '+' + supply.bonus : supply.bonus}
         </td>
-        <td class="secondary-data" ${exchangeClass}>
+        <td class="secondary-data hide-on-mobile" ${exchangeClass}>
           ${supply.exchange > 0 ? '-' + supply.exchange : supply.exchange}
         </td>
-        <td class="secondary-data" title="${supply.comment || ''}">
+        <td class="secondary-data hide-on-mobile" title="${supply.comment || ''}">
           ${supply.comment ? supply.comment.substring(0, 50) + (supply.comment.length > 50 ? '...' : '') : ''}
         </td>
         
           ${isTodaySupply ? 
             `<td class="secondary-data"><span class="badge ${supply.is_confirmed ? 'bg-success' : 'bg-warning text-dark'}">
-              ${supply.is_confirmed ? 'Подтверждено' : 'Ожидает'}
+              ${supply.is_confirmed ? `Подтверждено в ${supply.arrival_date.split('T')[1].split('.')[0]}` : 'Ожидает'}
             </span></td>` : ''}
         
       `;

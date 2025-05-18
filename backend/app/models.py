@@ -1,9 +1,9 @@
 from django.db import models
-
+from django.utils import timezone
 class Supplier(models.Model):
     name = models.CharField(max_length=30, db_index=True, unique=True)
     description = models.TextField(blank=True, null=True)
-    last_accessed = models.DateTimeField(auto_now=True)
+    last_accessed = models.DateTimeField(blank=True, null=True)
     date_added = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -18,10 +18,22 @@ class Supply(models.Model):
     delivery_date = models.DateField(db_index=True)
     comment = models.TextField(blank=True, null=True)
     is_confirmed = models.BooleanField(default=False)
+    arrival_date = models.DateTimeField(null=True, blank=True)
     date_added = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.supplier}: {self.price_bank + self.price_cash}"
+    
+    def save(self, *args, **kwargs):
+        if self.is_confirmed and not self.arrival_date:
+            self.arrival_date = timezone.now()
+        elif not self.is_confirmed:
+            self.arrival_date = None
+
+        if not self.supplier.last_accessed:
+            self.supplier.last_accessed = timezone.now()
+            self.supplier.save()
+        super().save(*args, **kwargs)
     
 class SupplyImage(models.Model):
     supply = models.ForeignKey(Supply, on_delete=models.CASCADE, related_name='images')

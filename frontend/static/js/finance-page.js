@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const cashFlowModal = new bootstrap.Modal('#cashFlowModal');
     const cashFlowForm = document.getElementById('cashFlowForm');
     const saveCashFlowBtn = document.getElementById('saveCashFlowBtn');
+    const deleteCashFlowBtn = document.getElementById('deleteCashFlowBtn')
     const incomeTotal = document.getElementById('incomeTotal');
     const expenseTotal = document.getElementById('expenseTotal');
     const balanceTotal = document.getElementById('balanceTotal');
@@ -58,16 +59,23 @@ document.addEventListener('DOMContentLoaded', function() {
 // Функция для отображения поставок в таблице
 function renderSupplies(supplies) {
     supplyBody.innerHTML = '';
-    
+    document.querySelector('#supplyHead').innerHTML = `<tr>
+                            <th>Поставщик</th>
+                            <th>Наличные</th>
+                            <th>Банковская карта</th>
+                            <th class="hide-on-mobile">Бонус</th>
+                            <th class="hide-on-mobile">Обмен</th>
+                            <th class="hide-on-mobile">Дата</th>
+                        </tr>`
     supplies.forEach(supply => {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${supply.supplier}</td>
             <td>${supply.price_cash.toLocaleString()} ₸</td>
             <td>${supply.price_bank.toLocaleString()} ₸</td>
-            <td>${supply.bonus > 0 ? '+' + supply.bonus : supply.bonus}</td>
-            <td>${supply.exchange > 0 ? '-' + supply.exchange : supply.exchange}</td>
-            <td>${new Date(supply.delivery_date).toLocaleDateString()}</td>
+            <td class="hide-on-mobile">${supply.bonus > 0 ? '+' + supply.bonus : supply.bonus}</td>
+            <td class="hide-on-mobile">${supply.exchange > 0 ? '-' + supply.exchange : supply.exchange}</td>
+            <td class="hide-on-mobile">${new Date(supply.delivery_date).toLocaleDateString()}</td>
         `;
         supplyBody.appendChild(row);
     });
@@ -124,7 +132,6 @@ function calculateSupplyTotals(supplies) {
         <th>Сумма</th>
         <th>Описание</th>
         <th>Дата/время</th>
-        ${isTodaySelected ? '<th>Действия</th>' : ''}
     `;
     thead.appendChild(headRow);
     table.insertBefore(thead, table.firstChild);
@@ -143,18 +150,17 @@ function calculateSupplyTotals(supplies) {
             <td class="${amountClass} fw-bold">${amountSign}${cashFlow.amount.toLocaleString()} ₸</td>
             <td>${cashFlow.description || '-'}</td>
             <td>${new Date(cashFlow.date_added).toLocaleString()}</td>
-            ${isTodaySelected ? `
-                <td>
-                    <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${cashFlow.id}">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${cashFlow.id}">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            ` : ''}
         `;
-
+       
+        if(isTodaySelected){
+            row.style.cursor = 'pointer'
+            row.addEventListener('click', () => {
+            editCashFlow(cashFlow.id)
+        })
+        }
+        else{
+            row.style.cursor = 'not-allowed'
+        }
         cashFlowBody.appendChild(row);
     });
 
@@ -169,8 +175,12 @@ function calculateSupplyTotals(supplies) {
         });
     }
 }
-
-
+    deleteCashFlowBtn.addEventListener('click', () => {
+        deleteCashFlow(currentCashFlowId)
+        cashFlowForm.reset()
+        cashFlowModal.hide()
+    })
+    
     // Расчет итогов
     function calculateTotals(cashFlows) {
         let income = 0;
@@ -192,6 +202,7 @@ function calculateSupplyTotals(supplies) {
     // Добавление новой операции
     function addCashFlow() {
         currentCashFlowId = null;
+        deleteCashFlowBtn.style.display = 'none'
         document.getElementById('modalTitle').textContent = 'Добавить операцию';
         cashFlowForm.reset();
         cashFlowModal.show();
@@ -200,6 +211,7 @@ function calculateSupplyTotals(supplies) {
     // Редактирование операции
     function editCashFlow(id) {
         currentCashFlowId = id;
+        deleteCashFlowBtn.style.display = 'block'
         document.getElementById('modalTitle').textContent = 'Редактировать операцию';
         
         fetch(`${apiUrl}${id}/`)

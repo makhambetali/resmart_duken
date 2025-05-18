@@ -166,7 +166,7 @@
   background-color: #f1f1f1;
 }
 
-/* Адаптивные стили */
+/* Адаптивные стили
 @media (max-width: 768px) {
   .table-responsive {
     border: 0;
@@ -218,5 +218,211 @@
   .button-nav.button-down-page {
     bottom: 20px;
     right: 20px;
+  }
+} */
+ @media (max-width: 768px) {
+  .table, .table thead, .table tbody, .table th, .table td, .table tr { 
+    display: block; 
+  }
+  
+  .table thead tr { 
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+  
+  .table tr {
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+  }
+  
+  .table td { 
+    border: none;
+    border-bottom: 1px solid #eee; 
+    position: relative;
+    padding-left: 50% !important;
+  }
+  
+  .table td:before { 
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 45%; 
+    padding-right: 10px; 
+    white-space: nowrap;
+    font-weight: bold;
+  }
+  
+  .table td:nth-of-type(1):before { content: "Название"; }
+  .table td:nth-of-type(2):before { content: "Описание"; }
+  .table td:nth-of-type(3):before { content: "Дата добавления"; }
+  .table td:nth-of-type(4):before { content: "Последнее обращение"; }
+}
+/* Мобильная адаптация (до 768px) */
+@media (max-width: 768px) {
+  /* Контейнер поиска - делаем вертикальным */
+  .input-group {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Поле поиска - на всю ширину */
+  #searchInput {
+    width: 100% !important;
+    height: 48px; /* Увеличиваем высоту для удобного тапа */
+    font-size: 16px; /* Увеличиваем шрифт */
+    padding: 12px 15px;
+    border-radius: 8px !important;
+  }
+
+  /* Кнопки поиска и сброса - на всю ширину */
+  #searchBtn, #resetSearchBtn {
+    width: 100%;
+    height: 48px;
+    font-size: 16px;
+    border-radius: 8px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Иконки в кнопках */
+  #searchBtn i, #resetSearchBtn i {
+    margin-right: 8px;
+  }
+
+  /* Кнопка добавления поставщика */
+  #addSupplierBtn {
+    width: 100%;
+    height: 48px;
+    font-size: 16px;
+    margin-top: 12px;
+    border-radius: 8px;
+    position: fixed;
+    bottom: 20px;
+    left: 15px;
+    right: 15px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Плавающая кнопка - делаем больше */
+  .floating-action-button {
+    width: 60px;
+    height: 60px;
+    bottom: 90px;
+    right: 20px;
+    font-size: 24px;
+  }
+
+  /* Кнопки навигации вверх/вниз */
+  .button-nav {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+
+  .button-nav.button-up-page {
+    bottom: 160px;
+    right: 20px;
+  }
+
+  .button-nav.button-down-page {
+    bottom: 90px;
+    right: 20px;
+  }
+
+  /* Модальное окно - занимает весь экран */
+  .modal-dialog {
+    margin: 0;
+    max-width: 100%;
+    min-height: 100vh;
+  }
+
+  .modal-content {
+    border-radius: 0;
+    min-height: 100vh;
+  }
+
+  /* Кнопки в модальном окне */
+  .modal-footer .btn {
+    height: 50px;
+    font-size: 16px;
+    flex: 1;
+  }
+
+  /* Убираем тени на мобильных для экономии ресурсов */
+  .btn, .modal-content, .floating-action-button {
+    box-shadow: none !important;
+  }
+}
+
+/* Дополнительные улучшения для очень маленьких экранов */
+@media (max-width: 576px) {
+  /* Еще больше увеличиваем элементы ввода */
+  #searchInput, #searchBtn, #resetSearchBtn, #addSupplierBtn {
+    height: 52px;
+  }
+
+  /* Увеличиваем отступы для кнопки добавления */
+  #addSupplierBtn {
+    bottom: 25px;
+    left: 10px;
+    right: 10px;
+  }
+
+  /* Увеличиваем плавающие кнопки */
+  .floating-action-button {
+    width: 64px;
+    height: 64px;
+    bottom: 100px;
+  }
+
+  .button-nav {
+    width: 54px;
+    height: 54px;
+  }
+
+  .button-nav.button-up-page {
+    bottom: 180px;
+  }
+
+  .button-nav.button-down-page {
+    bottom: 110px;
+  }
+}
+
+/* Оптимизация для ландшафтного режима */
+@media (max-width: 768px) and (orientation: landscape) {
+  /* Делаем поисковую строку компактнее */
+  .input-group {
+    flex-direction: row;
+    flex-wrap: nowrap;
+  }
+
+  #searchInput {
+    width: 60% !important;
+  }
+
+  #searchBtn, #resetSearchBtn {
+    width: 20%;
+  }
+
+  /* Поднимаем кнопку добавления выше */
+  #addSupplierBtn {
+    bottom: 15px;
+  }
+
+  /* Корректируем положение плавающих кнопок */
+  .floating-action-button {
+    bottom: 80px;
+  }
+
+  .button-nav.button-up-page {
+    bottom: 140px;
+  }
+
+  .button-nav.button-down-page {
+    bottom: 80px;
   }
 }
