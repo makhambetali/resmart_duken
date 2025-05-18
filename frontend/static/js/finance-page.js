@@ -16,7 +16,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const supplyBankTotal = document.getElementById('supplyBankTotal');
     const supplyTotal = document.getElementById('supplyTotal');
     const supplyApiUrl = '/api/v1/supplies/get_by_date/';
-
+    function isToday(dateStr) {
+        const today = new Date().toISOString().split('T')[0];
+        return dateStr === today;
+    }
+    dateFilter.value = new Date().toISOString().split('T')[0]
     let currentCashFlowId = null;
     const apiUrl = '/api/v1/cashflows/';
     function formatCurrency(value) {
@@ -108,17 +112,38 @@ function calculateSupplyTotals(supplies) {
 
     // Отображение операций в таблице
     function renderCashFlows(cashFlows) {
-        cashFlowBody.innerHTML = '';
-        
-        cashFlows.forEach(cashFlow => {
-            const row = document.createElement('tr');
-            const amountClass = cashFlow.amount >= 0 ? 'text-success' : 'text-danger';
-            const amountSign = cashFlow.amount >= 0 ? '+' : '';
-            
-            row.innerHTML = `
-                <td class="${amountClass} fw-bold">${amountSign}${cashFlow.amount.toLocaleString()} ₸</td>
-                <td>${cashFlow.description || '-'}</td>
-                <td>${new Date(cashFlow.date_added).toLocaleString()}</td>
+    const isTodaySelected = isToday(dateFilter.value);
+    const table = document.getElementById('cashFlowTable');
+    const oldThead = table.querySelector('thead');
+    if (oldThead) oldThead.remove(); // Удаляем старый thead, если он есть
+
+    // Создаём новый thead
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    headRow.innerHTML = `
+        <th>Сумма</th>
+        <th>Описание</th>
+        <th>Дата/время</th>
+        ${isTodaySelected ? '<th>Действия</th>' : ''}
+    `;
+    thead.appendChild(headRow);
+    table.insertBefore(thead, table.firstChild);
+
+    // Очищаем тело таблицы
+    const cashFlowBody = document.getElementById('cashFlowBody');
+    cashFlowBody.innerHTML = '';
+
+    // Добавляем строки
+    cashFlows.forEach(cashFlow => {
+        const row = document.createElement('tr');
+        const amountClass = cashFlow.amount >= 0 ? 'text-success' : 'text-danger';
+        const amountSign = cashFlow.amount >= 0 ? '+' : '';
+
+        row.innerHTML = `
+            <td class="${amountClass} fw-bold">${amountSign}${cashFlow.amount.toLocaleString()} ₸</td>
+            <td>${cashFlow.description || '-'}</td>
+            <td>${new Date(cashFlow.date_added).toLocaleString()}</td>
+            ${isTodaySelected ? `
                 <td>
                     <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${cashFlow.id}">
                         <i class="bi bi-pencil"></i>
@@ -127,12 +152,14 @@ function calculateSupplyTotals(supplies) {
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>
-            `;
-            
-            cashFlowBody.appendChild(row);
-        });
+            ` : ''}
+        `;
 
-        // Добавляем обработчики событий для кнопок
+        cashFlowBody.appendChild(row);
+    });
+
+    // Добавляем обработчики событий только если isToday
+    if (isTodaySelected) {
         document.querySelectorAll('.edit-btn').forEach(btn => {
             btn.addEventListener('click', () => editCashFlow(btn.dataset.id));
         });
@@ -141,6 +168,8 @@ function calculateSupplyTotals(supplies) {
             btn.addEventListener('click', () => deleteCashFlow(btn.dataset.id));
         });
     }
+}
+
 
     // Расчет итогов
     function calculateTotals(cashFlows) {
@@ -220,7 +249,7 @@ function calculateSupplyTotals(supplies) {
         .then(data => {
             showToast('Операция успешно сохранена', 'success');
             cashFlowModal.hide();
-            loadCashFlows(dateFilter.value);
+            loadCashFlows(date=dateFilter.value);
         })
         .catch(error => {
             console.error('Error:', error);
@@ -245,7 +274,7 @@ function calculateSupplyTotals(supplies) {
         .then(response => {
             if (!response.ok) throw new Error('Network response was not ok');
             showToast('Операция удалена', 'success');
-            loadCashFlows(dateFilter.value);
+            loadCashFlows();
         })
         .catch(error => {
             console.error('Error:', error);

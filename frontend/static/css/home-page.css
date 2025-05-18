@@ -407,7 +407,7 @@ textarea:focus-visible {
   justify-content: center;
 }
 
-/* Адаптивные стили */
+/* Адаптивные стили
 @media (max-width: 768px) {
   .btn-group .btn {
     font-size: 0.8rem;
@@ -417,7 +417,7 @@ textarea:focus-visible {
   .modal-dialog {
     margin: 0.5rem;
   }
-}
+} */
 
 /* Анимации */
 .modal.fade .modal-dialog {

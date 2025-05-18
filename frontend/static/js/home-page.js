@@ -11,14 +11,20 @@ document.querySelectorAll('input[name="paymentType"]').forEach(radio => {
     if (this.id === 'cashPayment') {
       cashGroup.style.display = 'block';
       bankGroup.style.display = 'none';
-      document.getElementById('priceBankInput').value = '0';
+      document.getElementById('priceCashInput').value = document.getElementById('priceBankInput').value;
+      document.getElementById('priceBankInput').value = ''
     } else if (this.id === 'bankPayment') {
       cashGroup.style.display = 'none';
       bankGroup.style.display = 'block';
-      document.getElementById('priceCashInput').value = '0';
+      document.getElementById('priceBankInput').value = document.getElementById('priceCashInput').value;
+      document.getElementById('priceCashInput').value = ''
     } else {
       cashGroup.style.display = 'block';
       bankGroup.style.display = 'block';
+      // document.getElementById('priceCashInput').value = document.getElementById('priceBankInput').value
+      // document.getElementById('priceBankInput').value = document.getElementById('priceCashInput').value;
+      document.getElementById('priceBankInput').value = ''
+      document.getElementById('priceCashInput').value = ''
     }
   });
 });
@@ -32,11 +38,13 @@ document.querySelectorAll('input[name="editPaymentType"]').forEach(radio => {
     if (this.id === 'editCashPayment') {
       cashGroup.style.display = 'block';
       bankGroup.style.display = 'none';
-      document.getElementById('editPriceBankInput').value = '0';
+      document.getElementById('editPriceCashInput').value = document.getElementById('editPriceBankInput').value;
+      document.getElementById('editPriceBankInput').value = '';
     } else if (this.id === 'editBankPayment') {
       cashGroup.style.display = 'none';
       bankGroup.style.display = 'block';
-      document.getElementById('editPriceCashInput').value = '0';
+      document.getElementById('editPriceBankInput').value = document.getElementById('editPriceCashInput').value;
+      document.getElementById('editPriceCashInput').value = '';
     } else {
       cashGroup.style.display = 'block';
       bankGroup.style.display = 'block';
@@ -759,10 +767,10 @@ function checkDateForImageUpload() {
   if (deliveryDate === today) {
     imageUploadSection.style.display = 'block';
     
-    priceBankSection.setAttribute('readonly', false)
+    // priceBankSection.setAttribute('readonly', false)
   } else {
     imageUploadSection.style.display = 'none';
-    priceBankSection.setAttribute('readonly', true)
+    // priceBankSection.setAttribute('readonly', true)
     clearImagePreviews();
   }
 }
@@ -1115,7 +1123,7 @@ document.getElementById('deliveryDate').addEventListener('change', function() {
     document.getElementById('cashPayment').checked = true;
     document.getElementById('cashAmountGroup').style.display = 'block';
     document.getElementById('bankAmountGroup').style.display = 'none';
-    document.getElementById('priceBankInput').value = '0';
+    // document.getElementById('priceBankInput').value = '0';
     
     paymentTypeGroup.querySelectorAll('input').forEach(radio => {
       if (radio.id !== 'cashPayment') {

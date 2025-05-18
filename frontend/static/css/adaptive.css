@@ -1,0 +1,268 @@
+/* Основные стили для мобильных устройств */
+@media (max-width: 768px) {
+  /* Общие стили для контейнера */
+  .container-custom {
+    padding: 0 10px;
+  }
+
+  /* Стили для таблицы денежных потоков */
+  #cashFlowTable {
+    font-size: 14px;
+  }
+
+  #cashFlowTable th,
+  #cashFlowTable td {
+    padding: 6px 4px;
+  }
+
+  /* Скрываем кнопки действий на маленьких экранах */
+  #cashFlowTable .btn {
+    padding: 3px 5px;
+    font-size: 12px;
+  }
+
+  /* Стили для таблицы поставок */
+  #supplyTable {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+
+  /* Скрываем неважные колонки на мобильных */
+  #supplyTable th:nth-child(4),
+  #supplyTable td:nth-child(4),
+  #supplyTable th:nth-child(5),
+  #supplyTable td:nth-child(5),
+  #supplyTable th:nth-child(6),
+  #supplyTable td:nth-child(6) {
+    display: none !important;
+  }
+
+  /* Уменьшаем отступы в ячейках */
+  #supplyTable th,
+  #supplyTable td {
+    padding: 6px 8px;
+  }
+
+  /* Стили для модальных окон */
+  .modal-dialog {
+    margin: 10px;
+  }
+
+  .modal-content {
+    padding: 15px;
+  }
+
+  /* Адаптивные формы */
+  .modal-body .form-control,
+  .modal-body .form-select {
+    font-size: 14px;
+  }
+
+  /* Кнопки в модальных окнах */
+  .modal-footer .btn {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  /* Плавающая кнопка */
+  .floating-action-button {
+    width: 50px;
+    height: 50px;
+    bottom: 20px;
+    right: 20px;
+  }
+
+  /* Навигационные кнопки */
+  .button-nav {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+
+  .button-up-page {
+    bottom: 70px;
+    right: 15px;
+  }
+
+  .button-down-page {
+    bottom: 15px;
+    right: 15px;
+  }
+
+  /* Карточки статистики */
+  .card-body .row {
+    flex-direction: column;
+  }
+
+  .card-body .col-md-4 {
+    margin-bottom: 10px;
+  }
+
+  /* Фильтры */
+  .today-supplies-filter .row {
+    flex-direction: column;
+  }
+
+  .today-supplies-filter .col-md-6,
+  .today-supplies-filter .col-md-3 {
+    margin-bottom: 10px;
+    width: 100%;
+  }
+}
+
+/* Стили для очень маленьких экранов */
+@media (max-width: 480px) {
+  /* Еще больше уменьшаем таблицы */
+  #cashFlowTable {
+    font-size: 12px;
+  }
+
+  #supplyTable {
+    font-size: 12px;
+  }
+
+  /* Скрываем описание в денежных потоках */
+  #cashFlowTable td:nth-child(2) {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Модальные окна на весь экран */
+  .modal-dialog {
+    margin: 0;
+    max-width: 100%;
+    height: 100%;
+  }
+
+  .modal-content {
+    height: 100%;
+    border-radius: 0;
+  }
+
+  /* Формы в модальных окнах */
+  .modal-body {
+    padding: 15px;
+  }
+
+  /* Кнопки в формах */
+  .btn-group .btn {
+    padding: 5px;
+    font-size: 12px;
+  }
+}
+
+/* Анимации для плавного появления/скрытия элементов */
+@media (max-width: 768px) {
+  .mobile-hidden {
+    display: none;
+    transition: all 0.3s ease;
+  }
+
+  .mobile-visible {
+    display: block;
+    transition: all 0.3s ease;
+  }
+}
+
+/* Стили для горизонтальной прокрутки таблиц на мобильных */
+.table-responsive {
+  -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+}
+
+/* Оптимизация отображения форм на мобильных */
+.form-control, .form-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Улучшение касаний на мобильных */
+.btn, .form-control, .form-select {
+  touch-action: manipulation;
+}
+
+/* Уменьшение размера шрифтов для экономии места */
+@media (max-width: 576px) {
+  body {
+    font-size: 14px;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  .card-title {
+    font-size: 1.2rem;
+  }
+
+  .fs-4 {
+    font-size: 1.1rem !important;
+  }
+}
+
+/* Оптимизация полей ввода на мобильных */
+@media (max-width: 768px) {
+  input[type="date"]::-webkit-inner-spin-button,
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+  }
+
+  input[type="date"] {
+    position: relative;
+  }
+
+  input[type="date"]:after {
+    content: "📅";
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+}
+
+/* Стили для карточек статистики на мобильных */
+@media (max-width: 768px) {
+  .card.text-white {
+    margin-bottom: 10px;
+  }
+
+  .card-body {
+    padding: 15px;
+  }
+
+  .card-text.fs-4 {
+    font-size: 1.2rem !important;
+  }
+}
+
+/* Адаптация выпадающих списков */
+@media (max-width: 768px) {
+  .supplier-dropdown {
+    max-height: 150px;
+  }
+
+  .supplier-option {
+    padding: 6px 10px;
+  }
+}
+
+/* Оптимизация превью изображений */
+@media (max-width: 768px) {
+  .image-preview {
+    width: 80px;
+    height: 80px;
+  }
+
+  .image-preview .delete-btn {
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+  }
+}

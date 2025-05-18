@@ -3,10 +3,7 @@
 
 {% block content %}
 <div class="container-custom">
-   <button type="button" class="btn btn-primary floating-action-button rounded-circle shadow-lg" data-bs-toggle="modal" data-bs-target="#cashFlowModal" style="width: 56px; height: 56px; position: fixed; bottom: 30px; right: 30px;">
-  <i class="bi bi-lightning-charge-fill fs-4"></i>
-</button>
-<div class="today-supplies-filter mb-3" id="todaySuppliesFilter" style="display: none;">
+  <div class="today-supplies-filter mb-3" id="todaySuppliesFilter" style="display: none;">
     <div class="row g-2">
       <div class="col-md-6">
         <input type="text" class="form-control" id="supplySearchInput" placeholder="Поиск по поставщику или комментарию">
@@ -25,6 +22,10 @@
       </div>
     </div>
   </div>
+  <button type="button" class="btn btn-primary floating-action-button rounded-circle shadow-lg" data-bs-toggle="modal" data-bs-target="#cashFlowModal" style="width: 56px; height: 56px; position: fixed; bottom: 30px; right: 30px;">
+    <i class="bi bi-lightning-charge-fill fs-4"></i>
+</button>
+
 <div class="modal fade" id="cashFlowModal" data-bs-backdrop="static" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <form class="modal-content shadow">
@@ -55,15 +56,7 @@
 </div>
 
     <!-- Home Page Content -->
-    <div class="custom-modal" id="customModal">
-      <div class="custom-modal-content">
-        <h2>Выберите критерий расчета:</h2>
-        <div class="custom-options-container">
-          <button class="custom-option" id="customCalculateSumButton">Все</button>
-          <button class="custom-option">Подтвержденные</button>
-        </div>
-      </div>
-    </div>
+    
 
 
     
@@ -289,5 +282,6 @@
 
   <script src="{% static 'js/home-page.js' %}"></script>
    <link rel="stylesheet" href="{% static 'css/home-page.css' %}">
+   <link rel="stylesheet" href="{% static 'css/adaptive.css' %}">
 
 {% endblock externals %}
