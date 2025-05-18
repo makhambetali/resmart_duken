@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const supplyCashTotal = document.getElementById('supplyCashTotal');
     const supplyBankTotal = document.getElementById('supplyBankTotal');
     const supplyTotal = document.getElementById('supplyTotal');
-    const supplyApiUrl = '/api/v1/supplies/get_by_date/';
+    const supplyApiUrl = '/api/v1/supplies/by_date/';
     function isToday(dateStr) {
         const today = new Date().toISOString().split('T')[0];
         return dateStr === today;
