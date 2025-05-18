@@ -27,11 +27,14 @@ class Supply(models.Model):
     def save(self, *args, **kwargs):
         if self.is_confirmed and not self.arrival_date:
             self.arrival_date = timezone.now()
+            print('hello world 123')
         elif not self.is_confirmed:
             self.arrival_date = None
-
+            print('hello world')
+        
         if not self.supplier.last_accessed:
             self.supplier.last_accessed = timezone.now()
+            print(123)
             self.supplier.save()
         super().save(*args, **kwargs)
     
