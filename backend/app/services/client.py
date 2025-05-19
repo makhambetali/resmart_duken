@@ -1,50 +1,60 @@
-from app.serializers import ClientSerializer, ClientDebtSerializer
+from app.daos.client_dao import ClientDAO
+from app.dtos.client_dto import ClientDTO, DebtDTO
+from typing import Optional, List
 from app.models import ClientDebt, Client   
+from django.db import transaction
 from rest_framework.serializers import ValidationError
 class ClientService:
-    def _delete_all_debts(self, client):
-        client.debts.all().delete()
-        print('Все долги удалены')
-
-    def delete_one_debt(self, debt_id):
-        instance = ClientDebt.objects.get(id=debt_id)
-        instance.client.debt -= instance.debt_value
-        instance.client.save()
-        instance.delete()
-
-    def _create_debt(self, client, debt_value):
-        ClientDebt.objects.create(client=client, debt_value=debt_value)
+    def __init__(self, dao: Optional[ClientDAO] = None):
+        self.dao = dao or ClientDAO()
 
     def add_debt(self, client, debt_value):
-        self._create_debt(client, debt_value)
-
-        client.debt += debt_value
         if debt_value == 0:
             raise ValidationError("Сумма не должна быть равна нулю")
-        if client.debt == 0:
-            self._delete_all_debts(client)
-        client.save()
-
-        return ClientSerializer(client).data
-    
-    def get_debts(self, client):
-        queryset = client.debts.all().order_by('-date_added')
-
-        return ClientDebtSerializer(queryset, many=True).data
-    
-    def search(self, query=None, filter_tag='latest'):
-        filter_dict = {
-            'oldest': 'last_accessed',
-            'latest': '-last_accessed',
-            'max': '-debt',
-            'min': 'debt'
-        }
-
-        order_field = filter_dict.get(filter_tag, '-last_accessed')  # безопасно с default
-
-        queryset = Client.objects.all().order_by(order_field)
-        if query:
-            queryset = queryset.filter(name__icontains=query)
         
-        return queryset
+        self.dao.create_debt(client, debt_value)
+        client.debt += debt_value
+
+        if client.debt == 0:
+            self.dao.delete_all_debts(client)
+        
+        client.save()
+        return self._to_client_dto(client)
+    
+    def get_debts(self, client: Client) -> List[ClientDTO]:
+        all_debts = self.dao.get_debts(client)
+        return [self._to_debt_dto(debt) for debt in all_debts]
+    
+    def search(self, query=None) -> List[ClientDTO]:
+        search_results = self.dao.search(query)
+        return [self._to_client_dto(result) for result in search_results]
+    
+    def delete_one_debt(self, debt_id: int) -> ClientDTO:
+        try:
+            client = self.dao.delete_one_debt(debt_id)
+            return self._to_client_dto(client)   # Получаем и удаляем долг, обновляем клиента
+                
+                
+        except ClientDebt.DoesNotExist:
+            raise
+        except Exception as e:
+            raise
+
+    def _to_client_dto(self, client: Client) -> ClientDTO:
+        return ClientDTO(
+            id = client.id, 
+            name = client.name,
+            debt = client.debt,
+            description=client.description,
+            is_chosen=client.is_chosen,
+            last_accessed=client.last_accessed
+        )
+
+    def _to_debt_dto(self, debt: ClientDebt) -> DebtDTO:
+        return DebtDTO(
+            id = debt.id, 
+            debt_value=debt.debt_value,
+            # client = debt.client.name,
+            date_added = debt.date_added
+        )
 

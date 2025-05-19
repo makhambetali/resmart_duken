@@ -4,7 +4,6 @@ from typing import Optional
 
 from app.models import Supply
 
-
 class SupplyDAO:
     def get_past_supplies(self):
         """Поставки с delivery_date раньше текущей даты."""
@@ -25,10 +24,4 @@ class SupplyDAO:
             query &= Q(is_confirmed=True)
         return Supply.objects.filter(query).select_related('supplier')
 
-    def get_by_id(self, supply_id: int):
-        """Получает поставку по ID или выбрасывает исключение."""
-        return Supply.objects.get(id=supply_id)
-
-    def save(self, supply: Supply):
-        """Сохраняет изменения в поставке."""
-        supply.save()
+   

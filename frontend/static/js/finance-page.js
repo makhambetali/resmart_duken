@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const cashFlowTable = document.getElementById('cashFlowTable');
     const cashFlowBody = document.getElementById('cashFlowBody');
     const dateFilter = document.getElementById('dateFilter');
-    const filterBtn = document.getElementById('filterBtn');
+    const filterBtns = document.querySelectorAll('#filterBtn')
     const addCashFlowBtn = document.getElementById('addCashFlowBtn');
     const cashFlowModal = new bootstrap.Modal('#cashFlowModal');
     const cashFlowForm = document.getElementById('cashFlowForm');
@@ -340,11 +340,13 @@ function calculateSupplyTotals(supplies) {
     }
 
     // Обработчики событий
-    filterBtn.addEventListener('click', () => {
+    filterBtns.forEach(filterBtn => {
+        filterBtn.addEventListener('click', () => {
     const date = dateFilter.value;
     loadCashFlows(date);
     loadSupplies(date);
 });
+    })
     addCashFlowBtn.addEventListener('click', addCashFlow);
     saveCashFlowBtn.addEventListener('click', saveCashFlow);
 loadCashFlows();    
