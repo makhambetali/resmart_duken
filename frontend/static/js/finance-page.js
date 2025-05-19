@@ -23,18 +23,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     dateFilter.value = new Date().toISOString().split('T')[0]
     let currentCashFlowId = null;
-    const apiUrl = '/api/v1/cashflows/by_date/';
-    function formatCurrency(value) {
-        if (value === null || value === undefined || value === '') return '0 ₸';
-        const num = typeof value === 'string' ? parseFloat(value.replace(/\./g, '')) : value;
-        if (isNaN(num)) return '0 ₸';
-        
-        // Форматируем с точками как разделителями тысяч
-        return num.toString()
-            .replace(/\D/g, '') // Оставляем только цифры
-            .replace(/\B(?=(\d{3})+(?!\d))/g, '.') // Добавляем точки как разделители
-            .replace(/^0+/, ''); // Убираем ведущие нули и добавляем символ валюты
-        }
+    const apiUrl = '/api/v1/cashflows/';
+   
     function loadSupplies(date = null) {
     let url = supplyApiUrl;
     if (date) {
@@ -102,6 +92,7 @@ function calculateSupplyTotals(supplies) {
     // Загрузка данных
     function loadCashFlows(date = null) {
         let url = apiUrl;
+        url += 'by_date/'
         if (date) {
             url += `?date=${date}`;
         }

@@ -2,101 +2,95 @@
 {% load static %}
 
 {% block content %}
-<div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">Управление клиентами</h2>
+<div class="clients-container">
+  <!-- Заголовок и кнопка добавления -->
+  <div class="clients-header">
+    <h2>Управление клиентами</h2>
     <button class="btn btn-primary" id="addClientBtn">
       <i class="fas fa-plus me-2"></i>Добавить клиента
     </button>
   </div>
 
   <!-- Фильтры и поиск -->
-  <div class="card mb-4 shadow-sm">
-    <div class="card-body">
-      <div class="row">
-        <!-- Поиск клиентов -->
-        <div class="col-md-6 mb-3 mb-md-0">
-          <div class="input-group">
-            <input type="text" class="form-control border-primary" placeholder="Поиск по имени клиента" id="searchInput">
-            <button class="btn btn-outline-primary" type="button" id="searchBtn">
-              <i class="fas fa-search me-2"></i>Найти
-            </button>
-            <button class="btn btn-outline-secondary" type="button" id="resetSearchBtn">
-              <i class="fas fa-times me-2"></i>Сбросить
-            </button>
-          </div>
-        </div>
-        
-        <!-- Фильтры -->
-        <div class="col-md-6">
-          <div class="d-flex align-items-center">
-            <span class="me-2">Сортировка:</span>
-            <select class="form-select form-select-sm w-auto" id="filterSelect">
-              <option value="latest">Последние</option>
-              <option value="oldest">Старые</option>
-              <option value="max">Макс. долг</option>
-              <option value="min">Мин. долг</option>
-            </select>
-            
-            <span class="ms-3 me-2">На странице:</span>
-            <select class="form-select form-select-sm w-auto" id="perPageSelect">
-              <option value="10" selected>10</option>
-              <option value="25" >25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
-          </div>
-        </div>
+  <div class="search-filters-card">
+    <div class="search-section">
+      <div class="search-input-group">
+        <input type="text" placeholder="Поиск по имени" id="searchInput">
+        <button class="btn btn-search" id="searchBtn">
+          <i class="fas fa-search"></i>
+        </button>
+        <button class="btn btn-reset" id="resetSearchBtn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+    
+    <div class="filters-section">
+      <div class="filter-group">
+        <label>Сортировка:</label>
+        <select id="filterSelect">
+          <option value="latest">Последние</option>
+          <option value="oldest">Старые</option>
+          <option value="max">Макс. долг</option>
+          <option value="min">Мин. долг</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label>На странице:</label>
+        <select id="perPageSelect">
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+        </select>
       </div>
     </div>
   </div>
 
   <!-- Таблица клиентов -->
-  <div class="table-responsive rounded shadow-sm">
-    <div class="d-flex justify-content-between align-items-center p-2 bg-light border-bottom">
-      <div>Найдено: <span class="res_count fw-bold">0</span> клиентов</div>
-      <div class="d-flex align-items-center">
-        <span class="me-2">Страница:</span>
-        <span id="currentPageInfo" class="fw-bold">1</span>
-      </div>
+  <div class="clients-table-container">
+    <div class="table-info-header">
+      <div class="results-count">Найдено: <span id="resultsCount">0</span></div>
+      <div class="page-info">Страница: <span id="currentPage">1</span></div>
     </div>
     
-    <table class="table table-hover align-middle mb-0" id="clients-table">
-      <thead class="table-primary">
-        <tr>
-          <th>Имя</th>
-          <th>Телефон</th>
-          <th>Долг</th>
-          <th>Последняя активность</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Данные будут загружены через JavaScript -->
-      </tbody>
-    </table>
+    <div class="table-responsive">
+      <table id="clientsTable">
+        <thead>
+          <tr>
+            <th data-priority="1">Имя</th>
+            <th data-priority="2">Телефон</th>
+            <th data-priority="3">Долг</th>
+            <th data-priority="4">Последняя активность</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Данные будут загружены через JavaScript -->
+        </tbody>
+      </table>
+    </div>
     
     <!-- Пагинация -->
-    <nav aria-label="Page navigation" class="mt-3">
-      <ul class="pagination justify-content-center" id="pagination">
-        <!-- Пагинация будет загружена через JavaScript -->
-      </ul>
-    </nav>
+    <div class="pagination-container">
+      <ul id="pagination"></ul>
+    </div>
   </div>
 
   <!-- Сообщение при отсутствии данных -->
-  <div class="alert alert-info mt-3 d-none" id="noDataAlert">
-    Клиенты не найдены. Хотите <a href="#" class="alert-link" id="addNewClientLink">добавить нового клиента</a>?
+  <div class="empty-state" id="noDataAlert">
+    <i class="fas fa-users-slash"></i>
+    <p>Клиенты не найдены</p>
+    <button class="btn btn-primary" id="addNewClientBtn">Добавить клиента</button>
   </div>
 </div>
 
-
-<!-- Модальное окно клиента -->
-<div class="modal fade" id="clientModal" tabindex="-1" aria-hidden="true">
+<!-- Основное модальное окно клиента -->
+<div class="modal fade" id="clientModal" tabindex="-1" aria-labelledby="clientModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title" id="clientModalTitle">Редактирование клиента</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+        <h5 class="modal-title" id="clientModalLabel">Редактирование клиента</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <form id="clientForm">
@@ -176,1255 +170,72 @@
         </button>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
         <button type="button" class="btn btn-primary" id="saveClientBtn">
-          <i class="fas fa-save me-1"></i>Сохранить изменения
+          <i class="fas fa-save me-1"></i>Сохранить
         </button>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Модальное окно подтверждения удаления -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Подтверждение удаления</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Вы уверены, что хотите удалить этого клиента? Это действие нельзя отменить.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Удалить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно подтверждения удаления долга -->
+<div class="modal fade" id="confirmDeleteDebtModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Подтверждение удаления</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Вы уверены, что хотите удалить эту запись о долге?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteDebtBtn">Удалить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Лоадер -->
-<div class="loader-container" id="loader">
-  <div class="loader"></div>
+<div class="loader-overlay" id="loader">
+  <div class="loader-spinner"></div>
+</div>
+
+<!-- Toast уведомления -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+  <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header">
+      <strong class="me-auto" id="toastTitle">Уведомление</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body" id="toastMessage">
+      Операция выполнена успешно
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block externals %}
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
-
-
-
-<script>
-  // Глобальный кэш данных
-const clientsCache = {
-  data: null,
-  lastFetch: 0,
-  currentPage: 1,
-  perPage: 10,
-  searchQuery: '',
-  filterType: 'latest',
-  cacheKey: function() {
-    return `${this.searchQuery}-${this.filterType}-${this.currentPage}-${this.perPage}`;
-  },
-  storage: {
-    get: function(key) {
-      const item = localStorage.getItem(key);
-      if (item) {
-        return JSON.parse(item);
-      }
-      return null;
-    },
-    set: function(key, value) {
-      localStorage.setItem(key, JSON.stringify(value));
-    }
-  },
-  abortController: null
-};
-
-// Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
-  initClientsPage();
-});
-
-async function initClientsPage() {
-  setupEventListeners();
-  await loadClients();
-}
-
-function debounce(func, wait, immediate = false) {
-  let timeout;
-  return function() {
-    const context = this;
-    const args = arguments;
-    const later = function() {
-      timeout = null;
-      if (!immediate) func.apply(context, args);
-    };
-    const callNow = immediate && !timeout;
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-    if (callNow) func.apply(context, args);
-  };
-}
-function clearRelatedCache(clientId) {
-  // Удаляем кэш клиентов
-  for (const key in localStorage) {
-    if (key.startsWith('clients-')) {
-      localStorage.removeItem(key);
-    }
-  }
-  
-  // Удаляем кэш долгов для этого клиента
-  localStorage.removeItem(`debts-${clientId}`);
-  
-  // Очищаем кэш строк таблицы
-  clientsCache.rowsCache = {};
-}
-
-function renderClients() {
-  const tbody = document.querySelector('#clients-table tbody');
-  tbody.innerHTML = '';
-  
-  if (!clientsCache.data || clientsCache.data.results.length === 0) {
-    document.getElementById('noDataAlert').classList.remove('d-none');
-    document.getElementById('pagination').innerHTML = '';
-    document.querySelector('.res_count').textContent = '0';
-    document.getElementById('currentPageInfo').textContent = '0';
-    return;
-  }
-  
-  document.getElementById('noDataAlert').classList.add('d-none');
-  document.querySelector('.res_count').textContent = clientsCache.data.count;
-  document.getElementById('currentPageInfo').textContent = clientsCache.currentPage;
-  
-  // Кэшируем созданные строки таблицы
-  if (!clientsCache.rowsCache) {
-    clientsCache.rowsCache = {};
-  }
-  
-  clientsCache.data.results.forEach(client => {
-    let row = clientsCache.rowsCache[client.id];
-    
-    if (!row) {
-      row = document.createElement('tr');
-      row.dataset.id = client.id;
-      row.innerHTML = `
-        <td>${escapeHtml(client.name)}</td>
-        <td>${client.phone_number || '-'}</td>
-        <td class="${client.debt > 0 ? 'debt-positive' : 'debt-negative'}">
-          ${formatCurrency(client.debt)}
-        </td>
-        <td>${formatDateTime(client.last_accessed)}</td>
-      `;
-      row.addEventListener('click', () => openClientModal(client));
-      clientsCache.rowsCache[client.id] = row;
-    }
-    
-    tbody.appendChild(row);
-  });
-  
-  renderPagination();
-}
-
-
-function setupEventListeners() {
-  // Поиск клиентов с дебаунсом
-  const searchInput = document.getElementById('searchInput');
-  searchInput.addEventListener('input', debounce(handleSearch, 300));
-  document.getElementById('searchBtn').addEventListener('click', handleSearch);
-  document.getElementById('resetSearchBtn').addEventListener('click', resetSearch);
-  
-  // Фильтрация
-  document.getElementById('filterSelect').addEventListener('change', function() {
-    clientsCache.filterType = this.value;
-    clientsCache.currentPage = 1;
-    // alert(clientsCache.filterType)
-    loadClients();
-  });
-  
-  // Пагинация
-  document.getElementById('perPageSelect').addEventListener('change', function() {
-    clientsCache.perPage = parseInt(this.value);
-    clientsCache.currentPage = 1;
-    loadClients();
-  });
-  
-  // Добавление клиента
-  document.getElementById('addClientBtn').addEventListener('click', openAddClientModal);
-  document.getElementById('addNewClientLink').addEventListener('click', function(e) {
-    e.preventDefault();
-    openAddClientModal();
-  });
-  
-  // Модальное окно клиента
-  document.getElementById('saveClientBtn').addEventListener('click', saveClient);
-  document.getElementById('deleteClientBtn').addEventListener('click', deleteClient);
-  
-  // Предотвращаем отправку формы при нажатии Enter
-  document.getElementById('clientForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    saveClient();
-  });
-  
-  // Управление долгами
-  document.getElementById('addDebtBtn').addEventListener('click', showDebtForm);
-  document.getElementById('saveDebtBtn').addEventListener('click', saveDebt);
-  document.getElementById('cancelDebtBtn').addEventListener('click', hideDebtForm);
-}
-async function loadClients() {
-  // Отменяем предыдущий запрос, если он есть
-  if (clientsCache.abortController) {
-    clientsCache.abortController.abort();
-  }
-  
-  const now = Date.now();
-  const cacheKey = clientsCache.cacheKey();
-  const cacheExpired = now - clientsCache.lastFetch > 300000; // 5 минут
-  
-  // Пытаемся получить данные из локального кэша
-  const cachedData = clientsCache.storage.get(`clients-${cacheKey}`);
-  console.log(cachedData && !cacheExpired && !clientsCache.forceReload)
-  // if (cachedData && !cacheExpired && !clientsCache.forceReload) {
-  //   clientsCache.data = cachedData;
-  //   renderClients();
-  //   return;
-  // }
-  
-  showLoader(true);
-  
-  // Создаем новый AbortController для текущего запроса
-  clientsCache.abortController = new AbortController();
-  
-  try {
-    const params = new URLSearchParams({
-      filter_tag: clientsCache.filterType,
-      page: clientsCache.currentPage,
-      page_size: clientsCache.perPage,
-      
-    });
-    
-    if (clientsCache.searchQuery) {
-      params.append('q', clientsCache.searchQuery);
-    }
-    
-    const response = await fetch(`/api/v1/clients/?${params}`, {
-      signal: clientsCache.abortController.signal
-    });
-    
-    if (!response.ok) throw new Error('Ошибка загрузки клиентов');
-    
-    clientsCache.data = await response.json();
-    clientsCache.lastFetch = now;
-    clientsCache.forceReload = false;
-    
-    // Сохраняем в локальное хранилище
-    clientsCache.storage.set(`clients-${cacheKey}`, clientsCache.data);
-    
-    renderClients();
-  } catch (error) {
-    if (error.name !== 'AbortError') {
-      console.error('Error loading clients:', error);
-      alert('Ошибка при загрузке клиентов');
-    }
-  } finally {
-    showLoader(false);
-    clientsCache.abortController = null;
-  }
-}
-function handleSearch() {
-  const searchValue = document.getElementById('searchInput').value.trim();
-  if (clientsCache.searchQuery !== searchValue) {
-    clientsCache.searchQuery = searchValue;
-    clientsCache.currentPage = 1;
-    clientsCache.forceReload = true;
-    loadClients();
-  }
-}
-// Отображение клиентов в таблице
-function resetSearch() {
-  document.getElementById('searchInput').value = '';
-  document.getElementById('filterSelect').value = 'latest';
-  
-  if (clientsCache.searchQuery || clientsCache.filterType !== 'latest') {
-    clientsCache.searchQuery = '';
-    clientsCache.filterType = 'latest';
-    clientsCache.currentPage = 1;
-    clientsCache.forceReload = true;
-    loadClients();
-  }
-}
-// Открытие модального окна клиента
-async function openClientModal(client) {
-  console.log(123)
-  const modal = new bootstrap.Modal(document.getElementById('clientModal'));
-  document.getElementById('clientName').classList.remove('is-invalid')
-  document.getElementById('clientName').nextElementSibling.textContent = ''
-  document.getElementById('clientModalTitle').textContent = client.name;
-  document.getElementById('clientId').value = client.id;
-  document.getElementById('clientName').value = client.name;
-  document.getElementById('clientPhone').value = client.phone_number || '';
-  document.getElementById('clientDescription').value = client.description || '';
-  document.getElementById('clientIsChosen').checked = client.is_chosen;
-  
-  // Загрузка долгов клиента
-  await loadClientDebts(client.id);
-  
-  modal.show();
-}
-
-// Загрузка долгов клиента
-async function loadClientDebts(clientId) {
-  // Проверяем кэш
-  const cacheKey = `debts-${clientId}`;
-  const cachedDebts = clientsCache.storage.get(cacheKey);
-  
-  // if (cachedDebts) {
-  //   renderDebts(cachedDebts);
-  //   return;
-  // }
-  
-  showLoader(true);
-  try {
-    const response = await fetch(`/api/v1/clients/${clientId}/get_debts/`);
-    if (!response.ok) throw new Error('Ошибка загрузки долгов');
-    
-    const debts = await response.json();
-    // Сохраняем в кэш
-    // clientsCache.storage.set(cacheKey, debts);
-    console.log(debts)
-    renderDebts(debts);
-  } catch (error) {
-    console.error('Error loading debts:', error);
-    alert('Ошибка при загрузке долгов');
-  } finally {
-    showLoader(false);
-  }
-}
-// Отображение долгов клиента
-function renderDebts(debts) {
-  const tbody = document.getElementById('debtsTableBody');
-  tbody.innerHTML = '';
-  
-  if (!debts || debts.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="3" class="text-center">Нет записей о долгах</td></tr>';
-    return;
-  }
-  
-  debts.forEach(debt => {
-    console.log(debt.date_added)
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${formatDateTime(debt.date_added)}</td>
-      <td class="${debt.debt_value > 0 ? 'debt-positive' : 'debt-negative'}">
-        ${formatCurrency(debt.debt_value)}
-      </td>
-      <td>
-        <button class="btn btn-sm btn-outline-danger delete-debt-btn" data-debt-id="${debt.id}">
-          <i class="fas fa-trash-alt"></i>
-        </button>
-      </td>
-    `;
-    tbody.appendChild(row);
-  });
-  
-  // Добавляем обработчики для кнопок удаления
-  document.querySelectorAll('.delete-debt-btn').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      const debtId = this.dataset.debtId;
-      deleteDebt(debtId);
-    });
-  });
-}
-
-// Сохранение клиента
-async function saveClient() {
-  const clientId = document.getElementById('clientId').value;
-  const clientData = {
-    name: document.getElementById('clientName').value.trim(),
-    phone_number: document.getElementById('clientPhone').value.trim(),
-    description: document.getElementById('clientDescription').value.trim(),
-    is_chosen: document.getElementById('clientIsChosen').checked
-  };
-  
-  if (!clientData.name) {
-    document.getElementById('clientName').classList.add('is-invalid')
-    document.getElementById('clientName').nextElementSibling.textContent = 'Пожалуйста, укажите имя клиента'
-    return;
-  }
-  
-  showLoader(true);
-  try {
-    const method = clientId ? 'PUT' : 'POST';
-    const url = clientId ? `/api/v1/clients/${clientId}/` : '/api/v1/clients/';
-    
-    const response = await fetch(url, {
-      method: method,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCsrfToken()
-      },
-      body: JSON.stringify(clientData)
-    });
-    
-    if (!response.ok) {
-      // Обработка возможных ошибок, включая ошибку уникальности имени
-      const errorData = await response.json();
-      console.log(errorData.name)
-      if (response.status === 400 && errorData.name && errorData.name[0].includes("уже существует")) {
-        // alert('Клиент с таким именем уже существует');
-        document.getElementById('clientName').classList.add('is-invalid')
-        document.getElementById('clientName').nextElementSibling.textContent = errorData.name[0];
-      } else {
-        throw new Error('Ошибка сохранения клиента');
-      }
-      return;
-    }
-    clearRelatedCache(clientId);
-    clientsCache.forceReload = true;
-    bootstrap.Modal.getInstance(document.getElementById('clientModal')).hide();
-    await loadClients();
-  } catch (error) {
-    console.error('Error saving client:', error);
-    // alert('Ошибка при сохранении клиента: ' + error.message);
-  } finally {
-    showLoader(false);
-  }
-  
-}
-
-// Удаление клиента
-async function deleteClient() {
-  const clientId = document.getElementById('clientId').value;
-  if (!clientId || !confirm('Вы уверены, что хотите удалить этого клиента?')) return;
-  
-  showLoader(true);
-  try {
-    const response = await fetch(`/api/v1/clients/${clientId}/`, {
-      method: 'DELETE',
-      headers: {
-        'X-CSRFToken': getCsrfToken()
-      }
-    });
-    
-    if (!response.ok) throw new Error('Ошибка удаления клиента');
-    clearRelatedCache(clientId);
-    clientsCache.forceReload = true;
-    bootstrap.Modal.getInstance(document.getElementById('clientModal')).hide();
-    await loadClients();
-  } catch (error) {
-    console.error('Error deleting client:', error);
-    alert('Ошибка при удалении клиента');
-  } finally {
-    showLoader(false);
-  }
-}
-
-// Добавление долга
-async function saveDebt() {
-  const clientId = document.getElementById('clientId').value;
-  const debtValueStr = document.getElementById('debtValue').value;
-  
-  if (!clientId || !debtValueStr) {
-    alert('Пожалуйста, укажите сумму долга');
-    return;
-  }
-  
-  const debtValue = parseInt(debtValueStr);
-  if (isNaN(debtValue)) {
-    alert('Пожалуйста, укажите корректную сумму долга');
-    return;
-  }
-  
-  showLoader(true);
-  try {
-    const response = await fetch(`/api/v1/clients/${clientId}/add_debt/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCsrfToken()
-      },
-      body: JSON.stringify({ debt_value: debtValue })
-    });
-    
-    if (!response.ok) throw new Error('Ошибка добавления долга');
-    
-    hideDebtForm();
-    document.getElementById('debtValue').value = '';
-    await loadClientDebts(clientId);
-    clientsCache.forceReload = true;
-    await loadClients();
-  } catch (error) {
-    console.error('Error adding debt:', error);
-    alert('Ошибка при добавлении долга');
-  } finally {
-    showLoader(false);
-  }
-}
-
-// Удаление долга
-async function deleteDebt(debtId) {
-  if (!confirm('Вы уверены, что хотите удалить эту запись о долге?')) return;
-  
-  showLoader(true);
-  try {
-    const response = await fetch(`/api/v1/clients/delete_debt/${debtId}/`, {
-      method: 'DELETE',
-      headers: {
-        'X-CSRFToken': getCsrfToken()
-      }
-    });
-    
-    if (!response.ok) throw new Error('Ошибка удаления долга');
-    
-    const clientId = document.getElementById('clientId').value;
-    await loadClientDebts(clientId);
-    clientsCache.forceReload = true;
-    await loadClients();
-  } catch (error) {
-    console.error('Error deleting debt:', error);
-    alert('Ошибка при удалении долга');
-  } finally {
-    showLoader(false);
-  }
-}
-
-// Вспомогательные функции
-function showDebtForm() {
-  document.getElementById('debtFormContainer').classList.remove('d-none');
-  document.getElementById('debtValue').focus();
-}
-
-function hideDebtForm() {
-  document.getElementById('debtFormContainer').classList.add('d-none');
-}
-
-function openAddClientModal() {
-  document.getElementById('clientModalTitle').textContent = 'Добавление клиента';
-  document.getElementById('clientForm').reset();
-  document.getElementById('clientName').classList.remove('is-invalid')
-  document.getElementById('clientName').nextElementSibling.textContent = ''
-  document.getElementById('clientId').value = '';
-  
-  document.getElementById('debtsTableBody').innerHTML = '<tr><td colspan="3" class="text-center">Нет записей о долгах</td></tr>';
-  hideDebtForm();
-  
-  const modal = new bootstrap.Modal(document.getElementById('clientModal'));
-  modal.show();
-  
-  // Фокус на поле имени
-  setTimeout(() => {
-    document.getElementById('clientName').focus();
-  }, 500);
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('ru-RU', { style: 'decimal' }).format(value) + ' ₸';
-}
-
-function formatDateTime(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-}
-
-function formatDate(dateString) {
-  return new Date(dateString).toLocaleDateString('ru-RU');
-}
-
-function escapeHtml(unsafe) {
-  if (unsafe === null || unsafe === undefined) return '';
-  return unsafe.toString()
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function getCsrfToken() {
-  const cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
-  return cookie ? cookie.split('=')[1] : '';
-}
-
-function showLoader(show) {
-  document.getElementById('loader').style.display = show ? 'flex' : 'none';
-}
-
-// Пагинация
-function renderPagination() {
-  const pagination = document.getElementById('pagination');
-  pagination.innerHTML = '';
-  
-  if (!clientsCache.data || clientsCache.data.count <= clientsCache.perPage) return;
-  
-  const totalPages = Math.ceil(clientsCache.data.count / clientsCache.perPage);
-  const currentPage = clientsCache.currentPage;
-  const maxVisiblePages = 5;
-  
-  // Кнопка "Назад"
-  addPaginationButton(pagination, 'Предыдущая', currentPage - 1, currentPage === 1);
-  
-  // Первая страница
-  if (currentPage > maxVisiblePages / 2 + 1) {
-    addPaginationButton(pagination, '1', 1);
-    if (currentPage > maxVisiblePages / 2 + 2) {
-      addPaginationButton(pagination, '...', Math.floor(currentPage - maxVisiblePages / 2) - 1, true);
-    }
-  }
-  
-  // Основные страницы
-  const startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-  const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-  
-  for (let i = startPage; i <= endPage; i++) {
-    addPaginationButton(pagination, i.toString(), i, false, i === currentPage);
-  }
-  
-  // Последняя страница
-  if (currentPage < totalPages - Math.floor(maxVisiblePages / 2)) {
-    if (currentPage < totalPages - Math.floor(maxVisiblePages / 2) - 1) {
-      addPaginationButton(pagination, '...', Math.ceil(currentPage + maxVisiblePages / 2) + 1, true);
-    }
-    addPaginationButton(pagination, totalPages.toString(), totalPages);
-  }
-  
-  // Кнопка "Вперед"
-  addPaginationButton(pagination, 'Следующая', currentPage + 1, currentPage === totalPages);
-}
-
-function addPaginationButton(container, text, page, disabled = false, active = false) {
-  const li = document.createElement('li');
-  li.className = `page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
-  
-  const a = document.createElement('a');
-  a.className = 'page-link';
-  a.href = '#';
-  a.textContent = text;
-  
-  if (!disabled) {
-    a.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (page !== clientsCache.currentPage) {
-        clientsCache.currentPage = page;
-        loadClients();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    });
-  }
-  
-  li.appendChild(a);
-  container.appendChild(li);
-}
-
-// Сброс поиска
-function resetSearch() {
-  const searchInput = document.getElementById('searchInput');
-  if (searchInput.value || clientsCache.searchQuery) {
-    searchInput.value = '';
-    clientsCache.searchQuery = '';
-    clientsCache.currentPage = 1;
-    clientsCache.forceReload = true;
-    loadClients();
-  }
-}
-
-</script>
-<!-- <style>
-  /* Стили для таблицы */
-  .table-hover tbody tr {
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-  .table-hover tbody tr:hover {
-    background-color: rgba(13, 110, 253, 0.1) !important;
-  }
-  
-  /* Стили для лоадера */
-  .loader-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(255, 255, 255, 0.8);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-  }
-  .loader {
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid #3498db;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    animation: spin 1s linear infinite;
-  }
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  
-  /* Стили для долгов */
-  .debt-positive {
-    color: #dc3545;
-    font-weight: bold;
-  }
-  .debt-negative {
-    color: #28a745;
-    font-weight: bold;
-  }
-  /* Основные адаптивные стили */
-@media (max-width: 992px) {
-  .container-custom {
-    padding: 0 10px;
-  }
-
-  /* Заголовок и кнопка добавления */
-  .d-flex.justify-content-between.align-items-center.mb-4 {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  #addClientBtn {
-    width: 100%;
-    padding: 12px;
-    font-size: 16px;
-  }
-
-  /* Карточка с фильтрами */
-  .card.mb-4.shadow-sm {
-    border-radius: 10px;
-    overflow: hidden;
-  }
-
-  /* Поиск и фильтры */
-  .input-group {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  #searchInput {
-    width: 100% !important;
-    height: 48px;
-    font-size: 16px;
-    padding: 12px 15px;
-  }
-
-  #searchBtn, #resetSearchBtn {
-    width: 100%;
-    height: 48px;
-    font-size: 16px;
-  }
-
-  /* Фильтры и пагинация */
-  .col-md-6 .d-flex {
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-start !important;
-  }
-
-  #filterSelect, #perPageSelect {
-    width: 100% !important;
-  }
-
-  /* Информация о странице */
-  .d-flex.justify-content-between.align-items-center.p-2 {
-    flex-direction: column;
-    align-items: flex-start !important;
-    gap: 8px;
-  }
-
-  /* Таблица */
-  .table-responsive {
-    border-radius: 10px;
-    overflow: hidden;
-  }
-
-  .table th, .table td {
-    padding: 10px 8px;
-    font-size: 14px;
-  }
-
-  /* Скрываем менее важные колонки */
-  .table th:nth-child(3),
-  .table td:nth-child(3),
-  .table th:nth-child(4),
-  .table td:nth-child(4) {
-    display: none;
-  }
-
-  /* Модальное окно */
-  .modal-dialog {
-    margin: 0;
-    max-width: 100%;
-    min-height: 100vh;
-  }
-
-  .modal-content {
-    border-radius: 0;
-    min-height: 100vh;
-  }
-
-  .modal-body {
-    padding: 15px;
-  }
-
-  /* Форма в модальном окне */
-  .row.mb-3 {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .col-md-6 {
-    width: 100% !important;
-  }
-
-  /* Кнопки в модальном окне */
-  .modal-footer {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  #deleteClientBtn, #saveClientBtn {
-    width: 100%;
-    order: 1;
-  }
-
-  .btn-secondary {
-    width: 100%;
-    order: 2;
-  }
-
-  /* Таблица долгов */
-  #debtsTable th, #debtsTable td {
-    padding: 8px 4px;
-    font-size: 13px;
-  }
-
-  .delete-debt-btn {
-    padding: 4px 8px !important;
-  }
-}
-
-/* Адаптация для очень маленьких экранов */
-@media (max-width: 576px) {
-  /* Увеличиваем элементы ввода */
-  #searchInput, #searchBtn, #resetSearchBtn {
-    height: 52px;
-  }
-
-  /* Уменьшаем отступы */
-  .container.py-4 {
-    padding-top: 1rem !important;
-    padding-bottom: 1rem !important;
-  }
-
-  /* Упрощаем таблицу */
-  .table th, .table td {
-    padding: 8px 6px;
-    font-size: 13px;
-  }
-
-  /* Форма добавления долга */
-  #debtFormContainer .row {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  #saveDebtBtn, #cancelDebtBtn {
-    width: 100%;
-    margin: 0 !important;
-  }
-}
-
-/* Ландшафтная ориентация */
-@media (max-width: 992px) and (orientation: landscape) {
-  /* Делаем поисковую строку компактнее */
-  .input-group {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-
-  #searchInput {
-    width: 60% !important;
-  }
-
-  #searchBtn, #resetSearchBtn {
-    width: 20%;
-  }
-
-  /* Уменьшаем высоту модального окна */
-  .modal-dialog {
-    max-height: 90vh;
-    margin: 5vh auto;
-  }
-
-  .modal-content {
-    min-height: auto;
-  }
-}
-
-/* Общие улучшения для мобильных */
-@media (max-width: 768px) {
-  /* Увеличиваем область нажатия */
-  .btn, .page-link, .form-control, .form-select {
-    min-height: 44px;
-  }
-
-  /* Улучшаем видимость активных элементов */
-  .table-hover tbody tr:active {
-    background-color: rgba(13, 110, 253, 0.2) !important;
-  }
-
-  /* Увеличиваем иконки */
-  .fas {
-    font-size: 1.1em;
-  }
-
-  /* Улучшаем скролл */
-  html {
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
-/* Специальные стили для iOS */
-@supports (-webkit-touch-callout: none) {
-  @media (max-width: 768px) {
-    /* Исправляем поведение input в Safari */
-    input, select, textarea {
-      font-size: 16px !important;
-    }
-    
-    /* Убираем задержку для :active */
-    .btn {
-      -webkit-tap-highlight-color: transparent;
-    }
-  }
-}
-</style> -->
-<style>
-  :root {
-  --primary-color: #4361ee;
-  --primary-hover: #3a56d4;
-  --danger-color: #ef233c;
-  --success-color: #2b9348;
-  --text-color: #2b2d42;
-  --light-gray: #f8f9fa;
-  --border-radius: 12px;
-  --box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  --transition: all 0.3s ease;
-}
-
-/* Базовые стили таблицы */
-.table-hover {
-  --table-border-color: #e9ecef;
-  --table-hover-bg: rgba(67, 97, 238, 0.05);
-  
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-family: 'Segoe UI', system-ui, sans-serif;
-}
-
-.table-hover thead th {
-  background-color: var(--primary-color);
-  color: white;
-  font-weight: 500;
-  /* padding: 1rem; */
-  position: sticky;
-  top: 0;
-  border: none;
-}
-
-.table-hover tbody tr {
-  background-color: white;
-  transition: var(--transition);
-  cursor: pointer;
-  position: relative;
-}
-
-.table-hover tbody tr:not(:last-child)::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 1rem;
-  right: 1rem;
-  height: 1px;
-  background-color: var(--table-border-color);
-}
-
-.table-hover tbody tr:hover {
-  background-color: var(--table-hover-bg) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.table-hover td {
-  padding: 0.5rem;
-  vertical-align: middle;
-  color: var(--text-color);
-}
-
-/* Стили для долгов */
-.debt-positive {
-  color: var(--danger-color);
-  font-weight: 600;
-}
-
-.debt-negative {
-  color: var(--success-color);
-  font-weight: 600;
-}
-
-/* Лоадер */
-.loader-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(255, 255, 255, 0.9);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  backdrop-filter: blur(2px);
-}
-
-.loader {
-  border: 4px solid rgba(67, 97, 238, 0.1);
-  border-top: 4px solid var(--primary-color);
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Кнопки */
-.btn {
-  border-radius: var(--border-radius);
-  /* padding: 0.75rem 1.5rem; */
-  font-weight: 500;
-  transition: var(--transition);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.btn-primary {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-.btn-primary:hover {
-  background-color: var(--primary-hover);
-  border-color: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(67, 97, 238, 0.2);
-}
-
-.btn-outline-primary {
-  color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-.btn-outline-primary:hover {
-  background-color: rgba(67, 97, 238, 0.1);
-}
-
-/* Карточки */
-.card {
-  border: none;
-  border-radius: var(--border-radius);
-  box-shadow: var(--box-shadow);
-  overflow: hidden;
-}
-
-/* Формы */
-.form-control, .form-select {
-  border-radius: var(--border-radius);
-  /* padding: 0.75rem 1rem; */
-  border: 1px solid #e9ecef;
-  transition: var(--transition);
-}
-
-.form-control:focus, .form-select:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.15);
-}
-
-/* Модальное окно */
-.modal-content {
-  border: none;
-  border-radius: var(--border-radius);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-}
-
-.modal-header {
-  background-color: var(--primary-color);
-  color: white;
-  border-bottom: none;
-  /* padding: 1.5rem; */
-}
-
-.modal-body {
-  /* padding: 1.5rem; */
-}
-
-.modal-footer {
-  border-top: none;
-  /* padding: 1.5rem; */
-  background-color: var(--light-gray);
-}
-
-/* Адаптивные стили */
-@media (max-width: 1200px) {
-  .table-hover td, .table-hover th {
-    padding: 0.75rem;
-  }
-}
-
-@media (max-width: 992px) {
-  .container-custom {
-    padding: 0 1rem;
-  }
-
-  /* Реорганизация заголовка и кнопок */
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start !important;
-    gap: 1rem;
-  }
-
-  /* Адаптация карточек */
-  .card-body {
-    padding: 1rem;
-  }
-
-  /* Поиск и фильтры - вертикальное расположение */
-  .search-filters {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .input-group {
-    width: 100% !important;
-  }
-
-  /* Таблица - скрываем менее важные колонки */
-  .table-hover th:nth-child(3),
-  .table-hover td:nth-child(3),
-  .table-hover th:nth-child(4),
-  .table-hover td:nth-child(4) {
-    display: none;
-  }
-
-  /* Модальное окно - полноэкранное */
-  .modal-dialog {
-    margin: 0;
-    max-width: 100%;
-    min-height: 100vh;
-  }
-
-  .modal-content {
-    border-radius: 0;
-    min-height: 100vh;
-  }
-}
-
-@media (max-width: 768px) {
-  /* Увеличиваем элементы управления */
-  .btn, .form-control, .form-select {
-    padding: 1rem;
-    font-size: 1rem;
-  }
-
-  /* Улучшаем таблицу */
-  .table-hover {
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* Анимация при нажатии */
-  .btn:active, .table-hover tbody tr:active {
-    transform: translateY(1px) !important;
-  }
-
-  /* Улучшаем модальное окно */
-  .modal-body {
-    padding: 1rem;
-  }
-
-  /* Кнопки в модальном окне - вертикальное расположение */
-  .modal-footer {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .modal-footer .btn {
-    width: 100%;
-  }
-}
-
-@media (max-width: 576px) {
-  /* Упрощаем интерфейс */
-  .table-info {
-    flex-direction: column;
-    align-items: flex-start !important;
-    gap: 0.5rem;
-  }
-
-  /* Форма в модальном окне - вертикальное расположение */
-  .form-row {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .form-row .col {
-    width: 100% !important;
-  }
-
-  /* Уменьшаем отступы */
-  .container {
-    padding: 0.5rem !important;
-  }
-}
-
-/* Специальные стили для iOS */
-@supports (-webkit-touch-callout: none) {
-  /* Улучшаем взаимодействие */
-  input, textarea, select {
-    font-size: 16px !important;
-  }
-
-  /* Убираем задержку для :active */
-  a, button {
-    -webkit-tap-highlight-color: transparent;
-  }
-}
-
-/* Анимации */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.modal-content {
-  animation: fadeIn 0.3s ease-out;
-}
-
-/* Микро-интеракции */
-.btn, .form-control, .table-hover tbody tr {
-  transition: var(--transition);
-}
-
-/* Кастомный скроллбар */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-thumb {
-  background-color: rgba(67, 97, 238, 0.3);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background-color: var(--primary-color);
-}
-
-::-webkit-scrollbar-track {
-  background-color: #f1f1f1;
-}
-</style>
-
+<link rel="stylesheet" href="{% static 'css/clients-page.css' %}">
+<script src="{% static 'js/clients-page.js' %}"></script>
 {% endblock %}

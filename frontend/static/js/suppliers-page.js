@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
   const tableBody = document.querySelector("#suppliers-table tbody");
   const searchInput = document.getElementById("searchInput");
   const searchBtn = document.getElementById("searchBtn");
@@ -47,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 300);
     
     searchBtn.addEventListener("click", debouncedSearch);
-    searchInput.addEventListener("keypress", (e) => e.key === "Enter" && debouncedSearch());
+    searchInput.addEventListener("input", debouncedSearch);
 
     resetSearchBtn.addEventListener("click", () => {
       if (searchQuery !== '') {
@@ -71,9 +72,10 @@ document.addEventListener("DOMContentLoaded", () => {
       nameInput.classList.remove('is-invalid');
       nameInput.nextElementSibling.textContent = '';
       supplierIdInput.value = "";
-      nameInput.value = "";
+      nameInput.value = randomInt(0, 100);
       descInput.value = "";
       deleteBtn.classList.add("d-none");
+      
       supplierModal.show();
     });
 
@@ -273,6 +275,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Открытие модального окна для редактирования
   function openModal(supplier) {
     modalTitle.textContent = "Редактировать поставщика";
+
+    nameInput.classList.remove('is-invalid');
+      nameInput.nextElementSibling.textContent = '';
     supplierIdInput.value = supplier.id;
     nameInput.value = supplier.name;
     descInput.value = supplier.description || "";
