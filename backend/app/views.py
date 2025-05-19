@@ -5,7 +5,7 @@ from datetime import date
 from rest_framework import viewsets, generics, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-
+from rest_framework.exceptions import ValidationError
 
 from .serializers import *
 from .pagination import SupplierResultsPaginationPage
@@ -19,9 +19,14 @@ class SupplierViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierSerializer
     pagination_class = SupplierResultsPaginationPage
     service_layer = SupplierService()
+    queryset = Supplier.objects.all().order_by('-last_accessed')
     def get_queryset(self):
-        q = self.request.query_params.get('q')
-        return self.service_layer.search(q)
+        q = self.request.query_params.get('q', None)
+        if q:
+            suppliers_dto = self.service_layer.search(q)
+            return Supplier.objects.filter(id__in=[dto.id for dto in suppliers_dto])
+        
+        return super().get_queryset()
     
 # class SupplyViewSet(viewsets.ModelViewSet):
 #     serializer_class = SupplySerializer
@@ -91,6 +96,7 @@ class SupplyViewSet(viewsets.ModelViewSet):
 
         only_confirmed = request.query_params.get('confirmed', 'true').lower() == 'true'
         supplies_dto = self.service_layer.get_supplies_by_date(target_date, only_confirmed)
+        print(supplies_dto)
         return Response([vars(dto) for dto in supplies_dto])
     @action(detail=True, methods=['get', 'delete'], url_path='images(?:/(?P<image_id>[^/.]+))?')
     def images(self, request, pk=None, image_id=None):
@@ -120,70 +126,61 @@ class SupplyViewSet(viewsets.ModelViewSet):
             else:
                 return Response({'detail': 'Method not allowed without image_id.'},
                                 status=status.HTTP_405_METHOD_NOT_ALLOWED)
-    # @action(detail=True, methods=['post'])
-    # def confirm(self, request, pk=None):
-    #     """Подтверждение поставки"""
-    #     supply_dto = self.service_layer.confirm_supply(int(pk))
-    #     return Response(vars(supply_dto), status.HTTP_200_OK)
-
-    # @action(detail=True, methods=['get', 'delete'], url_path='images/(?P<image_id>[^/.]+)?')
-    # def images(self, request, pk=None, image_id=None):
-    #     """Управление изображениями поставки"""
-    #     supply = get_object_or_404(Supply, pk=pk)
-
-    #     if image_id:
-    #         return self._handle_single_image(request, supply, image_id)
-    #     return self._handle_all_images(request, supply)
-
-    # def _handle_single_image(self, request, supply, image_id):
-    #     image = get_object_or_404(supply.images, pk=image_id)
-        
-    #     if request.method == 'GET':
-    #         serializer = SupplyImageSerializer(image)
-    #         return Response(serializer.data)
-            
-    #     if request.method == 'DELETE':
-    #         image.delete()
-    #         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    # def _handle_all_images(self, request, supply):
-    #     if request.method == 'GET':
-    #         images = supply.images.all()
-    #         serializer = SupplyImageSerializer(images, many=True)
-    #         return Response(serializer.data)
-            
-    #     return Response(
-    #         {'detail': 'Method not allowed for bulk operations'},
-    #         status=status.HTTP_405_METHOD_NOT_ALLOWED
-    #     )
 class ClientViewSet(viewsets.ModelViewSet):
     serializer_class = ClientSerializer
     pagination_class = SupplierResultsPaginationPage
     service_layer = ClientService()
+    queryset = Client.objects.all().order_by('-last_accessed')
     def get_queryset(self):
         q = self.request.query_params.get('q', '')
         filter_tag = self.request.query_params.get('filter_tag', 'latest')  # значение по умолчанию
-        return self.service_layer.search(q, filter_tag)
+        if q:
+            clients_dto = self.service_layer.search(q, filter_tag)
+            return Client.objects.filter(id__in=[dto.id for dto in clients_dto])
+        return super().get_queryset()
 
     @action(detail=True, methods=['post'])
     def add_debt(self, request, pk=None):
         client = self.get_object()
         debt_value = request.data.get('debt_value')
-        results = self.service_layer.add_debt(client, debt_value)
-        return Response(results)
+        try:
+            client_object = self.service_layer.add_debt(client, debt_value)
+            return Response(vars(client_object))
+        except ValidationError as e:
+            return Response({"error": str(e)}, status=400)
     
     @action(detail=False, methods = ['delete'], url_path='delete_debt(?:/(?P<debt_id>[^/.]+))?')
     def delete_debt(self, request, debt_id=None):
-        if debt_id:
-            self.service_layer.delete_one_debt(debt_id)
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        try:
+            if not debt_id:
+                return Response(
+                    {"error": "Debt ID is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+            updated_client = self.service_layer.delete_one_debt(debt_id)
+            return Response(
+                ClientSerializer(updated_client).data,
+                status=status.HTTP_200_OK
+            )
+            
+        except ClientDebt.DoesNotExist:
+            return Response(
+                {"error": "Debt not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=['get'])
     def get_debts(self, request, pk=None):
         client = self.get_object()
-        results = self.service_layer.get_debts(client)
-        return Response(results)
+        results_dto = self.service_layer.get_debts(client)
+        # print(results_dto)
+        return Response([vars(dto) for dto in results_dto])
 
 class CashFlowViewSet(viewsets.ModelViewSet):
     serializer_class = CashFlowSerializer
