@@ -39,8 +39,6 @@ class ClientService:
         except ClientDebt.DoesNotExist:
             raise
         except Exception as e:
-            # Логирование ошибки
-            # logger.error(f"Error deleting debt {debt_id}: {str(e)}")
             raise
 
     def _to_client_dto(self, client: Client) -> ClientDTO:
