@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     dateFilter.value = new Date().toISOString().split('T')[0]
     let currentCashFlowId = null;
-    const apiUrl = '/api/v1/cashflows/';
+    const apiUrl = '/api/v1/cashflows/by_date/';
     function formatCurrency(value) {
         if (value === null || value === undefined || value === '') return '0 ₸';
         const num = typeof value === 'string' ? parseFloat(value.replace(/\./g, '')) : value;

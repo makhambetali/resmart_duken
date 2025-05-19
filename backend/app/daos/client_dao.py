@@ -11,9 +11,7 @@ class ClientDAO:
         """
         instance = ClientDebt.objects.select_related('client').get(id=debt_id)
         client = instance.client
-        print(client.debt)
         client.debt -= instance.debt_value
-        print(client.debt)
         
         client.save()
         instance.delete()

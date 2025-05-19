@@ -26,7 +26,6 @@ class SupplyService:
         """Возвращает поставки на указанную дату."""
         target_date = target_date or date.today()
         supplies = self.dao.get_supplies_by_date(target_date, only_confirmed)
-        print('qwerty', supplies)
         return [self._to_dto(supply) for supply in supplies]
 
     def _to_dto(self, supply: Supply) -> SupplyDTO:

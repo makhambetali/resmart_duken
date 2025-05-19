@@ -1,5 +1,5 @@
 const cashFlowForm = document.querySelector('#cashFlowModal form');
-const amountInput = document.getElementById('amountInput');
+const amountInput = document.getElementById('amount');
 const descriptionText = document.getElementById('descriptionText');
 const submitBtn = document.getElementById('submitCashFlow');
 
@@ -112,9 +112,9 @@ cashFlowForm.addEventListener('submit', async function(e) {
   return cookie ? cookie[1] : '';
 }
   // Валидация суммы при вводе
-  amountInput.addEventListener('input', function() {
-    this.value = this.value.replace(/[^0-9-]/g, '');
-  });
+  // amountInput.addEventListener('input', function() {
+  //   this.value = this.value.replace(/[^0-9-]/g, '');
+  // });
   
   // Автоматическое закрытие при успешном сохранении
   document.getElementById('cashFlowModal').addEventListener('hidden.bs.modal', function() {

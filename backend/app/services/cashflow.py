@@ -1,15 +1,20 @@
 from django.utils import timezone
-from django.db.models import Sum
+from app.daos.cashflow_dao import CashFlowDAO
+from app.dtos.cashflow_dto import CashFlowDTO
 from app.models import CashFlow
-from app.serializers import CashFlowSerializer
+from typing import Optional
+
 class CashFlowService:
-    def get_instance(self, date = timezone.now().date()):
-        queryset = CashFlow.objects.all().filter(date_added__date = date).order_by('-date_added')
-        return CashFlowSerializer(queryset, many = True).data
+    def __init__(self, dao: Optional[CashFlowDAO] = None):
+        self.dao = dao or CashFlowDAO()
+    def get_cashflows_by_date(self, date):
+        cashflows = self.dao.get_cashflows_by_date(date)
+        return [self._to_dto(cashflow) for cashflow in cashflows]
     
-    def find_sum(self):
-        total_today = CashFlow.objects\
-            .filter(date_added__date=timezone.now().date())\
-            .aggregate(total_sum=Sum('amount'))['total_sum']
-        
-        return total_today
+    def _to_dto(self, cashflow: CashFlow) -> CashFlowDTO:
+        return CashFlowDTO(
+            id = cashflow.id,
+            amount = cashflow.amount,
+            description = cashflow.description,
+            date_added = cashflow.date_added
+        )

@@ -17,4 +17,3 @@ urlpatterns = [
     path('clients-page/', ClientsPageView.as_view(), name='clients-page'),
     path('finance-page/',FinancePageView.as_view(),name='finance-page' ),
 ]
- 

@@ -106,6 +106,7 @@
             <div class="col-md-6">
               <label for="clientName" class="form-label">Имя <span class="text-danger">*</span></label>
               <input type="text" class="form-control" id="clientName" required>
+              <div class="invalid-feedback">Пожалуйста, укажите имя клиента</div>
             </div>
             <div class="col-md-6">
               <label for="clientPhone" class="form-label">Телефон</label>
@@ -436,6 +437,8 @@ function resetSearch() {
 async function openClientModal(client) {
   console.log(123)
   const modal = new bootstrap.Modal(document.getElementById('clientModal'));
+  document.getElementById('clientName').classList.remove('is-invalid')
+  document.getElementById('clientName').nextElementSibling.textContent = ''
   document.getElementById('clientModalTitle').textContent = client.name;
   document.getElementById('clientId').value = client.id;
   document.getElementById('clientName').value = client.name;
@@ -525,7 +528,8 @@ async function saveClient() {
   };
   
   if (!clientData.name) {
-    alert('Пожалуйста, укажите имя клиента');
+    document.getElementById('clientName').classList.add('is-invalid')
+    document.getElementById('clientName').nextElementSibling.textContent = 'Пожалуйста, укажите имя клиента'
     return;
   }
   
@@ -546,8 +550,11 @@ async function saveClient() {
     if (!response.ok) {
       // Обработка возможных ошибок, включая ошибку уникальности имени
       const errorData = await response.json();
-      if (response.status === 400 && errorData.name && errorData.name.includes("already exists")) {
-        alert('Клиент с таким именем уже существует');
+      console.log(errorData.name)
+      if (response.status === 400 && errorData.name && errorData.name[0].includes("уже существует")) {
+        // alert('Клиент с таким именем уже существует');
+        document.getElementById('clientName').classList.add('is-invalid')
+        document.getElementById('clientName').nextElementSibling.textContent = errorData.name[0];
       } else {
         throw new Error('Ошибка сохранения клиента');
       }
@@ -559,7 +566,7 @@ async function saveClient() {
     await loadClients();
   } catch (error) {
     console.error('Error saving client:', error);
-    alert('Ошибка при сохранении клиента: ' + error.message);
+    // alert('Ошибка при сохранении клиента: ' + error.message);
   } finally {
     showLoader(false);
   }
@@ -675,6 +682,8 @@ function hideDebtForm() {
 function openAddClientModal() {
   document.getElementById('clientModalTitle').textContent = 'Добавление клиента';
   document.getElementById('clientForm').reset();
+  document.getElementById('clientName').classList.remove('is-invalid')
+  document.getElementById('clientName').nextElementSibling.textContent = ''
   document.getElementById('clientId').value = '';
   
   document.getElementById('debtsTableBody').innerHTML = '<tr><td colspan="3" class="text-center">Нет записей о долгах</td></tr>';
