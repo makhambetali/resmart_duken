@@ -39,8 +39,18 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'app',
     'rest_framework',
-    'drf_yasg'
+    'drf_yasg',
 ]
+# settings.py
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Брокер (Redis)
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_TIMEZONE = 'Asia/Almaty'  # Часовой пояс
+CELERY_BEAT_SCHEDULE = {
+    'print-every-minute': {
+        'task': 'app.tasks.print_message',
+        'schedule': 60.0,  # Каждые 60 секунд
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
