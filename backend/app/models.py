@@ -3,6 +3,7 @@ from django.utils import timezone
 class Supplier(models.Model):
     name = models.CharField(max_length=30, db_index=True, unique=True)
     description = models.TextField(blank=True, null=True)
+    is_everyday_supply = models.BooleanField(default=False)
     last_accessed = models.DateTimeField(blank=True, null=True)
     date_added = models.DateTimeField(auto_now_add=True)
 

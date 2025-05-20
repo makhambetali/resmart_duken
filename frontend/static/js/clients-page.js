@@ -231,7 +231,7 @@ class ClientsManager {
   async deleteDebt() {
     this.showLoader(true);
     this.confirmDeleteDebtModal.hide();
-
+    alert()
     try {
       const response = await fetch(`/api/v1/clients/delete_debt/${this.currentDebtId}/`, {
         method: 'DELETE',
@@ -307,6 +307,7 @@ class ClientsManager {
 
   showDeleteDebtConfirmation(debtId) {
     this.currentDebtId = debtId;
+    // alert
     this.confirmDeleteDebtModal.show();
   }
 
@@ -374,6 +375,7 @@ class ClientsManager {
     // Добавляем обработчики для кнопок удаления
     document.querySelectorAll('.delete-debt-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
+        // alert()
         e.stopPropagation();
         this.showDeleteDebtConfirmation(btn.dataset.debtId);
       });

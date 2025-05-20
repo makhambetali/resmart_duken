@@ -26,7 +26,34 @@ document.addEventListener("DOMContentLoaded", () => {
   let totalItems = 0;
   let lastRequestKey = '';
   const requestCache = new Map();
+function showToast(message, type = 'success') {
+  const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+  const toast = document.createElement('div');
+  toast.className = `toast align-items-center text-white bg-${type} border-0 show`;
+  toast.setAttribute('role', 'alert');
+  toast.setAttribute('aria-live', 'assertive');
+  toast.setAttribute('aria-atomic', 'true');
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">${message}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  `;
+  toastContainer.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.remove();
+  }, 5000);
+}
 
+function createToastContainer() {
+  const container = document.createElement('div');
+  container.id = 'toastContainer';
+  container.className = 'position-fixed bottom-0 end-0 p-3';
+  container.style.zIndex = '1100';
+  document.body.appendChild(container);
+  return container;
+}
   // Инициализация
   function init() {
     perPage = parseInt(perPageSelect.value);
@@ -65,14 +92,13 @@ document.addEventListener("DOMContentLoaded", () => {
       currentPage = 1;
       loadSuppliers();
     });
-
-    // Добавление поставщика
+     // Добавление поставщика
     addBtn.addEventListener("click", () => {
       modalTitle.textContent = "Добавить поставщика";
       nameInput.classList.remove('is-invalid');
       nameInput.nextElementSibling.textContent = '';
       supplierIdInput.value = "";
-      nameInput.value = randomInt(0, 100);
+      nameInput.value = randomInt(1000, 10000);
       descInput.value = "";
       deleteBtn.classList.add("d-none");
       
@@ -128,7 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
       processResponse(data);
     } catch (error) {
       console.error('Error:', error);
-      alert('Произошла ошибка при загрузке данных');
+      showToast('Произошла ошибка при загрузке данных', "danger");
     }
   }
 
@@ -279,7 +305,8 @@ document.addEventListener("DOMContentLoaded", () => {
     nameInput.classList.remove('is-invalid');
       nameInput.nextElementSibling.textContent = '';
     supplierIdInput.value = supplier.id;
-    nameInput.value = supplier.name;
+    nameInput.value = randomInt(1000, 10000);
+    // nameInput.value = supplier.name;
     descInput.value = supplier.description || "";
     deleteBtn.classList.remove("d-none");
     supplierModal.show();
@@ -323,12 +350,13 @@ document.addEventListener("DOMContentLoaded", () => {
       supplierModal.hide();
       // Очищаем кэш и перезагружаем данные
       requestCache.clear();
+      showToast('Поставщик успешно добавлен')
       loadSuppliers();
     })
     .catch(error => {
       console.error("Error:", error);
-      if (!error.name) {
-        alert(error.detail || "Произошла ошибка при сохранении");
+      if (error.name) {
+        showToast( "Произошла ошибка при сохранении", "danger");
       }
     });
   }
@@ -349,11 +377,12 @@ document.addEventListener("DOMContentLoaded", () => {
       supplierModal.hide();
       // Очищаем кэш и перезагружаем данные
       requestCache.clear();
+      showToast("Поставщик успешно удален")
       loadSuppliers();
     })
     .catch(error => {
       console.error("Error:", error);
-      alert("Произошла ошибка при удалении");
+      showToast("Произошла ошибка при удалении", "danger");
     });
   }
 

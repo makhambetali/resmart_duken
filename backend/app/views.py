@@ -28,6 +28,16 @@ class SupplierViewSet(viewsets.ModelViewSet):
         
         return super().get_queryset()
     
+    @action(detail=False, methods=['post'])
+    def set_everydays(self, request):
+        ids = request.data.get('ids', [])
+
+        print(ids)
+        supplies_dto = self.service_layer.set_everydays(ids)
+        return Response("Успешно изменено",status=200)
+    
+        
+    
 class SupplyViewSet(viewsets.ModelViewSet):
     serializer_class = SupplySerializer
     queryset = Supply.objects.all().select_related('supplier')
@@ -146,7 +156,7 @@ class CashFlowViewSet(viewsets.ModelViewSet):
 
 class SupplierCustomAPIView(generics.ListAPIView):
     serializer_class = SupplierCustomSerializer
-    queryset = Supplier.objects.all()
+    queryset = Supplier.objects.all().order_by('-is_everyday_supply')
 
 class HomePageView(TemplateView):
     template_name = 'home-page.html'
@@ -160,3 +170,6 @@ class ClientsPageView(TemplateView):
 
 class FinancePageView(TemplateView):
     template_name = 'finance-page.html'
+
+class SettingsPageView(TemplateView):
+    template_name = 'settings-page.html'

@@ -10,6 +10,10 @@ class SupplierService:
         search_result = self.dao.search(query)
         return [self._to_dto(result) for result in search_result]
     
+    def set_everydays(self, ids: List[int] = None) -> None:
+        output = self.dao.set_everydays(ids)
+        
+
     def _to_dto(self, supplier: Supplier) -> SupplierDTO:
         """Конвертирует модель Supplier в SupplierDTO."""
         return SupplierDTO(

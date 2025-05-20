@@ -52,7 +52,7 @@ class SupplySerializer(serializers.ModelSerializer):
 class SupplierCustomSerializer(serializers.ModelSerializer):
     class Meta:
         model = Supplier
-        fields = ['name']
+        fields = ['id','name', 'is_everyday_supply']
 
 class ClientDebtSerializer(serializers.ModelSerializer):
     class Meta:
