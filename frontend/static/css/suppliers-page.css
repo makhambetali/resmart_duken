@@ -1,3 +1,18 @@
+
+:root {
+  --primary: #4361ee;
+  --primary-dark: #3a56d4;
+  --danger: #ef233c;
+  --success: #2b9348;
+  --text: #2b2d42;
+  --text-light: #6c757d;
+  --light: #f8f9fa;
+  --white: #ffffff;
+  --border: #e9ecef;
+  --radius: 12px;
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --transition: all 0.3s ease;
+}
 /* Основные стили контейнера */
 .container-custom {
   flex-direction: column;
@@ -425,4 +440,40 @@
   .button-nav.button-down-page {
     bottom: 80px;
   }
+}
+.pagination-container {
+  padding: 1rem;
+  background-color: var(--light);
+  border-top: 1px solid var(--border);
+}
+
+#pagination {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#pagination li {
+  display: inline-block;
+}
+
+#pagination a {
+  display: inline-block;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  color: var(--primary);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+#pagination .active a {
+  background-color: var(--primary);
+  color: var(--white);
+}
+
+#pagination a:hover:not(.active a) {
+  background-color: rgba(67, 97, 238, 0.1);
 }

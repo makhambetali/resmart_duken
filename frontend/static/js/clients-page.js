@@ -231,7 +231,7 @@ class ClientsManager {
   async deleteDebt() {
     this.showLoader(true);
     this.confirmDeleteDebtModal.hide();
-    alert()
+    // alert()
     try {
       const response = await fetch(`/api/v1/clients/delete_debt/${this.currentDebtId}/`, {
         method: 'DELETE',
@@ -239,26 +239,26 @@ class ClientsManager {
           'X-CSRFToken': this.getCsrfToken()
         }
       });
+      console.log(response)
 
-      if (!response.ok) throw new Error('Ошибка удаления долга');
+      // if (!response.ok) throw new Error('Ошибка удаления долга');
 
       this.showToast('Долг удален', 'success');
+      console.log(12345)
       this.loadClientDebts(this.currentClientId);
       this.loadClients();
     } catch (error) {
       console.error('Error deleting debt:', error);
       this.showToast('Ошибка при удалении долга', 'error');
-    } finally {
-      this.showLoader(false);
-      this.currentDebtId = null;
-    }
+    } 
   }
 
   // ==================== Modal Methods ====================
 
   openClientModal(client) {
     this.currentClientId = client.id;
-    
+    document.querySelector('.addDebtSection').classList.remove('d-none')
+    document.querySelector('.debtList').classList.remove('d-none')
     document.getElementById('clientModalLabel').textContent = client.name;
     document.getElementById('clientId').value = client.id;
     document.getElementById('clientName').value = client.name;
@@ -280,6 +280,8 @@ class ClientsManager {
     
     document.getElementById('clientModalLabel').textContent = 'Добавить клиента';
     document.getElementById('clientForm').reset();
+    document.querySelector('.addDebtSection').classList.add('d-none')
+    document.querySelector('.debtList').classList.add('d-none')
     document.getElementById('clientForm').classList.remove('was-validated');
     document.getElementById('clientId').value = '';
     
@@ -306,9 +308,13 @@ class ClientsManager {
   }
 
   showDeleteDebtConfirmation(debtId) {
+    // alert()
+    this.confirmDeleteDebtModal.show()
+    if (!confirm('Вы уверены, что хотите удалить эту операцию?')) return;
     this.currentDebtId = debtId;
-    // alert
-    this.confirmDeleteDebtModal.show();
+    // // alert
+    // this.confirmDeleteDebtModal.show();
+    this.deleteDebt(debtId)
   }
 
   // ==================== Render Methods ====================
@@ -376,13 +382,15 @@ class ClientsManager {
     document.querySelectorAll('.delete-debt-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         // alert()
-        e.stopPropagation();
+        // e.defaultPrevented()
+        // alert()
         this.showDeleteDebtConfirmation(btn.dataset.debtId);
       });
     });
   }
 
   renderPagination() {
+    // this.showDeleteDebtConfirmation(4)
     const pagination = document.getElementById('pagination');
     pagination.innerHTML = '';
 
@@ -455,18 +463,33 @@ class ClientsManager {
   }
 
   showToast(message, type = 'success') {
-    const toast = document.getElementById('toast');
-    const toastTitle = document.getElementById('toastTitle');
-    const toastMessage = document.getElementById('toastMessage');
+        const toastContainer = document.getElementById('toastContainer') || this.createToastContainer();
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0 show`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        toastContainer.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 5000);
+    }
 
-    // Устанавливаем стили в зависимости от типа
-    toast.className = `toast ${type}`;
-    toastTitle.textContent = type === 'success' ? 'Успешно' : 
-                           type === 'error' ? 'Ошибка' : 'Внимание';
-    
-    toastMessage.textContent = message;
-    this.toast.show();
-  }
+    createToastContainer() {
+        const container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'position-fixed bottom-0 end-0 p-3';
+        container.style.zIndex = '1100';
+        document.body.appendChild(container);
+        return container;
+    }
 
   showLoader(show) {
     document.getElementById('loader').style.display = show ? 'flex' : 'none';

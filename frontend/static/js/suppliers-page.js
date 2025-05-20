@@ -205,98 +205,46 @@ function createToastContainer() {
 
     const totalPages = Math.ceil(data.count / perPage);
     const maxVisiblePages = 5;
-    let startPage, endPage;
-
-    if (totalPages <= maxVisiblePages) {
-      startPage = 1;
-      endPage = totalPages;
-    } else {
-      const maxPagesBeforeCurrent = Math.floor(maxVisiblePages / 2);
-      const maxPagesAfterCurrent = Math.ceil(maxVisiblePages / 2) - 1;
-      
-      if (currentPage <= maxPagesBeforeCurrent) {
-        startPage = 1;
-        endPage = maxVisiblePages;
-      } else if (currentPage + maxPagesAfterCurrent >= totalPages) {
-        startPage = totalPages - maxVisiblePages + 1;
-        endPage = totalPages;
-      } else {
-        startPage = currentPage - maxPagesBeforeCurrent;
-        endPage = currentPage + maxPagesAfterCurrent;
-      }
-    }
-
-    // Кнопка "Назад"
-    const prevLi = createPaginationItem(
-      'Предыдущая', 
-      currentPage > 1 ? currentPage - 1 : 1, 
-      currentPage === 1, 
-      false
-    );
-    paginationElement.appendChild(prevLi);
-
-    // Первая страница
-    if (startPage > 1) {
-      const firstLi = createPaginationItem('1', 1, false, 1 === currentPage);
-      paginationElement.appendChild(firstLi);
-      
-      if (startPage > 2) {
-        const ellipsisLi = document.createElement('li');
-        ellipsisLi.className = 'page-item disabled';
-        ellipsisLi.innerHTML = '<span class="page-link">...</span>';
-        paginationElement.appendChild(ellipsisLi);
-      }
-    }
+    addPaginationButton(pagination, '«', currentPage - 1, currentPage === 1);
 
     // Основные страницы
-    for (let i = startPage; i <= endPage; i++) {
-      const li = createPaginationItem(i.toString(), i, false, i === currentPage);
-      paginationElement.appendChild(li);
-    }
+    const startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
-    // Последняя страница
-    if (endPage < totalPages) {
-      if (endPage < totalPages - 1) {
-        const ellipsisLi = document.createElement('li');
-        ellipsisLi.className = 'page-item disabled';
-        ellipsisLi.innerHTML = '<span class="page-link">...</span>';
-        paginationElement.appendChild(ellipsisLi);
-      }
-      
-      const lastLi = createPaginationItem(totalPages.toString(), totalPages, false, totalPages === currentPage);
-      paginationElement.appendChild(lastLi);
+    for (let i = startPage; i <= endPage; i++) {
+      addPaginationButton(pagination, i.toString(), i, false, i === currentPage);
     }
 
     // Кнопка "Вперед"
-    const nextLi = createPaginationItem(
-      'Следующая', 
-      currentPage < totalPages ? currentPage + 1 : totalPages, 
-      currentPage === totalPages, 
-      false
-    );
-    paginationElement.appendChild(nextLi);
+    addPaginationButton(pagination, '»', currentPage + 1, currentPage === totalPages);
   }
 
-  function createPaginationItem(text, page, disabled, active) {
+  function addPaginationButton(container, text, page, disabled = false, active = false) {
     const li = document.createElement('li');
     li.className = `page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
-    
+
     const a = document.createElement('a');
     a.className = 'page-link';
     a.href = '#';
     a.textContent = text;
-    a.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (!disabled && page !== currentPage) {
-        currentPage = page;
-        loadSuppliers();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    });
-    
+
+    if (!disabled) {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (page !== currentPage) {
+          currentPage = page;
+          // this.loadClients();
+          loadSuppliers(  )
+          // window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+    }
+
     li.appendChild(a);
-    return li;
+    container.appendChild(li);
   }
+
+
 
   // Открытие модального окна для редактирования
   function openModal(supplier) {
