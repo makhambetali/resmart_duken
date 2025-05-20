@@ -1,13 +1,17 @@
 import os
 from celery import Celery
+from celery.schedules import crontab
 
-# Установите настройки Django для Celery
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
-app = Celery('config')  # Имя проекта (папка с settings.py)
-
-# Загрузите настройки Celery из settings.py (CELERY_*)
+app = Celery('config')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
-# Автоматически находите задачи в файлах tasks.py всех приложений
+app.conf.beat_schedule = {
+    'say-hi-every-minute': {
+        'task': 'app.tasks.auto_generate_supplies',
+        'schedule': crontab(hour=0, minute=9 )
+    },
+}
+
 app.autodiscover_tasks()

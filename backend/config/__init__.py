@@ -1,3 +1,3 @@
-from celery_app import app as celery_app  # Импортируем приложение Celery
+from celery_app import app as celery_app 
 
-__all__ = ('celery_app',)  # Чтобы Celery мог найти app
+__all__ = ('celery_app',)
