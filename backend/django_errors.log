@@ -1,0 +1,178 @@
+Internal Server Error: /api/v1/supplies/
+Traceback (most recent call last):
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\mixins.py", line 38, in list
+    queryset = self.filter_queryset(self.get_queryset())
+                                    ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\backend\app\views.py", line 56, in get_queryset
+    supplies_dto = self.service_layer.get_supplies(supply_type)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\backend\app\services\supply.py", line 26, in get_supplies
+    cache_object.set_cache(key, result, 30)
+TypeError: CacheService.set_cache() takes 1 positional argument but 4 were given
+"GET /api/v1/supplies/ HTTP/1.1" 500 110099
+Internal Server Error: /api/v1/supplies/
+Traceback (most recent call last):
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\mixins.py", line 38, in list
+    queryset = self.filter_queryset(self.get_queryset())
+                                    ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\backend\app\views.py", line 56, in get_queryset
+    supplies_dto = self.service_layer.get_supplies(supply_type)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\backend\app\services\supply.py", line 16, in get_supplies
+    cache_object = CacheService(key)
+                   ^^^^^^^^^^^^^^^^^
+TypeError: CacheService() takes no arguments
+"GET /api/v1/supplies/ HTTP/1.1" 500 108463
+Internal Server Error: /api/v1/supplies/
+Traceback (most recent call last):
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\mixins.py", line 38, in list
+    queryset = self.filter_queryset(self.get_queryset())
+                                    ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\backend\app\views.py", line 56, in get_queryset
+    supplies_dto = self.service_layer.get_supplies(supply_type)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\backend\app\services\supply.py", line 17, in get_supplies
+    cache = cache_object.get_cache(key)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\backend\app\services\cache.py", line 4, in get_cache
+    cached_value = cache.get(cache)
+                   ^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+"GET /api/v1/supplies/ HTTP/1.1" 500 112128
+Internal Server Error: /api/v1/supplies/
+Traceback (most recent call last):
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\mixins.py", line 19, in create
+    self.perform_create(serializer)
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\mixins.py", line 24, in perform_create
+    serializer.save()
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\serializers.py", line 210, in save
+    self.instance = self.create(validated_data)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\backend\app\serializers.py", line 38, in create
+    CacheService('all_supplies_future').delete_cache()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: CacheService() takes no arguments
+"POST /api/v1/supplies/ HTTP/1.1" 500 122531
+Internal Server Error: /api/v1/supplies/
+Traceback (most recent call last):
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\mixins.py", line 19, in create
+    self.perform_create(serializer)
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\mixins.py", line 24, in perform_create
+    serializer.save()
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\venv\Lib\site-packages\rest_framework\serializers.py", line 210, in save
+    self.instance = self.create(validated_data)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\diar8\OneDrive\Рабочий стол\Coding\resmart_duken\backend\app\serializers.py", line 38, in create
+    CacheService().delete_cache('all_supplies_future')
+TypeError: CacheService.delete_cache() takes 1 positional argument but 2 were given
+"POST /api/v1/supplies/ HTTP/1.1" 500 122827

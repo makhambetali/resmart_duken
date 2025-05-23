@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow
 from django.utils import timezone
-
+from .services.cache import CacheService
 class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
@@ -35,6 +35,7 @@ class SupplySerializer(serializers.ModelSerializer):
         supply = Supply.objects.create(**validated_data)
         supply.supplier.last_accessed = timezone.now()
         supply.supplier.save()
+        CacheService().delete_cache('all_supplies_future')
         for image in images:
             SupplyImage.objects.create(supply=supply, image=image)
         return supply

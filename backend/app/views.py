@@ -1,5 +1,7 @@
 from django.views.generic.base import TemplateView
 from django.utils import timezone
+from django.core.cache import cache
+
 from datetime import date
 from rest_framework import viewsets, generics, status
 from rest_framework.decorators import action
@@ -36,6 +38,11 @@ class SupplierViewSet(viewsets.ModelViewSet):
         supplies_dto = self.service_layer.set_everydays(ids)
         return Response("Успешно изменено",status=200)
     
+    def destroy(self, request, *args, **kwargs):
+        response = super().destroy(request, *args, **kwargs)
+        cache.delete('all_supplies_future')
+        print("CACHE DELETE: all_supplies_future")
+        return response
         
     
 class SupplyViewSet(viewsets.ModelViewSet):
