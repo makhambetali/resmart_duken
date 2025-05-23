@@ -35,7 +35,7 @@ class SupplySerializer(serializers.ModelSerializer):
         supply = Supply.objects.create(**validated_data)
         supply.supplier.last_accessed = timezone.now()
         supply.supplier.save()
-        CacheService().delete_cache('all_supplies_future')
+        CacheService().delete_cache('supplies_future')
         for image in images:
             SupplyImage.objects.create(supply=supply, image=image)
         return supply

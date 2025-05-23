@@ -13,7 +13,7 @@ class SupplyService:
         self.cache_service = CacheService()
 
     def get_supplies(self, supply_type: str) -> List[SupplyDTO]:
-        key = f'all_supplies_{supply_type}'
+        key = f'supplies_{supply_type}'
         cache = self.cache_service.get_cache(key)
         if cache:
             return cache
