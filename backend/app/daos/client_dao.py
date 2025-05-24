@@ -1,4 +1,5 @@
 from app.models import ClientDebt, Client   
+
 from rest_framework.serializers import ValidationError
 class ClientDAO:
     def delete_all_debts(self, client: Client):

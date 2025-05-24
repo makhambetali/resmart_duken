@@ -28,18 +28,18 @@ class SupplierViewSet(viewsets.ModelViewSet):
         return self.queryset.filter(id__in=[dto.id for dto in suppliers_dto])
     
     def perform_create(self, serializer):
-        self.service_layer.cache_service.delete_cache('suppliers')
-        self.service_layer.cache_service.delete_cache('all_suppliers')
+        # self.service_layer.cache_service.delete_cache('suppliers')
+        # self.service_layer.cache_service.delete_cache('all_suppliers')
         return super().perform_create(serializer)
     
     def perform_destroy(self, instance):
-        self.service_layer.cache_service.delete_cache('suppliers')
-        self.service_layer.cache_service.delete_cache('all_suppliers')
+        # self.service_layer.cache_service.delete_cache('suppliers')
+        # self.service_layer.cache_service.delete_cache('all_suppliers')
         return super().perform_destroy(instance)
     
     def perform_update(self, serializer):
-        self.service_layer.cache_service.delete_cache('suppliers')
-        self.service_layer.cache_service.delete_cache('all_suppliers')
+        # self.service_layer.cache_service.delete_cache('suppliers')
+        # self.service_layer.cache_service.delete_cache('all_suppliers')
         return super().perform_update(serializer)
     
     # @action(detail=False, methods=['post'])
@@ -171,25 +171,31 @@ class CashFlowViewSet(viewsets.ModelViewSet):
 class SupplierCustomAPIView(generics.ListAPIView, CacheService):
     serializer_class = SupplierCustomSerializer
     def get_queryset(self):
-        cache = self.get_cache('all_suppliers')
-        if cache:
-            return cache
+        # cache = self.get_cache('all_suppliers')
+        # if cache:
+        #     return cache
         queryset = Supplier.objects.all().order_by('-is_everyday_supply')
-        self.set_cache('all_suppliers', queryset)
+        # self.set_cache('all_suppliers', queryset)
         return queryset
 
-class HomePageView(TemplateView):
+class LoggingTemplateView(TemplateView):
+    def dispatch(self, request, *args, **kwargs):
+        view_name = request.resolver_match.view_name
+        print(f"{view_name:-^60}")
+        return super().dispatch(request, *args, **kwargs)
+
+class HomePageView(LoggingTemplateView):
     template_name = 'home-page.html'
 
-class SuppliersPageView(TemplateView):
+class SuppliersPageView(LoggingTemplateView):
     template_name = 'suppliers-page.html'
 
 
-class ClientsPageView(TemplateView):
+class ClientsPageView(LoggingTemplateView):
     template_name = 'clients-page.html'
 
-class FinancePageView(TemplateView):
+class FinancePageView(LoggingTemplateView):
     template_name = 'finance-page.html'
 
-class SettingsPageView(TemplateView):
+class SettingsPageView(LoggingTemplateView):
     template_name = 'settings-page.html'

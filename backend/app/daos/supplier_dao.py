@@ -6,14 +6,14 @@ from app.services.cache import CacheService
 class SupplierDAO(CacheService):
     def search(self, query: str) -> QuerySet[Supplier]:
         """Поставки с delivery_date раньше текущей даты."""
-        cache = self.get_cache('suppliers')
-        if cache and not query:
-            return cache
+        # cache = self.get_cache('suppliers')
+        # if cache and not query:
+        #     return cache
         
         queryset = Supplier.objects.all().order_by('-last_accessed')
         if query:
             return queryset.filter(name__icontains = query)
-        self.set_cache('suppliers', queryset)
+        # self.set_cache('suppliers', queryset)
         return queryset
         
     # def set_everydays(self, ids: List[int] = None):

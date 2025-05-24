@@ -1,11 +1,10 @@
 from django.core.cache import cache
 class CacheService:
     def get_cache(self, key):
-        cached_value = cache.get(key)
+        cached_value = cache.get(key, None)
         if cached_value:
             print(f"CACHE GET: {key}")
             return cached_value
-        
         return None
 
     def set_cache(self, key, value, lifetime = 5 * 60):

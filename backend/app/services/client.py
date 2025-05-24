@@ -2,9 +2,10 @@ from app.daos.client_dao import ClientDAO
 from app.dtos.client_dto import ClientDTO, DebtDTO
 from typing import Optional, List
 from app.models import ClientDebt, Client   
+from app.services.cache import CacheService
 from django.db import transaction
 from rest_framework.serializers import ValidationError
-class ClientService:
+class ClientService(CacheService):
     def __init__(self, dao: Optional[ClientDAO] = None):
         self.dao = dao or ClientDAO()
 
