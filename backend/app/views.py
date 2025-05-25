@@ -16,6 +16,10 @@ from .services.supplier import SupplierService
 from .services.client import ClientService
 from .services.cashflow import CashFlowService
 
+import logging
+
+logger = logging.getLogger('app')
+
 class SupplierViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierSerializer
     pagination_class = SupplierResultsPaginationPage
@@ -100,6 +104,7 @@ class ClientViewSet(viewsets.ModelViewSet):
             client_object = self.service_layer.add_debt(client, debt_value)
             return Response(vars(client_object))
         except ValidationError as e:
+            logger.error(e)
             return Response({"error": str(e)}, status=400)
     
     @action(detail=False, methods = ['delete'], url_path='delete_debt(?:/(?P<debt_id>[^/.]+))?')
@@ -144,6 +149,11 @@ class CashFlowViewSet(viewsets.ModelViewSet):
         date = request.query_params.get('date', timezone.now().date())
         cashflows_dto = self.service_layer.get_cashflows_by_date(date)
         return Response(vars(cashflow) for cashflow in cashflows_dto)
+    
+    def perform_create(self, serializer): 
+        action = 'Вынос' if serializer.validated_data['amount'] < 0 else "Внесение"
+        logger.info(f'{action} в размере {serializer.validated_data['amount']}')
+        return super().perform_create(serializer)
 
 class SupplierCustomAPIView(generics.ListAPIView):
     serializer_class = SupplierCustomSerializer

@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -105,34 +105,35 @@ CACHES = {
     }
 }
 
+
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'handlers': {
-        'file': {
-            'level': 'ERROR',
-            'class': 'logging.FileHandler',
-            'filename': 'django_errors.log',
-            'encoding': 'utf-8'
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} {levelname} {message}',
+            'style': '{',
         },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
+    },
+    'handlers': {
+        'myfile': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs.log'),
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
         },
     },
     'loggers': {
-        'django': {
-            'handlers': ['file', 'console'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-        'myapp': {
-            'handlers': ['file', 'console'],
-            'level': 'DEBUG',
+        'app': { 
+            'handlers': ['myfile'],
+            'level': 'INFO',
             'propagate': False,
         },
     },
 }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

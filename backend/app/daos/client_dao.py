@@ -1,6 +1,10 @@
 from app.models import ClientDebt, Client   
 from django.core.cache import cache
 from rest_framework.serializers import ValidationError
+import logging
+
+logger = logging.getLogger('app')
+
 class ClientDAO:
     def delete_all_debts(self, client: Client):
         client.debts.all().delete()
@@ -17,6 +21,7 @@ class ClientDAO:
         
         client.save()
         instance.delete()
+        logger.info(f'Удаление долга в размере {instance.debt_value} у клиента #{client.id}({client.name})')
         cache.delete(f'clients_{client.id}_debts')
         return client
 

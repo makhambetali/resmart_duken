@@ -5,7 +5,7 @@ class ClientsManager {
     this.clientModal = new bootstrap.Modal(document.getElementById('clientModal'));
     this.confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
     this.confirmDeleteDebtModal = new bootstrap.Modal(document.getElementById('confirmDeleteDebtModal'));
-    this.toast = new bootstrap.Toast(document.getElementById('toast'));
+    this.toast = new bootstrap.Modal(document.getElementById('toast'));
 
     // Текущие выбранные ID
     this.currentClientId = null;

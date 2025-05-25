@@ -1,11 +1,14 @@
 from app.daos.client_dao import ClientDAO
 from app.dtos.client_dto import ClientDTO, DebtDTO
 from typing import Optional, List
-from app.models import ClientDebt, Client   
-from app.services.cache import CacheService
+from app.models import ClientDebt, Client
 from django.db import transaction
 from rest_framework.serializers import ValidationError
-class ClientService(CacheService):
+import logging
+
+logger = logging.getLogger('app')
+
+class ClientService:
     def __init__(self, dao: Optional[ClientDAO] = None):
         self.dao = dao or ClientDAO()
 
@@ -15,9 +18,10 @@ class ClientService(CacheService):
         
         self.dao.create_debt(client, debt_value)
         client.debt += debt_value
-
+        logger.info(f'Создание долга в размере {debt_value} клиенту #{client.id}({client.name})')
         if client.debt == 0:
             self.dao.delete_all_debts(client)
+            logger.info(f'Обнуление всех долгов клиента #{client.id}({client.name})')
         
         client.save()
         return self._to_client_dto(client)
@@ -33,6 +37,7 @@ class ClientService(CacheService):
     def delete_one_debt(self, debt_id: int) -> ClientDTO:
         try:
             client = self.dao.delete_one_debt(debt_id)
+            
             return self._to_client_dto(client)   # Получаем и удаляем долг, обновляем клиента
                 
                 

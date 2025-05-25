@@ -2,6 +2,8 @@ from rest_framework import serializers
 from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow
 from django.utils import timezone
 from django.core.cache import cache
+import logging
+logger = logging.getLogger('app')
 class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
@@ -36,17 +38,25 @@ class SupplySerializer(serializers.ModelSerializer):
         supply.supplier.last_accessed = timezone.now()
         supply.supplier.save()
         cache.delete('future_supplies')
+        logger.info(f'Поставка #{supply.id} успешно создана: поставщик {supply.supplier} на {supply.delivery_date} ')
         for image in images:
             SupplyImage.objects.create(supply=supply, image=image)
+
+        if images:
+            logger.info(f'Добавлено {len(images)} изображении поставке #{supply.id}')
+        
+        
         return supply
 
     def update(self, instance, validated_data):
         request = self.context.get('request')
         images = request.FILES.getlist('images')
+        logger.info(f'Поставка #{instance.id} успешно изменена')
         if images:
             instance.images.all().delete()
             for image in images:
                 SupplyImage.objects.create(supply=instance, image=image)
+            logger.info(f'Добавлено {len(images)} изображении поставке #{instance.id}')
         return super().update(instance, validated_data)
 
 
