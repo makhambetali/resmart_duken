@@ -152,7 +152,8 @@ class CashFlowViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer): 
         action = 'Вынос' if serializer.validated_data['amount'] < 0 else "Внесение"
-        logger.info(f'{action} в размере {serializer.validated_data['amount']}')
+        logger.info(f"{action} в размере {serializer.validated_data['amount']}")
+
         return super().perform_create(serializer)
 
 class SupplierCustomAPIView(generics.ListAPIView):

@@ -42,8 +42,10 @@ INSTALLED_APPS = [
     'drf_yasg',
 ]
 # settings.py
-CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Брокер (Redis)
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+# CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Брокер (Redis)
+# CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 CELERY_TIMEZONE = 'Asia/Almaty'  # Часовой пояс
 
 MIDDLEWARE = [
@@ -91,14 +93,16 @@ DATABASES = {
         "NAME": "postgres",
         "USER": "postgres",
         "PASSWORD": "123",
-        "HOST": "127.0.0.1",
+        # "HOST": "127.0.0.1",
+        "HOST": "db",
         "PORT": "5432",
     }
 }
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",  # 1 — номер базы
+        # "LOCATION": "redis://127.0.0.1:6379/1",  # 1 — номер базы
+        "LOCATION": "redis://redis:6379/1",  # 1 — номер базы
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
