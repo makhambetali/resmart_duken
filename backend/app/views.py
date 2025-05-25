@@ -31,6 +31,11 @@ class SupplierViewSet(viewsets.ModelViewSet):
         suppliers_dto = self.service_layer.search(q)
         return self.queryset.filter(id__in=[dto.id for dto in suppliers_dto])
     
+    def perform_create(self, serializer):
+        cache.delete('suppliers')
+        return super().perform_create(serializer)
+    
+    
 
         
     
@@ -151,10 +156,19 @@ class CashFlowViewSet(viewsets.ModelViewSet):
         return Response(vars(cashflow) for cashflow in cashflows_dto)
     
     def perform_create(self, serializer): 
+        cache.delete(f'cashflow_{timezone.now().date()}')
         action = 'Вынос' if serializer.validated_data['amount'] < 0 else "Внесение"
         logger.info(f"{action} в размере {serializer.validated_data['amount']}")
 
         return super().perform_create(serializer)
+
+    def perform_destroy(self, instance):
+        cache.delete(f'cashflow_{timezone.now().date()}')
+        return super().perform_destroy(instance)
+    
+    def perform_update(self, serializer):
+        cache.delete(f'cashflow_{timezone.now().date()}')
+        return super().perform_update(serializer)
 
 class SupplierCustomAPIView(generics.ListAPIView):
     serializer_class = SupplierCustomSerializer

@@ -37,7 +37,7 @@ class SupplySerializer(serializers.ModelSerializer):
         supply = Supply.objects.create(**validated_data)
         supply.supplier.last_accessed = timezone.now()
         supply.supplier.save()
-        cache.delete('future_supplies')
+        cache.delete('supplies_future')
         logger.info(f'Поставка #{supply.id} успешно создана: поставщик {supply.supplier} на {supply.delivery_date} ')
         for image in images:
             SupplyImage.objects.create(supply=supply, image=image)
