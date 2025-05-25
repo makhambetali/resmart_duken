@@ -27,28 +27,6 @@ class SupplierViewSet(viewsets.ModelViewSet):
         suppliers_dto = self.service_layer.search(q)
         return self.queryset.filter(id__in=[dto.id for dto in suppliers_dto])
     
-    def perform_create(self, serializer):
-        # self.service_layer.cache_service.delete_cache('suppliers')
-        # self.service_layer.cache_service.delete_cache('all_suppliers')
-        return super().perform_create(serializer)
-    
-    def perform_destroy(self, instance):
-        # self.service_layer.cache_service.delete_cache('suppliers')
-        # self.service_layer.cache_service.delete_cache('all_suppliers')
-        return super().perform_destroy(instance)
-    
-    def perform_update(self, serializer):
-        # self.service_layer.cache_service.delete_cache('suppliers')
-        # self.service_layer.cache_service.delete_cache('all_suppliers')
-        return super().perform_update(serializer)
-    
-    # @action(detail=False, methods=['post'])
-    # def set_everydays(self, request):
-    #     ids = request.data.get('ids', [])
-
-    #     print(ids)
-    #     supplies_dto = self.service_layer.set_everydays(ids)
-    #     return Response("Успешно изменено",status=200)
 
         
     
@@ -62,7 +40,6 @@ class SupplyViewSet(viewsets.ModelViewSet):
         if supply_type in ('past', 'future'):
             supplies_dto = self.service_layer.get_supplies(supply_type)
             return self.queryset.filter(id__in=[dto.id for dto in supplies_dto])
-        return super().get_queryset()
 
     @action(detail=False, methods=['get'])
     def by_date(self, request):
@@ -168,14 +145,10 @@ class CashFlowViewSet(viewsets.ModelViewSet):
         cashflows_dto = self.service_layer.get_cashflows_by_date(date)
         return Response(vars(cashflow) for cashflow in cashflows_dto)
 
-class SupplierCustomAPIView(generics.ListAPIView, CacheService):
+class SupplierCustomAPIView(generics.ListAPIView):
     serializer_class = SupplierCustomSerializer
     def get_queryset(self):
-        # cache = self.get_cache('all_suppliers')
-        # if cache:
-        #     return cache
         queryset = Supplier.objects.all().order_by('-is_everyday_supply')
-        # self.set_cache('all_suppliers', queryset)
         return queryset
 
 class LoggingTemplateView(TemplateView):

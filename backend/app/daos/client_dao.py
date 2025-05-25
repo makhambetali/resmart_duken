@@ -1,9 +1,10 @@
 from app.models import ClientDebt, Client   
-
+from django.core.cache import cache
 from rest_framework.serializers import ValidationError
 class ClientDAO:
     def delete_all_debts(self, client: Client):
         client.debts.all().delete()
+        cache.delete(f'clients_{client.id}_debts')
 
     def delete_one_debt(self, debt_id: int) -> Client:
         """
@@ -16,18 +17,31 @@ class ClientDAO:
         
         client.save()
         instance.delete()
+        cache.delete(f'clients_{client.id}_debts')
         return client
 
     def create_debt(self, client, debt_value):
         ClientDebt.objects.create(client=client, debt_value=debt_value)
+        cache.delete(f'clients_{client.id}_debts')
 
     def get_debts(self, client):
-        return client.debts.all().order_by('-date_added')
+        # queryset = client.debts.all().order_by('-date_added')
+        queryset = cache.get_or_set(
+                f'clients_{client.id}_debts',
+                lambda: client.debts.all().order_by('-date_added'),
+                timeout=10
+            )
+        return queryset
     
     def search(self, query=None):
-        queryset = Client.objects.all()
+        queryset = cache.get_or_set(
+            'clients',
+            lambda: Client.objects.all(),
+            timeout=300
+        )
         if query:
             queryset = queryset.filter(name__icontains=query)
         
         return queryset
+        
 

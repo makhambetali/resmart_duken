@@ -2,18 +2,16 @@ from django.core.cache import cache
 from django.db.models import QuerySet
 from typing import List
 from app.models import Supplier
-from app.services.cache import CacheService
-class SupplierDAO(CacheService):
+class SupplierDAO:
     def search(self, query: str) -> QuerySet[Supplier]:
         """Поставки с delivery_date раньше текущей даты."""
-        # cache = self.get_cache('suppliers')
-        # if cache and not query:
-        #     return cache
-        
-        queryset = Supplier.objects.all().order_by('-last_accessed')
+        queryset = cache.get_or_set(
+            'suppliers', 
+            lambda: Supplier.objects.all().order_by('-last_accessed'), 
+            timeout=300
+        )
         if query:
-            return queryset.filter(name__icontains = query)
-        # self.set_cache('suppliers', queryset)
+            queryset = queryset.filter(name__icontains=query.lower())
         return queryset
         
     # def set_everydays(self, ids: List[int] = None):

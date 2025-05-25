@@ -13,17 +13,11 @@ class SupplyService:
         # self.cache_service = CacheService()
 
     def get_supplies(self, supply_type: str) -> List[SupplyDTO]:
-        key = f'supplies_{supply_type}'
-        # cache = self.cache_service.get_cache(key)
-        # if cache:
-        #     return cache
-        
         queryset = (
             self.dao.get_past_supplies() if supply_type == 'past'
             else self.dao.get_future_supplies()
         )
         result = [self._to_dto(supply) for supply in queryset]
-        # self.cache_service.set_cache(key, result)
         return result
 
     def get_supplies_by_date(
@@ -33,14 +27,8 @@ class SupplyService:
     ) -> List[SupplyDTO]:
         """Возвращает поставки на указанную дату."""
         target_date = target_date or date.today()
-        # key = f"supplies_by_date_{target_date}_{only_confirmed}"
-        # cache = self.cache_service.get_cache(key)
-        # if cache:
-        #     return cache
-        
         supplies = self.dao.get_supplies_by_date(target_date, only_confirmed)
         result = [self._to_dto(supply) for supply in supplies]
-        # self.cache_service.set_cache(key, result)
         return result
 
     def _to_dto(self, supply: Supply) -> SupplyDTO:
