@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const perPageSelect = document.getElementById("perPageSelect");
   const paginationElement = document.getElementById("pagination");
 
-  // Модальное окно
+  
   const supplierModal = new bootstrap.Modal(document.getElementById("supplierModal"));
   const supplierForm = document.getElementById("supplierForm");
   const modalTitle = document.getElementById("modalTitle");
@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const descInput = document.getElementById("supplierDescription");
   const deleteBtn = document.getElementById("deleteBtn");
 
-  // Состояние приложения
+  
   let searchQuery = '';
   let currentPage = 1;
   let perPage = 25;
@@ -54,22 +54,22 @@ function createToastContainer() {
   document.body.appendChild(container);
   return container;
 }
-  // Инициализация
+  
   function init() {
     perPage = parseInt(perPageSelect.value);
     loadSuppliers();
     
-    // Настройка обработчиков событий
+    
     setupEventListeners();
   }
 
   function setupEventListeners() {
-    // Поиск
+    
     const debouncedSearch = debounce(() => {
       const newQuery = searchInput.value.trim();
       if (newQuery !== searchQuery) {
         searchQuery = newQuery;
-        currentPage = 1; // Сброс на первую страницу при новом поиске
+        currentPage = 1; 
         loadSuppliers();
       }
     }, 300);
@@ -86,19 +86,19 @@ function createToastContainer() {
       }
     });
 
-    // Пагинация
+    
     perPageSelect.addEventListener("change", () => {
       perPage = parseInt(perPageSelect.value);
       currentPage = 1;
       loadSuppliers();
     });
-     // Добавление поставщика
+     
     addBtn.addEventListener("click", () => {
       modalTitle.textContent = "Добавить поставщика";
       nameInput.classList.remove('is-invalid');
       nameInput.nextElementSibling.textContent = '';
       supplierIdInput.value = "";
-      // nameInput.value = randomInt(1000, 10000);
+      
       nameInput.value = "";
       descInput.value = "";
       deleteBtn.classList.add("d-none");
@@ -111,16 +111,16 @@ function createToastContainer() {
       addBtn.click();
     });
 
-    // Форма
+    
     supplierForm.addEventListener("submit", (e) => {
       e.preventDefault();
       saveSupplier();
     });
 
-    // Удаление
+    
     deleteBtn.addEventListener("click", deleteSupplier);
 
-    // Валидация
+    
     nameInput.addEventListener("input", () => {
       if (nameInput.value.trim()) {
         nameInput.classList.remove("is-invalid");
@@ -128,7 +128,7 @@ function createToastContainer() {
     });
   }
 
-  // Загрузка данных с пагинацией
+  
   async function loadSuppliers() {
     const params = new URLSearchParams();
     if (searchQuery) params.append('q', searchQuery);
@@ -138,7 +138,7 @@ function createToastContainer() {
     const url = `/api/v1/suppliers/?${params.toString()}`;
     const cacheKey = `${searchQuery}-${currentPage}-${perPage}`;
 
-    // Проверка кэша
+    
     if (requestCache.has(cacheKey)) {
       const cachedData = requestCache.get(cacheKey);
       processResponse(cachedData);
@@ -150,7 +150,7 @@ function createToastContainer() {
       if (!response.ok) throw new Error('Ошибка загрузки данных');
       const data = await response.json();
       
-      // Кэширование ответа
+      
       requestCache.set(cacheKey, data);
       processResponse(data);
     } catch (error) {
@@ -174,7 +174,7 @@ function createToastContainer() {
     }
   }
 
-  // Отображение списка поставщиков
+  
   function renderSuppliers(suppliers) {
     tableBody.innerHTML = '';
     
@@ -198,7 +198,7 @@ function createToastContainer() {
     });
   }
 
-  // Отображение пагинации
+  
   function renderPagination(data) {
     paginationElement.innerHTML = '';
     
@@ -208,7 +208,7 @@ function createToastContainer() {
     const maxVisiblePages = 5;
     addPaginationButton(pagination, '«', currentPage - 1, currentPage === 1);
 
-    // Основные страницы
+    
     const startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
     const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
@@ -216,7 +216,7 @@ function createToastContainer() {
       addPaginationButton(pagination, i.toString(), i, false, i === currentPage);
     }
 
-    // Кнопка "Вперед"
+    
     addPaginationButton(pagination, '»', currentPage + 1, currentPage === totalPages);
   }
 
@@ -234,9 +234,9 @@ function createToastContainer() {
         e.preventDefault();
         if (page !== currentPage) {
           currentPage = page;
-          // this.loadClients();
+          
           loadSuppliers(  )
-          // window.scrollTo({ top: 0, behavior: 'smooth' });
+          
         }
       });
     }
@@ -247,7 +247,7 @@ function createToastContainer() {
 
 
 
-  // Открытие модального окна для редактирования
+  
   function openModal(supplier) {
     modalTitle.textContent = "Редактировать поставщика";
 
@@ -255,13 +255,13 @@ function createToastContainer() {
       nameInput.nextElementSibling.textContent = '';
     supplierIdInput.value = supplier.id;
     nameInput.value = randomInt(1000, 10000);
-    // nameInput.value = supplier.name;
+    
     descInput.value = supplier.description || "";
     deleteBtn.classList.remove("d-none");
     supplierModal.show();
   }
 
-  // Сохранение поставщика
+  
   function saveSupplier() {
     const id = supplierIdInput.value;
     const method = id ? "PUT" : "POST";
@@ -297,7 +297,7 @@ function createToastContainer() {
     })
     .then(() => {
       supplierModal.hide();
-      // Очищаем кэш и перезагружаем данные
+      
       requestCache.clear();
       showToast(id ? 'Поставщик успешно изменен' : "Поставщик успешно добавлен")
       loadSuppliers();
@@ -310,7 +310,7 @@ function createToastContainer() {
     });
   }
 
-  // Удаление поставщика
+  
   function deleteSupplier() {
     const id = supplierIdInput.value;
     if (!id || !confirm("Вы уверены, что хотите удалить этого поставщика?")) return;
@@ -324,7 +324,7 @@ function createToastContainer() {
     .then(response => {
       if (!response.ok) throw new Error("Ошибка при удалении");
       supplierModal.hide();
-      // Очищаем кэш и перезагружаем данные
+      
       requestCache.clear();
       showToast("Поставщик успешно удален")
       loadSuppliers();
@@ -335,7 +335,7 @@ function createToastContainer() {
     });
   }
 
-  // Вспомогательные функции
+  
   function debounce(func, delay) {
     let timeout;
     return (...args) => {
@@ -376,6 +376,6 @@ function createToastContainer() {
       .replace(/'/g, "&#039;");
   }
 
-  // Запуск приложения
+  
   init();
 });

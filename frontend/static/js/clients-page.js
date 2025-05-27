@@ -1,17 +1,17 @@
-// clients.js
+
 class ClientsManager {
   constructor() {
-    // Инициализация модальных окон
+    
     this.clientModal = new bootstrap.Modal(document.getElementById('clientModal'));
     this.confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
     this.confirmDeleteDebtModal = new bootstrap.Modal(document.getElementById('confirmDeleteDebtModal'));
     this.toast = new bootstrap.Modal(document.getElementById('toast'));
 
-    // Текущие выбранные ID
+    
     this.currentClientId = null;
     this.currentDebtId = null;
 
-    // Кэш данных
+    
     this.cache = {
       clients: null,
       lastFetch: 0,
@@ -23,20 +23,20 @@ class ClientsManager {
       show_zeros: 1
     };
 
-    // Инициализация
+    
     this.initEventListeners();
     this.loadClients();
   }
 
-  // Инициализация обработчиков событий
+  
   initEventListeners() {
-    // Кнопки управления
+    
     document.getElementById('addClientBtn').addEventListener('click', () => this.openAddClientModal());
     document.getElementById('addNewClientBtn').addEventListener('click', () => this.openAddClientModal());
     document.getElementById('searchBtn').addEventListener('click', () => this.handleSearch());
     document.getElementById('resetSearchBtn').addEventListener('click', () => this.resetSearch());
 
-    // Фильтры
+    
     document.getElementById('filterSelect').addEventListener('change', (e) => {
       this.cache.filterType = e.target.value;
       this.cache.currentPage = 1;
@@ -49,33 +49,33 @@ class ClientsManager {
       this.loadClients();
     });
     document.getElementById('showZerosCheckbox').addEventListener('change', (e) => {
-      // console.log(e.target.checked)
+      
       this.cache.show_zeros = +e.target.checked
       this.cache.currentPage = 1
       this.loadClients()
     })
 
-    // Форма клиента
+    
     document.getElementById('saveClientBtn').addEventListener('click', () => this.saveClient());
     document.getElementById('deleteClientBtn').addEventListener('click', () => this.showDeleteConfirmation());
     document.getElementById('confirmDeleteBtn').addEventListener('click', () => this.deleteClient());
 
-    // Управление долгами
+    
     document.getElementById('addDebtBtn').addEventListener('click', () => this.showDebtForm());
     document.getElementById('saveDebtBtn').addEventListener('click', () => this.saveDebt());
     document.getElementById('cancelDebtBtn').addEventListener('click', () => this.hideDebtForm());
     document.getElementById('confirmDeleteDebtBtn').addEventListener('click', () => this.deleteDebt());
 
-    // Дебаунс для поиска
+    
     document.getElementById('searchInput').addEventListener('input', this.debounce(() => {
       this.handleSearch();
     }, 300));
   }
 
-  // ==================== API Methods ====================
+  
 
   async loadClients() {
-    // Отмена предыдущего запроса
+    
     if (this.cache.abortController) {
       this.cache.abortController.abort();
     }
@@ -239,7 +239,7 @@ class ClientsManager {
   async deleteDebt() {
     this.showLoader(true);
     this.confirmDeleteDebtModal.hide();
-    // alert()
+    
     try {
       const response = await fetch(`/api/v1/clients/delete_debt/${this.currentDebtId}/`, {
         method: 'DELETE',
@@ -249,7 +249,7 @@ class ClientsManager {
       });
       console.log(response)
 
-      // if (!response.ok) throw new Error('Ошибка удаления долга');
+      
 
       this.showToast('Долг удален', 'success');
       console.log(12345)
@@ -261,7 +261,7 @@ class ClientsManager {
     } 
   }
 
-  // ==================== Modal Methods ====================
+  
 
   openClientModal(client) {
     this.currentClientId = client.id;
@@ -274,7 +274,7 @@ class ClientsManager {
     document.getElementById('clientDescription').value = client.description || '';
     document.getElementById('clientIsChosen').checked = client.is_chosen;
     
-    // Сброс валидации
+    
     document.getElementById('clientForm').classList.remove('was-validated');
     document.getElementById('clientName').classList.remove('is-invalid');
     
@@ -293,7 +293,7 @@ class ClientsManager {
     document.getElementById('clientForm').classList.remove('was-validated');
     document.getElementById('clientId').value = '';
     
-    // Очистка таблицы долгов
+    
     document.getElementById('debtsTableBody').innerHTML = `
       <tr><td colspan="3" class="text-center">Нет записей о долгах</td></tr>`;
     
@@ -316,16 +316,16 @@ class ClientsManager {
   }
 
   showDeleteDebtConfirmation(debtId) {
-    // alert()
+    
     this.confirmDeleteDebtModal.show()
     if (!confirm('Вы уверены, что хотите удалить эту операцию?')) return;
     this.currentDebtId = debtId;
-    // // alert
-    // this.confirmDeleteDebtModal.show();
+    
+    
     this.deleteDebt(debtId)
   }
 
-  // ==================== Render Methods ====================
+  
 
   renderClients() {
     const tbody = document.querySelector('#clientsTable tbody');
@@ -386,19 +386,19 @@ class ClientsManager {
       tbody.appendChild(row);
     });
 
-    // Добавляем обработчики для кнопок удаления
+    
     document.querySelectorAll('.delete-debt-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        // alert()
-        // e.defaultPrevented()
-        // alert()
+        
+        
+        
         this.showDeleteDebtConfirmation(btn.dataset.debtId);
       });
     });
   }
 
   renderPagination() {
-    // this.showDeleteDebtConfirmation(4)
+    
     const pagination = document.getElementById('pagination');
     pagination.innerHTML = '';
 
@@ -408,10 +408,10 @@ class ClientsManager {
     const currentPage = this.cache.currentPage;
     const maxVisiblePages = 5;
 
-    // Кнопка "Назад"
+    
     this.addPaginationButton(pagination, '«', currentPage - 1, currentPage === 1);
 
-    // Основные страницы
+    
     const startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
     const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
@@ -419,7 +419,7 @@ class ClientsManager {
       this.addPaginationButton(pagination, i.toString(), i, false, i === currentPage);
     }
 
-    // Кнопка "Вперед"
+    
     this.addPaginationButton(pagination, '»', currentPage + 1, currentPage === totalPages);
   }
 
@@ -447,7 +447,7 @@ class ClientsManager {
     container.appendChild(li);
   }
 
-  // ==================== Utility Methods ====================
+  
 
   handleSearch() {
     const searchValue = document.getElementById('searchInput').value.trim();
@@ -551,7 +551,7 @@ class ClientsManager {
   }
 }
 
-// Инициализация при загрузке страницы
+
 document.addEventListener('DOMContentLoaded', () => {
   new ClientsManager();
 });

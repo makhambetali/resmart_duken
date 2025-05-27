@@ -21,15 +21,15 @@ document.querySelectorAll('input[name="paymentType"]').forEach(radio => {
     } else {
       cashGroup.style.display = 'block';
       bankGroup.style.display = 'block';
-      // document.getElementById('priceCashInput').value = document.getElementById('priceBankInput').value
-      // document.getElementById('priceBankInput').value = document.getElementById('priceCashInput').value;
+      
+      
       document.getElementById('priceBankInput').value = ''
       document.getElementById('priceCashInput').value = ''
     }
   });
 });
 
-// Аналогично для редактирования
+
 document.querySelectorAll('input[name="editPaymentType"]').forEach(radio => {
   radio.addEventListener('change', function() {
     const cashGroup = document.getElementById('editCashAmountGroup');
@@ -86,17 +86,17 @@ cashFlowForm.addEventListener('submit', async function(e) {
       const result = await response.json();
       console.log('Успешно сохранено:', result);
       
-      // Закрываем модальное окно
+      
       const modal = bootstrap.Modal.getInstance(document.getElementById('cashFlowModal'));
       modal.hide();
       
-      // Очищаем форму
+      
       cashFlowForm.reset();
       
-      // Обновляем список операций (если нужно)
-      // refreshCashFlows();
       
-      // Показываем уведомление
+      
+      
+      
       showToast('Операция успешно сохранена!', 'success');
       
     } catch (error) {
@@ -111,12 +111,12 @@ cashFlowForm.addEventListener('submit', async function(e) {
   const cookie = document.cookie.match(/csrftoken=([^ ;]+)/);
   return cookie ? cookie[1] : '';
 }
-  // Валидация суммы при вводе
-  // amountInput.addEventListener('input', function() {
-  //   this.value = this.value.replace(/[^0-9-]/g, '');
-  // });
   
-  // Автоматическое закрытие при успешном сохранении
+  
+  
+  
+  
+  
   document.getElementById('cashFlowModal').addEventListener('hidden.bs.modal', function() {
     cashFlowForm.reset();
   });
@@ -165,7 +165,7 @@ async function deleteSupply() {
     
     if (!response.ok) throw new Error('Network response was not ok');
     
-    // Закрываем модальное окно и обновляем данные
+    
     bootstrap.Modal.getInstance(document.getElementById('editSupplyModal')).hide();
     showToast('Поставка успешно удалена')
     fetchSupplies();
@@ -180,27 +180,27 @@ function isToday(dateStr) {
   return dateStr === today;
 }
 
-// Loader simulation
+
 function formatCurrency(value) {
   if (value === null || value === undefined || value === '') return '0 ₸';
   const num = typeof value === 'string' ? parseFloat(value.replace(/\./g, '')) : value;
   if (isNaN(num)) return '0 ₸';
   
-  // Форматируем с точками как разделителями тысяч
+  
   return num.toString()
-    .replace(/\D/g, '') // Оставляем только цифры
-    .replace(/\B(?=(\d{3})+(?!\d))/g, '.') // Добавляем точки как разделители
-    .replace(/^0+/, ''); // Убираем ведущие нули и добавляем символ валюты
+    .replace(/\D/g, '') 
+    .replace(/\B(?=(\d{3})+(?!\d))/g, '.') 
+    .replace(/^0+/, ''); 
 }
 
-// Преобразование форматированной строки обратно в число
+
 function parseCurrency(value) {
   if (!value) return 0;
   
-  // Удаляем символ валюты, пробелы и точки (разделители тысяч)
+  
   const numStr = value.replace(/[^\d]/g, '');
   
-  // Преобразуем в число
+  
   const num = parseFloat(numStr);
   
   return isNaN(num) ? 0 : num;
@@ -209,41 +209,41 @@ function parseCurrency(value) {
 function setupCurrencyInput(inputId) {
   const input = document.getElementById(inputId);
   
-  // Форматирование значения с разделителями
+  
   const formatValue = (value) => {
-    // Удаляем все нецифровые символы
+    
     const numStr = value.replace(/\D/g, '');
-    // Добавляем разделители тысяч
+    
     return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
   
-  // Обработчик ввода - форматируем в реальном времени
+  
   input.addEventListener('input', function(e) {
-    // Сохраняем позицию курсора до форматирования
+    
     const cursorPosition = this.selectionStart;
     const originalLength = this.value.length;
     
-    // Получаем неформатированное значение
+    
     const rawValue = this.value.replace(/\./g, '');
     
-    // Форматируем значение
+    
     this.value = formatValue(rawValue);
     
-    // Корректируем позицию курсора
+    
     const newLength = this.value.length;
     const lengthDiff = newLength - originalLength;
     const newCursorPosition = cursorPosition + lengthDiff;
     
-    // Устанавливаем курсор на новую позицию
+    
     this.setSelectionRange(newCursorPosition, newCursorPosition);
   });
   
-  // При фокусе - показываем чистое число для удобства редактирования
+  
   input.addEventListener('focus', function() {
     this.value = this.value.replace(/\./g, '');
   });
   
-  // При потере фокуса - форматируем окончательно
+  
   input.addEventListener('blur', function() {
     const numValue = this.value.replace(/\./g, '');
     if (numValue === '') {
@@ -253,14 +253,14 @@ function setupCurrencyInput(inputId) {
     }
   });
   
-  // Инициализация начального значения
+  
   input.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
-      this.blur(); // Применяем форматирование при нажатии Enter
+      this.blur(); 
     }
   });
   
-  // Устанавливаем начальное значение
+  
   input.value = input.value === '' ? '0 ₸' : formatValue(input.value.replace(/\./g, '')) + ' ₸';
 }
 document.getElementById('supplierInput').addEventListener('keydown', (e) => {
@@ -293,7 +293,7 @@ window.addEventListener('load', function() {
   }, 1000);
 });
 
-// Function to fetch supplies from API
+
 async function fetchSupplies() {
   try {
     const response = await fetch('/api/v1/supplies/');
@@ -308,7 +308,7 @@ async function fetchSupplies() {
   }
 }
 
-// Function to format date and time
+
 function formatDateTime(dateTimeStr) {
   const date = new Date(dateTimeStr);
   const dateStr = date.toLocaleDateString('ru-RU');
@@ -316,7 +316,7 @@ function formatDateTime(dateTimeStr) {
   return `${dateStr} ${timeStr}`;
 }
 
-// Function to calculate time ago
+
 function timeAgo(dateTimeStr) {
   const now = new Date();
   const date = new Date(dateTimeStr);
@@ -338,9 +338,9 @@ function timeAgo(dateTimeStr) {
   }
 }
 
-// Function to render supplies grouped by date
+
 function renderSupplies(supplies) {
-  // Группируем поставки по дате
+  
   const groupedSupplies = {};
   supplies.forEach(supply => {
     const date = supply.delivery_date;
@@ -350,17 +350,17 @@ function renderSupplies(supplies) {
     groupedSupplies[date].push(supply);
   });
 
-  // Сортируем даты (новые сначала)
+  
   const sortedDates = Object.keys(groupedSupplies).sort((a, b) => new Date(a) - new Date(b));
   
-  // Получаем контейнер
+  
   const container = document.querySelector('.container-custom');
   
-  // Находим точку вставки перед кнопками навигации
+  
   const buttons = document.querySelectorAll('.button-nav');
   const insertPoint = buttons.length > 0 ? buttons[0] : null;
   
-  // Очищаем существующие группы
+  
   const dateGroups = document.querySelectorAll('.date-title-general, .date_group');
   dateGroups.forEach(group => {
     if (!group.classList.contains('button-nav') && 
@@ -371,12 +371,12 @@ function renderSupplies(supplies) {
     }
   });
 
-  // Показываем фильтры, если есть сегодняшние поставки
+  
   const todaySupplies = groupedSupplies[new Date().toISOString().split('T')[0]] || [];
   const filterSection = document.getElementById('todaySuppliesFilter');
   filterSection.style.display = todaySupplies.length > 0 ? 'block' : 'none';
 
-  // Рендерим каждую группу дат
+  
   sortedDates.forEach((date, index) => {
     const dateObj = new Date(date);
     const dateString = dateObj.toLocaleDateString('ru-RU', { 
@@ -386,7 +386,7 @@ function renderSupplies(supplies) {
     });
     const dayName = dateObj.toLocaleDateString('ru-RU', { weekday: 'long' });
     
-    // Создаем заголовок даты
+    
     const dateTitleDiv = document.createElement('div');
     dateTitleDiv.className = 'date-title-general';
     dateTitleDiv.innerHTML = `
@@ -398,7 +398,7 @@ function renderSupplies(supplies) {
     `;
     container.insertBefore(dateTitleDiv, insertPoint);
 
-    // Создаем таблицу
+    
     const table = document.createElement('table');
     table.className = `date_group_${index} date_group show_group table table-hover`;
     table.innerHTML = `
@@ -415,7 +415,7 @@ function renderSupplies(supplies) {
       <tbody></tbody>
     `;
 
-    // Добавляем поставки в таблицу
+    
     const tbody = table.querySelector('tbody');
     groupedSupplies[date].forEach(supply => {
       const bonusClass = supply.bonus > 0 ? 'style="color:#218838; font-weight: bold;"' : '';
@@ -455,7 +455,7 @@ function renderSupplies(supplies) {
         
       `;
       
-      // Добавляем обработчики кликов
+      
       row.querySelectorAll('td:not(:last-child)').forEach(td => {
         td.addEventListener('click', () => redirectTo(supply.id));
       });
@@ -466,7 +466,7 @@ function renderSupplies(supplies) {
     container.insertBefore(table, insertPoint);
   });
 
-  // Прикрепляем обработчики событий
+  
   attachEventListeners();
   setupTodaySuppliesFilter();
 }
@@ -505,28 +505,28 @@ function filterTodaySupplies() {
   });
 }
 
-// Сброс фильтров
+
 function clearFilters() {
   document.getElementById('supplySearchInput').value = '';
   document.getElementById('confirmationFilter').value = 'all';
   filterTodaySupplies();
 }
-// Reattach event listeners after dynamic content load
+
 function attachEventListeners() {
-  // const calcButtons = document.querySelectorAll('.sum_button');
-  // calcButtons.forEach(button => {
-  //   button.addEventListener('click', function() {
-  //     openCalcOptionsModal();
-  //     date = this.getAttribute('date');
-  //     const options = document.querySelectorAll('.custom-option');
-  //     if (options[1]) {
-  //       options[1].disabled = (this.getAttribute('today') != this.getAttribute('date_f'));
-  //     }
-  //   });
-  // });
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 }
 
-// Toggle date group visibility
+
 function show_date_group(arg) {
   const element = document.querySelector(`.${arg}`);
   if (element) {
@@ -534,21 +534,21 @@ function show_date_group(arg) {
   }
 }
 
-// Modal functions
 
 
 
 
-// Redirect to edit page
 
-// Функция для загрузки деталей поставки
+
+
+
 async function fetchSupplyDetails(id) {
   try {
-    // Загружаем основные данные поставки
+    
     const supplyResponse = await fetch(`/api/v1/supplies/${id}/`);
     if (!supplyResponse.ok) throw new Error('Failed to fetch supply');
     
-    // Загружаем изображения поставки
+    
     const imagesResponse = await fetch(`/api/v1/supplies/${id}/images/`);
     if (!imagesResponse.ok) throw new Error('Failed to fetch supply images');
     
@@ -562,7 +562,7 @@ async function fetchSupplyDetails(id) {
   }
 }
 
-// Функция для отображения изображений в модальном окне редактирования
+
 function renderEditImages(images, supply_id) {
   const container = document.getElementById('editImagePreviewContainer');
   container.innerHTML = '';
@@ -580,12 +580,12 @@ function renderEditImages(images, supply_id) {
     
     previewDiv.querySelector('.delete-btn').addEventListener('click', function() {
       deleteSupplyImage(image.id, supply_id);
-      // removeImageFromList(image.id, id='editSupplyImages')
+      
     });
   });
   return images
 }
-// Удаление изображения поставки
+
 async function deleteSupplyImage(imageId, supply_id) {
   try {
     const response = await fetch(`/api/v1/supplies/${supply_id}/images/${imageId}/`, {
@@ -597,7 +597,7 @@ async function deleteSupplyImage(imageId, supply_id) {
     
     if (!response.ok) throw new Error('Failed to delete image');
     showToast('Изображение успешно удалено')
-    // Обновляем список изображений
+    
     const supplyId = document.getElementById('editSupplyId').value;
     const supply = await fetchSupplyDetails(supplyId);
     
@@ -617,7 +617,7 @@ async function fetchSuppliers() {
     if (!response.ok) {
       throw new Error('Network response was not ok');
     }
-    const data = await response.json();  // Прочитали тело один раз
+    const data = await response.json();  
     console.log(data);
     return data;
   } catch (error) {
@@ -632,37 +632,37 @@ let currentSuppliers = [];
 let selectedSupplier = null;
 
 async function initAddSupplyModal() {
-  // Загружаем поставщиков
+  
   allSuppliers = await fetchSuppliers();
   
-  // Находим элементы
+  
   const supplierInput = document.getElementById('supplierInput');
   const dropdown = document.querySelector('.supplier-dropdown');
   
-  // Обработчики событий
+  
   supplierInput.addEventListener('input', handleSupplierInput);
   supplierInput.addEventListener('focus', handleSupplierFocus);
   supplierInput.addEventListener('blur', () => {
     setTimeout(() => dropdown.classList.remove('show'), 200);
   });
   
-  // Устанавливаем сегодняшнюю дату по умолчанию
+  
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('deliveryDate').value = today;
   
-  // Инициализируем тип оплаты (разблокирован, так как дата сегодняшняя)
+  
   const paymentTypeGroup = document.querySelector('.btn-group[role="group"]');
   paymentTypeGroup.querySelectorAll('input').forEach(radio => {
     radio.disabled = false;
   });
   
-  // Остальная инициализация
+  
   checkDateForImageUpload();
   document.getElementById('deliveryDate').addEventListener('change', checkDateForImageUpload);
   document.getElementById('supplyImages').addEventListener('change', handleImageUpload);
   document.getElementById('saveSupplyBtn').addEventListener('click', saveSupply);
   
-  // Инициализация масок ввода
+  
   document.querySelectorAll('.currency-mask').forEach(each => {
     IMask(
       each,
@@ -678,7 +678,7 @@ async function initAddSupplyModal() {
     );
   });
   
-  // Форматируем начальные значения
+  
   document.getElementById('priceCashInput').value = '';
   document.getElementById('priceBankInput').value = '';
 }
@@ -689,22 +689,22 @@ function handleSupplierInput(e) {
   const dropdown = document.querySelector('.supplier-dropdown');
   const searchTerm = input.value.trim().toLowerCase();
   
-  // Фильтруем поставщиков
+  
   currentSuppliers = allSuppliers.filter(supplier => 
     supplier.name.toLowerCase().includes(searchTerm)
   );
   
-  // Показываем варианты
+  
   renderSupplierOptions(currentSuppliers);
   
-  // Сбрасываем выбранного поставщика если текст изменился
+  
   if (selectedSupplier !== input.value) {
     selectedSupplier = null;
     input.classList.remove('is-valid');
     input.classList.add('is-invalid');
   }
   
-  // Показываем/скрываем dropdown
+  
   if (searchTerm.length > 0 && currentSuppliers.length > 0) {
     dropdown.classList.add('show');
   } else {
@@ -754,11 +754,11 @@ function selectSupplier(supplierName) {
   selectedSupplier = supplierName;
   dropdown.classList.remove('show');
   
-  // Валидация
+  
   input.classList.remove('is-invalid');
   input.classList.add('is-valid');
 }
-// Check if selected date is today and show image upload section
+
 function checkDateForImageUpload() {
   const deliveryDate = document.getElementById('deliveryDate').value;
   const today = new Date().toISOString().split('T')[0];
@@ -767,19 +767,19 @@ function checkDateForImageUpload() {
   if (deliveryDate === today) {
     imageUploadSection.style.display = 'block';
     
-    // priceBankSection.setAttribute('readonly', false)
+    
   } else {
     imageUploadSection.style.display = 'none';
-    // priceBankSection.setAttribute('readonly', true)
+    
     clearImagePreviews();
   }
 }
 
-// Handle image upload and preview
+
 function handleImageUpload(event, containerId = 'imagePreviewContainer') {
   const files = event.target.files;
   const previewContainer = document.getElementById(containerId);
-  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+  const MAX_SIZE = 5 * 1024 * 1024; 
   const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
   
   previewContainer.innerHTML = '';
@@ -820,14 +820,14 @@ function removeImageFromList(index, id = 'supplyImages') {
   const files = Array.from(input.files);
   files.splice(index, 1);
   
-  // Create new FileList (workaround as FileList is read-only)
+  
   const dataTransfer = new DataTransfer();
   files.forEach(file => dataTransfer.items.add(file));
   input.files = dataTransfer.files;
   console.log(input.files)
 }
 
-// Clear all image previews
+
 function clearImagePreviews() {
   document.getElementById('imagePreviewContainer').innerHTML = '';
   document.getElementById('supplyImages').value = '';
@@ -839,7 +839,7 @@ async function saveSupply() {
   const deliveryDate = document.getElementById('deliveryDate').value;
   const today = new Date().toISOString().split('T')[0];
   
-  // Проверка поставщика
+  
   const isValidSupplier = allSuppliers.some(
     supplier => supplier.name === supplierInput.value.trim()
   );
@@ -859,7 +859,7 @@ async function saveSupply() {
   const formData = new FormData();
   formData.append('supplier', supplierInput.value.trim());
   
-  // Для не сегодняшних дат - только наличные
+  
   if (deliveryDate !== today) {
     formData.append('price_cash', parseCurrency(document.getElementById('priceCashInput').value));
     formData.append('price_bank', '0');
@@ -880,10 +880,10 @@ async function saveSupply() {
     }
   }
 
-  // // Загрузка изображений только для сегодняшней даты
-  // if (deliveryDate === today) {
+  
+  
     
-  // }
+  
 
   try {
     const response = await fetch('/api/v1/supplies/', {
@@ -902,11 +902,11 @@ async function saveSupply() {
     const result = await response.json();
     showToast(`Поставка для ${supplierInput.value.trim()} успешно добавлена!`, 'success');
     
-    // Закрываем модальное окно и обновляем данные
+    
     bootstrap.Modal.getInstance(document.getElementById('addSupplyModal')).hide();
     fetchSupplies();
     
-    // Сбрасываем форму
+    
     form.reset();
     document.getElementById('deliveryDate').value = today;
     clearImagePreviews();
@@ -917,7 +917,7 @@ async function saveSupply() {
   }
 }
 
-// Обновленная функция редактирования поставки
+
 async function updateSupply() {
   const supplyId = document.getElementById('editSupplyId').value;
   const deliveryDate = document.getElementById('editDeliveryDate').value;
@@ -928,7 +928,7 @@ async function updateSupply() {
     const formData = new FormData();
     formData.append('supplier', document.getElementById('editSupplierInput').value);
     
-    // Для не сегодняшних дат - только наличные
+    
     if (!isToday) {
       formData.append('price_cash', parseCurrency(document.getElementById('editPriceCashInput').value));
       formData.append('price_bank', '0');
@@ -943,7 +943,7 @@ async function updateSupply() {
     formData.append('delivery_date', deliveryDate);
     formData.append('comment', document.getElementById('editCommentInput').value);
 
-    // Загрузка новых изображений только для сегодняшней даты
+    
     if (isToday) {
       const files = document.getElementById('editSupplyImages').files;
       for (let i = 0; i < files.length; i++) {
@@ -974,7 +974,7 @@ async function updateSupply() {
   }
 }
 
-// Обновленная функция redirectTo (заполнение формы редактирования)
+
 function redirectTo(id) {
   fetchSupplyDetails(id).then(supply => {
     document.getElementById('editSupplyId').value = supply.id;
@@ -990,7 +990,7 @@ function redirectTo(id) {
     if (isTodaySupply) {
       document.getElementById('editIsConfirmedCheckbox').checked = supply.is_confirmed;
     }
-    // Устанавливаем тип оплаты
+    
     if (isToday) {
       if (supply.price_cash > 0 && supply.price_bank > 0) {
         document.getElementById('editMixedPayment').checked = true;
@@ -1006,12 +1006,12 @@ function redirectTo(id) {
         document.getElementById('editBankAmountGroup').style.display = 'none';
       }
       
-      // Разблокируем выбор типа оплаты
+      
       paymentTypeGroup.querySelectorAll('input').forEach(radio => {
         radio.disabled = false;
       });
     } else {
-      // Блокируем выбор типа оплаты и устанавливаем наличные
+      
       document.getElementById('editCashPayment').checked = true;
       document.getElementById('editCashAmountGroup').style.display = 'block';
       document.getElementById('editBankAmountGroup').style.display = 'none';
@@ -1030,14 +1030,14 @@ function redirectTo(id) {
     document.getElementById('editDeliveryDate').value = supply.delivery_date;
     document.getElementById('editCommentInput').value = supply.comment || '';
     
-    // Показываем/скрываем загрузку изображений
+    
     document.getElementById('editImageUploadSection').style.display = 
       isToday ? 'block' : 'none';
     
-    // Загружаем изображения
+    
     renderEditImages(supply.images || [], supply.id);
     
-    // Показываем модальное окно
+    
     const modal = new bootstrap.Modal(document.getElementById('editSupplyModal'));
     modal.show();
     
@@ -1049,7 +1049,7 @@ function redirectTo(id) {
 
 
 
-// Helper function to get CSRF token
+
 function getCookie(name) {
   let cookieValue = null;
   if (document.cookie && document.cookie !== '') {
@@ -1065,32 +1065,32 @@ function getCookie(name) {
   return cookieValue;
 }
 
-// Initialize when DOM is loaded
+
 document.addEventListener('DOMContentLoaded', function() {
   initAddSupplyModal();
   
   document.getElementById('updateSupplyBtn').addEventListener('click', updateSupply);
   document.getElementById('deleteSupplyBtn').addEventListener('click', deleteSupply);
   
-  // Обработчик загрузки изображений в модальном окне редактирования
+  
   document.getElementById('editSupplyImages').addEventListener('change', function(e) {
     handleImageUpload(e, 'editImagePreviewContainer');
   });
   
-  // Проверка даты при изменении в модальном окне редактирования
+  
   document.getElementById('editDeliveryDate').addEventListener('change', function() {
     const today = new Date().toISOString().split('T')[0];
     const selectedDate = this.value;
     const paymentTypeGroup = document.querySelector('input[name="editPaymentType"]').closest('.btn-group');
     
     if (selectedDate === today) {
-      // Разблокируем выбор типа оплаты
+      
       paymentTypeGroup.querySelectorAll('input').forEach(radio => {
         radio.disabled = false;
       });
       document.getElementById('editImageUploadSection').style.display = 'block';
     } else {
-      // Блокируем выбор типа оплаты и устанавливаем наличные
+      
       document.getElementById('editCashPayment').checked = true;
       document.getElementById('editCashAmountGroup').style.display = 'block';
       document.getElementById('editBankAmountGroup').style.display = 'none';
@@ -1110,20 +1110,20 @@ document.addEventListener('DOMContentLoaded', function() {
 document.getElementById('deliveryDate').addEventListener('change', function() {
   const today = new Date().toISOString().split('T')[0];
   const selectedDate = this.value;
-  // const paymentTypeGroup = document.querySelector('.btn-group[name="paymentType"]');
+  
    const paymentTypeGroup = document.querySelector('.btn-group[role="group"]');
   console.log(paymentTypeGroup)
   if (selectedDate === today) {
-    // Разблокируем выбор типа оплаты
+    
     paymentTypeGroup.querySelectorAll('input').forEach(radio => {
       radio.disabled = false;
     });
   } else {
-    // Блокируем выбор типа оплаты и устанавливаем наличные
+    
     document.getElementById('cashPayment').checked = true;
     document.getElementById('cashAmountGroup').style.display = 'block';
     document.getElementById('bankAmountGroup').style.display = 'none';
-    // document.getElementById('priceBankInput').value = '0';
+    
     
     paymentTypeGroup.querySelectorAll('input').forEach(radio => {
       if (radio.id !== 'cashPayment') {
@@ -1134,11 +1134,11 @@ document.getElementById('deliveryDate').addEventListener('change', function() {
   const isToday = isToday(this.value);
     const confirmationContainer = document.getElementById('confirmationCheckboxContainer');
     
-    // Показываем чекбокс подтверждения только для сегодняшней даты
+    
     confirmationContainer.style.display = isToday ? 'block' : 'none';
     if (!isToday) {
       document.getElementById('isConfirmedCheckbox').checked = false;
     }
-  // Проверяем нужно ли показывать загрузку изображений
+  
   checkDateForImageUpload();
 });

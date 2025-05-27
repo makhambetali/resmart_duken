@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Элементы DOM
+    
     const cashFlowTable = document.getElementById('cashFlowTable');
     const cashFlowBody = document.getElementById('cashFlowBody');
     const dateFilter = document.getElementById('dateFilter');
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 }
 
-// Функция для отображения поставок в таблице
+
 function renderSupplies(supplies) {
     supplyBody.innerHTML = '';
     document.querySelector('#supplyHead').innerHTML = `<tr>
@@ -71,7 +71,7 @@ function renderSupplies(supplies) {
     });
 }
 
-// Функция для расчета итогов по поставкам
+
 function calculateSupplyTotals(supplies) {
     let cashTotal = 0;
     let bankTotal = 0;
@@ -89,7 +89,7 @@ function calculateSupplyTotals(supplies) {
     supplyTotal.textContent = `${total.toLocaleString()} ₸`;
 }
 
-    // Загрузка данных
+    
     function loadCashFlows(date = null) {
         let url = apiUrl;
         url += 'by_date/'
@@ -109,14 +109,14 @@ function calculateSupplyTotals(supplies) {
             });
     }
 
-    // Отображение операций в таблице
+    
     function renderCashFlows(cashFlows) {
     const isTodaySelected = isToday(dateFilter.value);
     const table = document.getElementById('cashFlowTable');
     const oldThead = table.querySelector('thead');
-    if (oldThead) oldThead.remove(); // Удаляем старый thead, если он есть
+    if (oldThead) oldThead.remove(); 
 
-    // Создаём новый thead
+    
     const thead = document.createElement('thead');
     const headRow = document.createElement('tr');
     headRow.innerHTML = `
@@ -127,11 +127,11 @@ function calculateSupplyTotals(supplies) {
     thead.appendChild(headRow);
     table.insertBefore(thead, table.firstChild);
 
-    // Очищаем тело таблицы
+    
     const cashFlowBody = document.getElementById('cashFlowBody');
     cashFlowBody.innerHTML = '';
 
-    // Добавляем строки
+    
     cashFlows.forEach(cashFlow => {
         const row = document.createElement('tr');
         const amountClass = cashFlow.amount >= 0 ? 'text-success' : 'text-danger';
@@ -155,7 +155,7 @@ function calculateSupplyTotals(supplies) {
         cashFlowBody.appendChild(row);
     });
 
-    // Добавляем обработчики событий только если isToday
+    
     if (isTodaySelected) {
         document.querySelectorAll('.edit-btn').forEach(btn => {
             btn.addEventListener('click', () => editCashFlow(btn.dataset.id));
@@ -172,7 +172,7 @@ function calculateSupplyTotals(supplies) {
         cashFlowModal.hide()
     })
     
-    // Расчет итогов
+    
     function calculateTotals(cashFlows) {
         let income = 0;
         let expense = 0;
@@ -190,7 +190,7 @@ function calculateSupplyTotals(supplies) {
         balanceTotal.textContent = `${(income - expense).toLocaleString()} ₸`;
     }
 
-    // Добавление новой операции
+    
     function addCashFlow() {
         currentCashFlowId = null;
         deleteCashFlowBtn.style.display = 'none'
@@ -199,7 +199,7 @@ function calculateSupplyTotals(supplies) {
         cashFlowModal.show();
     }
 
-    // Редактирование операции
+    
     function editCashFlow(id) {
         currentCashFlowId = id;
         deleteCashFlowBtn.style.display = 'block'
@@ -218,7 +218,7 @@ function calculateSupplyTotals(supplies) {
             });
     }
 
-    // Сохранение операции
+    
     function saveCashFlow() {
         const amount = parseInt(document.getElementById('amount').value);
         const description = document.getElementById('description').value;
@@ -264,7 +264,7 @@ function calculateSupplyTotals(supplies) {
         });
     }
 
-    // Удаление операции
+    
     function deleteCashFlow(id) {
         if (!confirm('Вы уверены, что хотите удалить эту операцию?')) return;
 
@@ -285,7 +285,7 @@ function calculateSupplyTotals(supplies) {
         });
     }
 
-    // Вспомогательные функции
+    
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -330,7 +330,7 @@ function calculateSupplyTotals(supplies) {
         return container;
     }
 
-    // Обработчики событий
+    
     filterBtns.forEach(filterBtn => {
         filterBtn.addEventListener('click', () => {
     const date = dateFilter.value;
