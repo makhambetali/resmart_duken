@@ -30,8 +30,9 @@ class ClientService:
         all_debts = self.dao.get_debts(client)
         return [self._to_debt_dto(debt) for debt in all_debts]
     
-    def search(self, query=None) -> List[ClientDTO]:
-        search_results = self.dao.search(query)
+    def search(self, query=None, show_zeros = True) -> List[ClientDTO]:
+        print('service:', show_zeros)
+        search_results = self.dao.search(query, show_zeros)
         return [self._to_client_dto(result) for result in search_results]
     
     def delete_one_debt(self, debt_id: int) -> ClientDTO:

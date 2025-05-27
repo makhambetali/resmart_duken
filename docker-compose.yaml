@@ -44,7 +44,16 @@ services:
     depends_on:
       - redis
       - db
-
+  celery_beat:
+    build: .
+    command: celery -A config beat --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
 volumes:
   postgres_data:
   redis_data:

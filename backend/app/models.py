@@ -9,6 +9,10 @@ class Supplier(models.Model):
 
     def __str__(self):
         return self.name
+    
+    class Meta:
+        verbose_name = "Поставщик"
+        verbose_name_plural = "Поставщики"
 
 class Supply(models.Model):
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='supplier')
@@ -31,8 +35,11 @@ class Supply(models.Model):
         elif not self.is_confirmed:
             self.arrival_date = None
         
-       
         super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Поставка"
+        verbose_name_plural = "Поставки"
     
 class SupplyImage(models.Model):
     supply = models.ForeignKey(Supply, on_delete=models.CASCADE, related_name='images')
@@ -55,10 +62,18 @@ class Client(models.Model):
     def __str__(self):
         return f"{self.name} : {self.debt}"
     
+    class Meta:
+        verbose_name = "Клиент"
+        verbose_name_plural = "Клиенты"
+    
 class ClientDebt(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='debts')
     debt_value = models.IntegerField()
     date_added = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Долг"
+        verbose_name_plural = "Долги"
 
 
 class CashFlow(models.Model):
@@ -68,3 +83,7 @@ class CashFlow(models.Model):
 
     def __str__(self):
         return f'{self.amount}'
+    
+    class Meta:
+        verbose_name = "Внос/вынос денег"
+        verbose_name_plural = "Внос/вынос денег"

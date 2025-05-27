@@ -87,6 +87,8 @@ class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
     def get_queryset(self):
         q = self.request.query_params.get('q', '')
+        show_zeros = int(self.request.query_params.get('show_zeros', 1))
+        print('views.py: ',type(show_zeros))
         filter_tag = self.request.query_params.get('filter_tag', 'latest')
         if q or filter_tag:
             filter_dict = {
@@ -97,9 +99,9 @@ class ClientViewSet(viewsets.ModelViewSet):
             }
 
             order_field = filter_dict.get(filter_tag)
-            clients_dto = self.service_layer.search(q)
+            clients_dto = self.service_layer.search(q, bool(show_zeros))
             return self.queryset.filter(id__in=[dto.id for dto in clients_dto]).order_by(order_field)
-        return super().get_queryset()
+        # return super().get_queryset()
 
     @action(detail=True, methods=['post'])
     def add_debt(self, request, pk=None):

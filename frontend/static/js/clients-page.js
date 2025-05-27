@@ -19,7 +19,8 @@ class ClientsManager {
       perPage: 10,
       searchQuery: '',
       filterType: 'latest',
-      abortController: null
+      abortController: null,
+      show_zeros: 1
     };
 
     // Инициализация
@@ -47,6 +48,12 @@ class ClientsManager {
       this.cache.currentPage = 1;
       this.loadClients();
     });
+    document.getElementById('showZerosCheckbox').addEventListener('change', (e) => {
+      // console.log(e.target.checked)
+      this.cache.show_zeros = +e.target.checked
+      this.cache.currentPage = 1
+      this.loadClients()
+    })
 
     // Форма клиента
     document.getElementById('saveClientBtn').addEventListener('click', () => this.saveClient());
@@ -80,7 +87,8 @@ class ClientsManager {
         page: this.cache.currentPage,
         page_size: this.cache.perPage,
         filter_tag: this.cache.filterType,
-        q: this.cache.searchQuery
+        q: this.cache.searchQuery,
+        show_zeros: this.cache.show_zeros
       });
 
       this.cache.abortController = new AbortController();

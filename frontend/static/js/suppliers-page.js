@@ -98,7 +98,8 @@ function createToastContainer() {
       nameInput.classList.remove('is-invalid');
       nameInput.nextElementSibling.textContent = '';
       supplierIdInput.value = "";
-      nameInput.value = randomInt(1000, 10000);
+      // nameInput.value = randomInt(1000, 10000);
+      nameInput.value = "";
       descInput.value = "";
       deleteBtn.classList.add("d-none");
       
@@ -298,7 +299,7 @@ function createToastContainer() {
       supplierModal.hide();
       // Очищаем кэш и перезагружаем данные
       requestCache.clear();
-      showToast('Поставщик успешно добавлен')
+      showToast(id ? 'Поставщик успешно изменен' : "Поставщик успешно добавлен")
       loadSuppliers();
     })
     .catch(error => {
