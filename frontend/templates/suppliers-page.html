@@ -84,6 +84,78 @@
           <label for="supplierDescription" class="form-label">Описание</label>
           <textarea class="form-control" id="supplierDescription" rows="3"></textarea>
         </div>
+
+        <!-- Контактные группы с возможностью сворачивания -->
+   <div class="accordion mb-3" id="contactsAccordion">
+  <!-- Руководитель -->
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#supervisorCollapse">
+        Супервайзер
+      </button>
+    </h2>
+    <div id="supervisorCollapse" class="accordion-collapse collapse">
+      <div class="accordion-body p-2">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-6">
+            <label for="supplierSupervisor" class="form-label small mb-0">Контактное лицо</label>
+            <input type="text" class="form-control form-control-sm" id="supplierSupervisor" maxlength="30">
+          </div>
+          <div class="col-md-6">
+            <label for="supplierSupervisorPn" class="form-label small mb-0">Телефон</label>
+            <input type="text" class="form-control phone-mask form-control-sm" id="supplierSupervisorPn" maxlength="30">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Представитель -->
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#representativeCollapse">
+        Представитель
+      </button>
+    </h2>
+    <div id="representativeCollapse" class="accordion-collapse collapse">
+      <div class="accordion-body p-2">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-6">
+            <label for="supplierRepresentative" class="form-label small mb-0">Контактное лицо</label>
+            <input type="text" class="form-control form-control-sm" id="supplierRepresentative" maxlength="30">
+          </div>
+          <div class="col-md-6">
+            <label for="supplierRepresentativePn" class="form-label small mb-0">Телефон</label>
+            <input type="text" class="form-control phone-mask form-control-sm" id="supplierRepresentativePn" maxlength="30">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Доставка -->
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#deliveryCollapse">
+        Доставка
+      </button>
+    </h2>
+    <div id="deliveryCollapse" class="accordion-collapse collapse">
+      <div class="accordion-body p-2">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-6">
+            <label for="supplierDelivery" class="form-label small mb-0">Контактное лицо</label>
+            <input type="text" class="form-control form-control-sm" id="supplierDelivery" maxlength="30">
+          </div>
+          <div class="col-md-6">
+            <label for="supplierDeliveryPn" class="form-label small mb-0">Телефон</label>
+            <input type="text" class="form-control phone-mask form-control-sm" id="supplierDeliveryPn" maxlength="30">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>

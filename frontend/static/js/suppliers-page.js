@@ -17,6 +17,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const supplierIdInput = document.getElementById("supplierId");
   const nameInput = document.getElementById("supplierName");
   const descInput = document.getElementById("supplierDescription");
+  const supplierSupervisor = document.getElementById("supplierSupervisor")
+  const supplierSupervisorPn = document.getElementById("supplierSupervisorPn")
+  const supplierRepresentative = document.getElementById("supplierRepresentative")
+  const supplierRepresentativePn = document.getElementById("supplierRepresentativePn")
+  const supplierDelivery = document.getElementById("supplierDelivery")
+  const supplierDeliveryPn = document.getElementById("supplierDeliveryPn")
   const deleteBtn = document.getElementById("deleteBtn");
 
   
@@ -101,6 +107,12 @@ function createToastContainer() {
       
       nameInput.value = "";
       descInput.value = "";
+      supplierSupervisor.value = "";
+      supplierSupervisorPn.value = "";
+      supplierRepresentative.value = "";
+      supplierRepresentativePn.value = "";
+      supplierDelivery.value = "";
+      supplierDeliveryPn.value = "";
       deleteBtn.classList.add("d-none");
       
       supplierModal.show();
@@ -254,7 +266,14 @@ function createToastContainer() {
     nameInput.classList.remove('is-invalid');
       nameInput.nextElementSibling.textContent = '';
     supplierIdInput.value = supplier.id;
-    nameInput.value = randomInt(1000, 10000);
+     supplierSupervisor.value = supplier.supervisor;
+      supplierSupervisorPn.value = supplier.supervisor_pn;
+      supplierRepresentative.value = supplier.representative;
+      supplierRepresentativePn.value = supplier.representative_pn;
+      supplierDelivery.value = supplier.delivery;
+      supplierDeliveryPn.value = supplier.delivery_pn;
+    // nameInput.value = randomInt(1000, 10000);
+    nameInput.value = supplier.name
     
     descInput.value = supplier.description || "";
     deleteBtn.classList.remove("d-none");
@@ -271,7 +290,7 @@ function createToastContainer() {
       nameInput.classList.add("is-invalid");
       return;
     }
-    
+    console.log(supplierRepresentativePn.value.trim())
     fetch(url, {
       method: method,
       headers: {
@@ -280,9 +299,16 @@ function createToastContainer() {
       },
       body: JSON.stringify({
         name: nameInput.value.trim(),
-        description: descInput.value.trim()
+        description: descInput.value.trim(),
+        supervisor: supplierSupervisor.value.trim(),
+        supervisor_pn: supplierSupervisorPn.value.trim(),
+        representative: supplierRepresentative.value.trim(),
+        representative_pn: supplierRepresentativePn.value.trim(),
+        delivery: supplierDelivery.value.trim(),
+        delivery_pn: supplierDeliveryPn.value.trim()
       })
     })
+    
     .then(response => {
       if (!response.ok) {
         return response.json().then(err => { 
@@ -376,6 +402,13 @@ function createToastContainer() {
       .replace(/'/g, "&#039;");
   }
 
-  
+  document.querySelectorAll('.phone-mask').forEach(each => {
+    IMask(
+    each,
+    {
+      mask: '+{7}(000)000-00-00'
+    }
+  )
+  })
   init();
 });

@@ -3,6 +3,12 @@ from django.utils import timezone
 class Supplier(models.Model):
     name = models.CharField(max_length=30, db_index=True, unique=True)
     description = models.TextField(blank=True, null=True)
+    supervisor = models.CharField(blank=True, max_length=30)
+    supervisor_pn = models.CharField(blank=True, max_length=30)
+    representative = models.CharField(blank=True, max_length=30)
+    representative_pn = models.CharField(blank=True, max_length=30)
+    delivery = models.CharField(blank=True, max_length=30)
+    delivery_pn = models.CharField(blank=True, max_length=30)
     is_everyday_supply = models.BooleanField(default=False)
     last_accessed = models.DateTimeField(blank=True, null=True)
     date_added = models.DateTimeField(auto_now_add=True)
@@ -13,6 +19,8 @@ class Supplier(models.Model):
     class Meta:
         verbose_name = "Поставщик"
         verbose_name_plural = "Поставщики"
+
+
 
 class Supply(models.Model):
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='supplier')

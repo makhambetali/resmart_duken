@@ -21,6 +21,12 @@ class SupplierService:
         return SupplierDTO(
             id=supplier.id,
             name=supplier.name,
+            supervisor=supplier.supervisor,
+            supervisor_pn=supplier.supervisor_pn,
+            representative=supplier.representative,
+            representative_pn=supplier.representative_pn,
+            delivery=supplier.delivery,
+            delivery_pn=supplier.delivery_pn,
             description=supplier.description,
             last_accessed=supplier.last_accessed
         )

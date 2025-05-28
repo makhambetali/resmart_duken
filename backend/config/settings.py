@@ -96,7 +96,7 @@ DATABASES = {
         "NAME": "postgres",
         "USER": "postgres",
         "PASSWORD": "123",
-        "HOST": "127.0.0.1" if prod_type == 'local' else "db",
+        "HOST": "127.0.0.1",
         # "HOST": "db",
         "PORT": "5432",
     }
@@ -104,7 +104,7 @@ DATABASES = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1" if prod_type == 'local' else "redis://redis:6379/1",  # 1 — номер базы
+        "LOCATION": "redis://127.0.0.1:6379/1" ,
         # "LOCATION": "redis://redis:6379/1",  # 1 — номер базы
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
