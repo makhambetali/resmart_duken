@@ -23,7 +23,7 @@ class Supplier(models.Model):
 
 
 class Supply(models.Model):
-    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='supplier')
+    supplier = models.ForeignKey(Supplier, on_delete=models.SET_DEFAULT, default=1, related_name='supplier')
     price_cash = models.PositiveIntegerField(default=0)
     price_bank = models.PositiveIntegerField(default=0)
     bonus = models.SmallIntegerField(default=0)

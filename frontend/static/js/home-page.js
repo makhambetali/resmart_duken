@@ -648,7 +648,13 @@ async function initAddSupplyModal() {
   
   
   const today = new Date().toISOString().split('T')[0];
-  document.getElementById('deliveryDate').value = today;
+  const dateElem = document.getElementById('deliveryDate')
+  dateElem.min = today;
+  const date = new Date(today)
+  date.setDate(date.getDate() + 14)
+  dateElem.max = date.toISOString().split('T')[0]
+  dateElem.value = today;
+
   
   
   const paymentTypeGroup = document.querySelector('.btn-group[role="group"]');

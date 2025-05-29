@@ -24,7 +24,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierSerializer
     pagination_class = SupplierResultsPaginationPage
     service_layer = SupplierService()
-    queryset = Supplier.objects.all().order_by('-last_accessed')
+    queryset = Supplier.objects.all().exclude(name="[удаленный поставщик]").order_by('-last_accessed')
 
     def get_queryset(self):
         q = self.request.query_params.get('q', None)
@@ -175,8 +175,9 @@ class CashFlowViewSet(viewsets.ModelViewSet):
 class SupplierCustomAPIView(generics.ListAPIView):
     serializer_class = SupplierCustomSerializer
     def get_queryset(self):
-        queryset = Supplier.objects.all().order_by('-is_everyday_supply')
-        return queryset
+        return Supplier.objects.exclude(name="[удаленный поставщик]") \
+            .only('name', 'is_everyday_supply') \
+            .order_by('-is_everyday_supply')
 
 class LoggingTemplateView(TemplateView):
     def dispatch(self, request, *args, **kwargs):
