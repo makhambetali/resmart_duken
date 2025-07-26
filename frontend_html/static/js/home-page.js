@@ -772,13 +772,16 @@ function checkDateForImageUpload() {
   const priceBankSection = document.getElementById('priceBankInput')
   if (deliveryDate === today) {
     imageUploadSection.style.display = 'block';
+    document.getElementById('confirmationCheckboxContainer').style.display = 'block'
     
     
   } else {
     imageUploadSection.style.display = 'none';
-    
+    document.getElementById('confirmationCheckboxContainer').style.display = 'none'
     clearImagePreviews();
   }
+  
+    document.getElementById('confirmationCheckboxContainer').querySelector('#isConfirmedCheckbox').checked = false
 }
 
 
@@ -1116,9 +1119,8 @@ document.addEventListener('DOMContentLoaded', function() {
 document.getElementById('deliveryDate').addEventListener('change', function() {
   const today = new Date().toISOString().split('T')[0];
   const selectedDate = this.value;
-  
-   const paymentTypeGroup = document.querySelector('.btn-group[role="group"]');
-  console.log(paymentTypeGroup)
+  const paymentTypeGroup = document.querySelector('.btn-group[role="group"]');
+
   if (selectedDate === today) {
     
     paymentTypeGroup.querySelectorAll('input').forEach(radio => {
@@ -1137,14 +1139,7 @@ document.getElementById('deliveryDate').addEventListener('change', function() {
       }
     });
   }
-  const isToday = isToday(this.value);
-    const confirmationContainer = document.getElementById('confirmationCheckboxContainer');
-    
-    
-    confirmationContainer.style.display = isToday ? 'block' : 'none';
-    if (!isToday) {
-      document.getElementById('isConfirmedCheckbox').checked = false;
-    }
+  
   
   checkDateForImageUpload();
 });

@@ -30,7 +30,7 @@ class SupplyDAO:
             query &= Q(is_confirmed=True)
 
         queryset = cache.get_or_set(
-            f'supplies_{query}',
+            f'supplies_{date}_{only_confirmed}',
             lambda: Supply.objects.filter(query).select_related('supplier'),
             timeout=300
         )

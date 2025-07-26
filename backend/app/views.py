@@ -28,15 +28,19 @@ class SupplierViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         q = self.request.query_params.get('q', None)
+        # print('views.py:', q)
         suppliers_dto = self.service_layer.search(q)
         return self.queryset.filter(id__in=[dto.id for dto in suppliers_dto])
+        # return Supplier.objects.all()
     
     def perform_create(self, serializer):
         cache.delete('suppliers')
         return super().perform_create(serializer)
     
     
-
+class TestViewSet(viewsets.ModelViewSet):
+    serializer_class = SupplierSerializer
+    queryset = Supplier.objects.all()
         
     
 class SupplyViewSet(viewsets.ModelViewSet):

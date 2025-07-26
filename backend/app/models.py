@@ -1,5 +1,8 @@
 from django.db import models
 from django.utils import timezone
+
+
+
 class Supplier(models.Model):
     name = models.CharField(max_length=30, db_index=True, unique=True)
     description = models.TextField(blank=True, null=True)
@@ -21,9 +24,11 @@ class Supplier(models.Model):
         verbose_name_plural = "Поставщики"
 
 
+def get_default_supplier():
+    return Supplier.objects.get_or_create(name="Удаленный поставщик")[0].id
 
 class Supply(models.Model):
-    supplier = models.ForeignKey(Supplier, on_delete=models.SET_DEFAULT, default=1, related_name='supplier')
+    supplier = models.ForeignKey(Supplier, on_delete=models.SET_DEFAULT, default=get_default_supplier, related_name='supplier')
     price_cash = models.PositiveIntegerField(default=0)
     price_bank = models.PositiveIntegerField(default=0)
     bonus = models.SmallIntegerField(default=0)

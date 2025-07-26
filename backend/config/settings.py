@@ -28,7 +28,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.8.143', '127.0.0.1', '172.20.10.3',]
+ALLOWED_HOSTS = ['192.168.8.143', '127.0.0.1', '172.20.10.3', '172.29.80.1', 'localhost',]
 
 
 # Application definition
@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'app',
     'rest_framework',
     'drf_yasg',
+    'corsheaders'
 ]
 # settings.py
 # CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Брокер (Redis)
@@ -52,6 +53,7 @@ CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 CELERY_TIMEZONE = 'Asia/Almaty'  # Часовой пояс
 
 MIDDLEWARE = [
+     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -60,6 +62,16 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://10.0.0.5:8081",  # локальная сеть
+    "http://172.20.10.3:8081",  # если ты заходишь с другого устройства
+]
+
+CORS_ALLOW_ALL_ORIGINS = True
+
 
 ROOT_URLCONF = 'config.urls'
 

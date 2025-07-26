@@ -48,16 +48,17 @@ class SupplySerializer(serializers.ModelSerializer):
         
         return supply
 
-    def update(self, instance, validated_data):
-        request = self.context.get('request')
-        images = request.FILES.getlist('images')
-        logger.info(f'Поставка #{instance.id} успешно изменена')
-        if images:
-            instance.images.all().delete()
-            for image in images:
-                SupplyImage.objects.create(supply=instance, image=image)
-            logger.info(f'Добавлено {len(images)} изображении поставке #{instance.id}')
-        return super().update(instance, validated_data)
+    # def update(self, instance, validated_data):
+    #     request = self.context.get('request')
+    #     images = request.FILES.getlist('images')
+    #     # cache.delete(f"supplies_{timezone.now().date()}_True")
+    #     logger.info(f'Поставка #{instance.id} успешно изменена')
+    #     if images:
+    #         instance.images.all().delete()
+    #         for image in images:
+    #             SupplyImage.objects.create(supply=instance, image=image)
+    #         logger.info(f'Добавлено {len(images)} изображении поставке #{instance.id}')
+    #     return super().update(instance, validated_data)
 
 
 class SupplierCustomSerializer(serializers.ModelSerializer):

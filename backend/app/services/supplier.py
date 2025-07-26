@@ -9,7 +9,9 @@ class SupplierService:
         # self.cache_service = CacheService()
 
     def search(self, query: str = None) -> List[SupplierDTO]:
+        print('supplier:', query)
         search_result = self.dao.search(query)
+        print(123)
         return [self._to_dto(result) for result in search_result]
     
     # def set_everydays(self, ids: List[int] = None) -> None:
