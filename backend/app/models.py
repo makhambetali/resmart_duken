@@ -63,7 +63,7 @@ class SupplyImage(models.Model):
     
 
 class Client(models.Model):
-    name = models.CharField(max_length=25, db_index=True, unique=True)
+    name = models.CharField(verbose_name='именем', max_length=25, db_index=True, unique=True)
     description = models.TextField(blank=True)
     phone_number = models.CharField(max_length=25, blank=True)
     is_chosen = models.BooleanField(default=False)

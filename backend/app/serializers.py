@@ -3,11 +3,14 @@ from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow
 from django.utils import timezone
 from django.core.cache import cache
 import logging
+from rest_framework.exceptions import ValidationError
 logger = logging.getLogger('app')
 class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
         fields = '__all__'
+    
+
 
 
 class SupplierSerializer(serializers.ModelSerializer):
