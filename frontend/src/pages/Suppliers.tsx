@@ -41,7 +41,8 @@ const SuppliersPage = () => {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CreateSupplierData> }) => suppliersApi.updateSupplier(id, data),
     onSuccess: () => {
-      toast({ title: 'Поставщик обновлен' });
+      toast({ title: 'Поставщик обновлен',variant: "default",
+        className: "bg-green-500 text-white", });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       setIsModalOpen(false);
     },

@@ -10,7 +10,14 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Icons } from '@/components/icons';
+import { Button } from '@/components/ui/button';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, Edit, CheckCircle, AlertCircle, CalendarDays, Info } from 'lucide-react'; // Прямой импорт иконок
 import { cn } from '@/lib/utils';
 
 interface SupplyTableProps {
@@ -65,6 +72,27 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
 
   const groupedSupplies: [string, Supply[]][] = groupedByDate ? groupSuppliesByDate(supplies) : [['all', supplies]];
 
+  if (supplies.length === 0 && !groupedByDate) {
+      return (
+          <Card>
+              <CardContent className="p-0">
+                  <Table>
+                      <TableHeader>
+                          {/* Заголовки можно оставить или убрать, в зависимости от дизайна */}
+                      </TableHeader>
+                      <TableBody>
+                          <TableRow>
+                              <TableCell colSpan={8} className="h-24 text-center">
+                                  Поставок не найдено.
+                              </TableCell>
+                          </TableRow>
+                      </TableBody>
+                  </Table>
+              </CardContent>
+          </Card>
+      );
+  }
+
   return (
     <div className="space-y-4">
       {groupedSupplies.map(([date, daySupplies]) => (
@@ -73,7 +101,7 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
             <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 px-6 py-3 border-b">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div className="flex items-center gap-3">
-                  <Icons.calendarDays className="h-5 w-5 text-blue-600" />
+                  <CalendarDays className="h-5 w-5 text-blue-600" />
                   <h3 className="text-lg font-semibold text-gray-800">
                     {formatDate(date)}
                   </h3>
@@ -98,101 +126,120 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
                   <TableHead className="hidden md:table-cell">Бонус</TableHead>
                   <TableHead className="hidden md:table-cell">Обмен</TableHead>
                   <TableHead className="hidden lg:table-cell">Комментарий</TableHead>
-                  <TableHead className="w-[140px]">Статус</TableHead>
+                  <TableHead className="w-[180px]">Статус</TableHead>
+                  <TableHead className="text-right">Действия</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {daySupplies.map((supply) => (
-                  <TableRow 
-                    key={supply.id}
-                    className={cn(
-                      "group cursor-pointer transition-colors",
-                      !supply.is_confirmed && "bg-rose-50 hover:bg-rose-100",
-                      supply.is_confirmed && "hover:bg-gray-50"
-                    )}
-                    onClick={() => onEditSupply(supply)}
-                  >
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {supply.supplier}
-                        {supply.comment && (
-                          <Icons.info className="h-4 w-4 text-gray-400 lg:hidden" />
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant="outline" 
-                        className={cn(
-                          "border font-normal",
-                          supply.price_bank === 0 ? 'border-green-200 bg-green-50 text-green-700' : 
-                          supply.price_cash === 0 ? 'border-blue-200 bg-blue-50 text-blue-700' : 
-                          'border-purple-200 bg-purple-50 text-purple-700'
-                        )}
-                      >
-                        {supply.price_bank === 0 ? 'Наличные' : 
-                         supply.price_cash === 0 ? 'Банк' : 'Смешанная'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-0.5">
-                        {supply.price_cash > 0 && (
-                          <div className="flex items-center gap-1 text-sm">
-                            <span className="text-gray-500">Нал:</span>
-                            <span className="font-medium">{formatCurrency(supply.price_cash)}</span>
-                          </div>
-                        )}
-                        {supply.price_bank > 0 && (
-                          <div className="flex items-center gap-1 text-sm">
-                            <span className="text-gray-500">Банк:</span>
-                            <span className="font-medium">{formatCurrency(supply.price_bank)}</span>
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {supply.bonus > 0 ? (
-                        <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
-                          {supply.bonus}
+                {daySupplies.length > 0 ? (
+                  daySupplies.map((supply) => (
+                    <TableRow key={supply.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {supply.supplier}
+                          {supply.comment && (
+                            <Info className="h-4 w-4 text-gray-400 lg:hidden" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            "border font-normal",
+                            supply.price_bank === 0 ? 'border-green-200 bg-green-50 text-green-700' : 
+                            supply.price_cash === 0 ? 'border-blue-200 bg-blue-50 text-blue-700' : 
+                            'border-purple-200 bg-purple-50 text-purple-700'
+                          )}
+                        >
+                          {supply.price_bank === 0 ? 'Наличные' : 
+                           supply.price_cash === 0 ? 'Банк' : 'Смешанная'}
                         </Badge>
-                      ) : '-'}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {supply.exchange > 0 ? (
-                        <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-700">
-                          {supply.exchange}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-0.5">
+                          {supply.price_cash > 0 && (
+                            <div className="flex items-center gap-1 text-sm">
+                              <span className="text-gray-500">Нал:</span>
+                              <span className="font-medium">{formatCurrency(supply.price_cash)}</span>
+                            </div>
+                          )}
+                          {supply.price_bank > 0 && (
+                            <div className="flex items-center gap-1 text-sm">
+                              <span className="text-gray-500">Банк:</span>
+                              <span className="font-medium">{formatCurrency(supply.price_bank)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {supply.bonus > 0 ? (
+                          <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+                            {supply.bonus}
+                          </Badge>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {supply.exchange > 0 ? (
+                          <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-700">
+                            {supply.exchange}
+                          </Badge>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell max-w-[200px]">
+                        <div className="truncate text-gray-600">
+                          {supply.comment || '-'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          className={cn(
+                            "flex items-center gap-1.5 py-1",
+                            supply.is_confirmed 
+                              ? "bg-green-100 text-green-800" 
+                              : "bg-rose-100 text-rose-800"
+                          )}
+                          variant="secondary"
+                        >
+                          {supply.is_confirmed ? (
+                            <>
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              <span>Подтверждена</span>
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle className="h-3.5 w-3.5" />
+                              <span>Не подтверждена</span>
+                            </>
+                          )}
                         </Badge>
-                      ) : '-'}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell max-w-[200px]">
-                      <div className="truncate text-gray-600">
-                        {supply.comment || '-'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        className={cn(
-                          "flex items-center gap-1.5 py-1",
-                          supply.is_confirmed 
-                            ? "bg-green-100 text-green-800 hover:bg-green-100" 
-                            : "bg-rose-100 text-rose-800 hover:bg-rose-100"
-                        )}
-                      >
-                        {supply.is_confirmed ? (
-                          <>
-                            <Icons.checkCircle className="h-3.5 w-3.5" />
-                            <span>Подтверждена</span>
-                          </>
-                        ) : (
-                          <>
-                            <Icons.alertCircle className="h-3.5 w-3.5" />
-                            <span>Не подтверждена</span>
-                          </>
-                        )}
-                      </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Открыть меню</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onEditSupply(supply)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Редактировать
+                            </DropdownMenuItem>
+                            {/* Можно добавить другие действия, если понадобятся */}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center">
+                      Поставок за этот день не найдено.
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </CardContent>

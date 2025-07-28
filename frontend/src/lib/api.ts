@@ -2,8 +2,8 @@ import { Supply, AddSupplyForm, CashFlowOperation, SupplyImage } from '@/types/s
 import { Client, ClientDebt, AddClientForm, ClientsResponse } from '@/types/client';
 import { CreateSupplierData, Supplier } from '@/types/suppliers';
 
-// const API_BASE_URL = 'http://localhost:8000/api/v1'; // Измените на ваш URL
-const API_BASE_URL = 'http://192.168.43.14:8000/api/v1'; // Измените на ваш URL
+const API_BASE_URL = 'http://localhost:8000/api/v1'; // Измените на ваш URL
+// const API_BASE_URL = 'http://192.168.43.14:8000/api/v1'; // Измените на ваш URL
 
 
 class ApiError extends Error {
