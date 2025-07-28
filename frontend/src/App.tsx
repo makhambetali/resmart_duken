@@ -10,6 +10,7 @@ import Suppliers from "./pages/Suppliers";
 import Finance from "./pages/Finance";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import History from "./pages/History";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/suppliers" element={<Suppliers />} />
           <Route path="/finance" element={<Finance />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/history" element={<History/>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

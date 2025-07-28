@@ -59,7 +59,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddSupplyClick }) =>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem>Профиль</DropdownMenuItem>
-                <DropdownMenuItem>История</DropdownMenuItem>
+                <DropdownMenuItem asChild>
+  <Link to="/history">История</Link>
+</DropdownMenuItem>
+
                 <DropdownMenuItem>
                   <Link to="/settings" className="w-full">Настройки</Link>
                 </DropdownMenuItem>
