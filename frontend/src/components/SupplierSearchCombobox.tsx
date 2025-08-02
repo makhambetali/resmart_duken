@@ -69,7 +69,8 @@ export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
       onValueChange(newSupplier.name);
       // Закрываем выпадающий список
       setOpen(false);
-      toast({ title: `Поставщик "${newSupplier.name}" успешно создан.` });
+      toast({ title: `Поставщик "${newSupplier.name}" успешно создан.`,variant: "default",
+        className: "bg-green-500 text-white", });
     },
     onError: () => {
       toast({

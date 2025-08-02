@@ -5,11 +5,7 @@ from app.models import Supplier
 class SupplierDAO:
     def search(self, query: str) -> QuerySet[Supplier]:
         """Поставки с delivery_date раньше текущей даты."""
-        queryset = cache.get_or_set(
-            'suppliers', 
-            lambda: Supplier.objects.all().order_by('-last_accessed'), 
-            timeout=300
-        )
+        queryset = Supplier.objects.all().order_by('-last_accessed')
         if query:
             queryset = queryset.filter(name__icontains=query.lower())
         return queryset

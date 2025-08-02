@@ -7,20 +7,12 @@ from app.models import Supply
 class SupplyDAO:
     def get_past_supplies(self):
         """Поставки с delivery_date раньше текущей даты."""
-        queryset = cache.get_or_set(
-            'supplies_past',
-            lambda: Supply.objects.filter(delivery_date__lt=timezone.now().date()).select_related('supplier'),
-            timeout=300
-        )
+        queryset = Supply.objects.filter(delivery_date__lt=timezone.now().date()).select_related('supplier')
         return queryset
 
     def get_future_supplies(self):
         """Поставки с delivery_date сегодня или позже."""
-        queryset = cache.get_or_set(
-            'supplies_future',
-            lambda: Supply.objects.filter(delivery_date__gte=timezone.now().date()).select_related('supplier'),
-            timeout=300
-        )
+        queryset = Supply.objects.filter(delivery_date__gte=timezone.now().date()).select_related('supplier')
         return queryset
     
     def get_supplies_by_date(self, date, only_confirmed: bool = True):
@@ -29,11 +21,7 @@ class SupplyDAO:
         if only_confirmed:
             query &= Q(is_confirmed=True)
 
-        queryset = cache.get_or_set(
-            f'supplies_{date}_{only_confirmed}',
-            lambda: Supply.objects.filter(query).select_related('supplier'),
-            timeout=300
-        )
+        queryset =Supply.objects.filter(query).select_related('supplier')
         return queryset
 
    

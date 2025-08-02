@@ -118,7 +118,14 @@ const FinancePage = () => {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl font-bold text-gray-900">Управление финансами</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-48" />
+           <Input
+  type="date"
+  value={selectedDate}
+  onChange={(e) => setSelectedDate(e.target.value)}
+  max={new Date().toISOString().split('T')[0]}
+  className="w-48"
+/>
+
             <Button onClick={handleAddOperationClick}>
               <PlusCircle className="mr-2 h-4 w-4" /> Добавить операцию
             </Button>

@@ -41,7 +41,7 @@ const SuppliersPage = () => {
   const createMutation = useMutation({
     mutationFn: suppliersApi.createSupplier,
     onSuccess: () => {
-      toast({ title: 'Поставщик создан' });
+      toast({ title: 'Поставщик создан',variant: "default", className: "bg-green-500 text-white"  });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       setIsModalOpen(false);
     },
@@ -55,13 +55,13 @@ const SuppliersPage = () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       setIsModalOpen(false);
     },
-    onError: () => toast({ title: 'Ошибка', description: 'Не удалось обновить поставщика', variant: 'destructive' }),
+    onError: (error: any) => toast({ title: 'Ошибка', description: error.body?.name?.[0] || 'Не удалось обновить поставщика', variant: 'destructive' }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: suppliersApi.deleteSupplier,
     onSuccess: () => {
-      toast({ title: 'Поставщик удален' });
+      toast({ title: 'Поставщик удален', variant: "default", className: "bg-green-500 text-white" });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
     },
     onError: () => toast({ title: 'Ошибка', description: 'Не удалось удалить поставщика', variant: 'destructive' }),

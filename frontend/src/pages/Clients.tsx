@@ -26,7 +26,7 @@ const Clients = () => {
   const [filters, setFilters] = useState<Filters>({
     searchTerm: '',
     filterType: 'latest',
-    perPage: 1,
+    perPage: 10,
     currentPage: 1,
     showZeros: true,
   });
