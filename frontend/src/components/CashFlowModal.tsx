@@ -151,7 +151,7 @@ export const CashFlowModal: React.FC<CashFlowModalProps> = ({
               <Input
                 id="amount" type="text" inputMode="decimal" value={formData.amount}
                 onChange={(e) => handlePriceChange(e.target.value)}
-                placeholder="0" required disabled={isLoading}
+                placeholder="Например: 50 000" required disabled={isLoading}
                 className="rounded-l-none focus-visible:ring-offset-0 focus-visible:ring-1"
               />
             </div>

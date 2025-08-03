@@ -84,7 +84,7 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
     }, {} as Record<string, Supply[]>);
 
     return Object.entries(grouped).sort(([a], [b]) => 
-      new Date(b).getTime() - new Date(a).getTime()
+      new Date(a).getTime() - new Date(b).getTime()
     );
   };
 

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'; // Оставляем для др
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { capitalize } from '@/lib/utils';
 
 interface SupplierModalProps {
   open: boolean;
@@ -59,7 +60,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ open, onOpenChange
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: capitalize(value) }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {

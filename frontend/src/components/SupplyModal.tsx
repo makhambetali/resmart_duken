@@ -53,6 +53,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   });
 
   const today = new Date().toISOString().split('T')[0];
+  const plus7 = new Date(Date.now() + 7 * 864e5).toISOString().split('T')[0];
   const isToday = formData.delivery_date === today;
 
   useEffect(() => {
@@ -330,7 +331,8 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                   <Input
                     id="deliveryDate"
                     type="date"
-                    max={today}
+                    min={today}
+                    max={plus7}
                     value={formData.delivery_date}
                     onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))}
                   />

@@ -12,6 +12,10 @@ export const formatPrice = (value: string): string => {
   return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 };
 
+export const capitalize = (value: string): string => {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 // Removes thousand separators to get the raw numeric string
 export const getNumericValue = (formattedValue: string): string => {
   return formattedValue.replace(/\s/g, '');

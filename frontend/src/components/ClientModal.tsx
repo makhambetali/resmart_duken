@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // ++ 1. ИМПОРТИРУЕМ useRef ++
 import { IMaskInput } from 'react-imask';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -36,6 +36,9 @@ export const ClientModal: React.FC<ClientModalProps> = ({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
+  // ++ 2. СОЗДАЕМ REF ДЛЯ ПОЛЯ ВВОДА ++
+  const debtInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState<AddClientForm>({
     name: '',
     phone_number: '',
@@ -101,6 +104,17 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     setResponsibleEmployeeId('');
   }, [client, open]);
 
+  // ++ 3. ИСПОЛЬЗУЕМ useEffect ДЛЯ ФОКУСИРОВКИ ++
+  useEffect(() => {
+    // Если форма стала видимой и ссылка на инпут существует...
+    if (showDebtForm && debtInputRef.current) {
+      // Небольшая задержка, чтобы браузер успел отрендерить элемент перед фокусом
+      setTimeout(() => {
+        debtInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showDebtForm]); // Этот эффект будет срабатывать каждый раз, когда меняется showDebtForm
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
@@ -109,39 +123,25 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     }
     onSubmit(formData);
   };
-
-  // ++ НАЧАЛО ИЗМЕНЕНИЙ: Локальная функция форматирования ++
+  
   const handleDebtInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-
-    // 1. Определяем, является ли число отрицательным
     const isNegative = value.startsWith('-');
-    // 2. Удаляем все символы, кроме цифр
     let numericValue = value.replace(/[^\d]/g, '');
-
-    // 3. Ограничиваем количество цифр до 6
     if (numericValue.length > 6) {
       numericValue = numericValue.slice(0, 6);
     }
-
-    // 4. Добавляем пробелы как разделители тысяч
     const formattedNumericPart = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-
-    // 5. Собираем итоговую строку
     if (isNegative) {
-      // Если есть цифры, возвращаем "- 123 456", иначе просто "-"
       setNewDebtValue(formattedNumericPart ? `- ${formattedNumericPart}` : '-');
     } else {
       setNewDebtValue(formattedNumericPart);
     }
   };
-  // ++ КОНЕЦ ИЗМЕНЕНИЙ ++
 
   const handleAddDebt = () => {
-    // Удаляем все пробелы из строки для корректного преобразования в число
     const rawValue = newDebtValue.replace(/\s/g, '');
     const debtValue = parseFloat(rawValue);
-
     if (isNaN(debtValue) || debtValue === 0) {
       toast({ title: 'Введите корректную сумму долга', variant: 'destructive' });
       return;
@@ -183,7 +183,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* ... основная форма клиента ... */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Имя *</Label>
@@ -218,8 +217,9 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                     <div className="flex gap-2 items-end">
                       <div className="flex-grow space-y-2">
                         <Label htmlFor="debt_value">Сумма</Label>
-                        {/* ++ НАЧАЛО ИЗМЕНЕНИЙ: Применяем локальный обработчик ++ */}
                         <Input
+                          // ++ 4. ПРИВЯЗЫВАЕМ REF К ПОЛЮ ВВОДА ++
+                          ref={debtInputRef}
                           id="debt_value"
                           type="text"
                           value={newDebtValue}
@@ -227,7 +227,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                           placeholder="Например: -50 000"
                           autoComplete="off"
                         />
-                        {/* ++ КОНЕЦ ИЗМЕНЕНИЙ ++ */}
                       </div>
                       <div className="flex-grow space-y-2">
                         <Label htmlFor="employee">Ответственный</Label>

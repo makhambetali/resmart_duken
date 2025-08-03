@@ -60,7 +60,9 @@ const Index = () => {
   const deleteSupplyMutation = useMutation({
     mutationFn: suppliesApi.deleteSupply,
     onSuccess: () => {
-      toast({ title: 'Поставка удалена' });
+      setIsSupplyModalOpen(false)
+      toast({ title: 'Поставка удалена', variant: 'default', className: "bg-green-500 text-white", });
+
       queryClient.invalidateQueries({ queryKey: ['supplies'] });
     },
     onError: () => toast({ title: 'Ошибка удаления поставки', variant: 'destructive' }),

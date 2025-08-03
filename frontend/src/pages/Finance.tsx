@@ -7,23 +7,39 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cashFlowApi, suppliesApi } from '@/lib/api';
 import { CashFlowOperation, Supply } from '@/types/supply';
-import { PlusCircle, AlertTriangle, ChevronsDown, ChevronsUp } from 'lucide-react';
+// ++ НАЧАЛО ИЗМЕНЕНИЙ: Импорт иконок и компонентов для подсказок ++
+import { PlusCircle, AlertTriangle, ChevronsDown, ChevronsUp, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+// ++ КОНЕЦ ИЗМЕНЕНИЙ ++
 import { format } from 'date-fns';
 import { CashFlowModal } from '@/components/CashFlowModal';
 
 // Вспомогательные функции и компоненты
 const formatCurrency = (amount: number) => new Intl.NumberFormat('ru-RU').format(amount) + ' ₸';
 
-const StatCard = ({ title, value, className }: { title: string, value: string, className?: string }) => (
+// ++ НАЧАЛО ИЗМЕНЕНИЙ: Обновляем StatCard для поддержки подсказок ++
+const StatCard = ({ title, value, className, tooltipContent }: { title: string, value: string, className?: string, tooltipContent: string }) => (
   <Card className={className}>
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-4 w-4 text-gray-400 cursor-pointer" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{tooltipContent}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </CardHeader>
     <CardContent>
       <div className="text-2xl font-bold">{value}</div>
     </CardContent>
   </Card>
 );
+// ++ КОНЕЦ ИЗМЕНЕНИЙ ++
+
 
 const FinancePage = () => {
   const queryClient = useQueryClient();
@@ -31,7 +47,6 @@ const FinancePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState<CashFlowOperation | null>(null);
   
-  // ++ 1. СОСТОЯНИЕ ДЛЯ КОНТРОЛЯ РАСКРЫТИЯ СПИСКА ++
   const [isCashFlowsExpanded, setIsCashFlowsExpanded] = useState(false);
 
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
@@ -48,19 +63,17 @@ const FinancePage = () => {
     queryFn: () => suppliesApi.getSuppliesByDate(selectedDate),
   });
 
-  // ++ 2. СБРОС СОСТОЯНИЯ РАСКРЫТИЯ ПРИ СМЕНЕ ДАТЫ ++
   useEffect(() => {
     setIsCashFlowsExpanded(false);
   }, [selectedDate]);
 
 
-  // ++ 3. СОЗДАНИЕ ВИДИМОГО СПИСКА ОПЕРАЦИЙ ++
   const visibleCashFlows = useMemo(() => {
     if (!cashFlows) return [];
     if (isCashFlowsExpanded) {
       return cashFlows;
     }
-    return cashFlows.slice(0, 3); // Показываем только первые 3 элемента
+    return cashFlows.slice(0, 3);
   }, [cashFlows, isCashFlowsExpanded]);
 
 
@@ -119,24 +132,40 @@ const FinancePage = () => {
           <h1 className="text-2xl font-bold text-gray-900">Управление финансами</h1>
           <div className="flex flex-wrap items-center gap-2">
            <Input
-  type="date"
-  value={selectedDate}
-  onChange={(e) => setSelectedDate(e.target.value)}
-  max={new Date().toISOString().split('T')[0]}
-  className="w-48"
-/>
-
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
+              className="w-48"
+            />
             <Button onClick={handleAddOperationClick}>
               <PlusCircle className="mr-2 h-4 w-4" /> Добавить операцию
             </Button>
           </div>
         </div>
 
+        {/* ++ НАЧАЛО ИЗМЕНЕНИЙ: Добавляем tooltipContent в StatCard ++ */}
         <div className="grid gap-4 md:grid-cols-3">
-          <StatCard title="Доходы" value={isLoading ? "..." : formatCurrency(cashFlowTotals.income)} className="text-green-600" />
-          <StatCard title="Расходы" value={isLoading ? "..." : formatCurrency(cashFlowTotals.expense)} className="text-red-600" />
-          <StatCard title="Итого" value={isLoading ? "..." : formatCurrency(cashFlowTotals.balance)} className="text-blue-600" />
+          <StatCard 
+            title="Доходы" 
+            value={isLoading ? "..." : formatCurrency(cashFlowTotals.income)} 
+            className="text-green-600"
+            tooltipContent="Сумма всех взносов(денег извне) за выбранный день."
+          />
+          <StatCard 
+            title="Расходы" 
+            value={isLoading ? "..." : formatCurrency(cashFlowTotals.expense)} 
+            className="text-red-600"
+            tooltipContent="Сумма всех отрицательных операций (выносов) за выбранный день."
+          />
+          <StatCard 
+            title="Итого" 
+            value={isLoading ? "..." : formatCurrency(cashFlowTotals.balance)} 
+            className="text-blue-600"
+            tooltipContent="Разница между доходами и расходами за день."
+          />
         </div>
+        {/* ++ КОНЕЦ ИЗМЕНЕНИЙ ++ */}
 
         <Card>
             <CardHeader><CardTitle>Движение средств за день</CardTitle></CardHeader>
@@ -153,7 +182,6 @@ const FinancePage = () => {
                         {isLoading ? (
                             <TableRow><TableCell colSpan={3} className="text-center p-8">Загрузка...</TableCell></TableRow>
                         ) : visibleCashFlows && visibleCashFlows.length > 0 ? (
-                            // ++ 4. ИСПОЛЬЗУЕМ `visibleCashFlows` ДЛЯ РЕНДЕРА ++
                             visibleCashFlows.map(op => (
                                 <TableRow 
                                   key={op.id} 
@@ -173,7 +201,6 @@ const FinancePage = () => {
                     </TableBody>
                 </Table>
                 
-                {/* ++ 5. КНОПКА "ПОКАЗАТЬ ЕЩЕ / СКРЫТЬ" ++ */}
                 {cashFlows && cashFlows.length > 3 && (
                   <div className="mt-4 text-center">
                     <Button
@@ -201,9 +228,24 @@ const FinancePage = () => {
             <CardHeader><CardTitle>Поставки за день</CardTitle></CardHeader>
             <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-3">
-                    <StatCard title="Наличные" value={isLoading ? "..." : formatCurrency(supplyTotals.cash)} className="text-cyan-600" />
-                    <StatCard title="Банк" value={isLoading ? "..." : formatCurrency(supplyTotals.bank)} className="text-orange-600" />
-                    <StatCard title="Всего" value={isLoading ? "..." : formatCurrency(supplyTotals.total)} className="text-slate-800" />
+                    <StatCard 
+                      title="Наличные" 
+                      value={isLoading ? "..." : formatCurrency(supplyTotals.cash)} 
+                      className="text-cyan-600"
+                      tooltipContent="Сумма всех поставок за день, оплаченных наличными."
+                    />
+                    <StatCard 
+                      title="Банк" 
+                      value={isLoading ? "..." : formatCurrency(supplyTotals.bank)} 
+                      className="text-orange-600"
+                      tooltipContent="Сумма всех поставок за день, оплаченных через банк."
+                    />
+                    <StatCard 
+                      title="Всего" 
+                      value={isLoading ? "..." : formatCurrency(supplyTotals.total)} 
+                      className="text-slate-800"
+                      tooltipContent="Общая сумма всех поставок за день (наличные + банк)."
+                    />
                 </div>
                  <Table>
                     <TableHeader>
