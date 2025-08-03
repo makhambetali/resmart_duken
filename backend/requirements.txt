@@ -6,6 +6,7 @@ click==8.2.1
 click-didyoumean==0.3.1
 click-plugins==1.1.1.2
 click-repl==0.3.0
+colorama==0.4.6
 cron-descriptor==1.4.5
 Django==5.2.4
 django-celery-beat==2.8.1
@@ -16,7 +17,9 @@ djangorestframework==3.16.0
 drf-yasg==1.21.10
 inflection==0.5.1
 kombu==5.5.4
+modeltranslation==0.25
 packaging==25.0
+pillow==11.3.0
 prompt_toolkit==3.0.51
 psycopg2-binary==2.9.10
 python-crontab==3.3.0

@@ -3,8 +3,8 @@ import { Client, ClientDebt, AddClientForm, ClientsResponse } from '@/types/clie
 import { CreateSupplierData, Supplier } from '@/types/suppliers';
 import { Employee } from '@/types/employees';
 
-// const API_BASE_URL = 'http://localhost:8000/api/v1'; // Измените на ваш URL
-const API_BASE_URL = 'http://172.20.10.3:8000/api/v1'; // Измените на ваш URL
+const API_BASE_URL = 'http://localhost:8000/api/v1'; // Измените на ваш URL
+//const API_BASE_URL = 'http://172.20.10.3:8000/api/v1'; // Измените на ваш URL
 
 
 class ApiError extends Error {
