@@ -10,6 +10,7 @@ export interface Client {
 
 export interface ClientDebt {
   id: string;
+  responsible_employee_id: string;
   debt_value: number;
   date_added: string;
 }

@@ -25,13 +25,16 @@ class SupplierViewSet(viewsets.ModelViewSet):
     pagination_class = SupplierResultsPaginationPage
     service_layer = SupplierService()
     queryset = Supplier.objects.all().exclude(name="[удаленный поставщик]").order_by('-last_accessed')
-
+    front_bool_to_back  = {
+        'true':True,
+        'false': False,
+        'all': None
+    }
     def get_queryset(self):
         q = self.request.query_params.get('q', None)
-        # print('views.py:', q)
-        suppliers_dto = self.service_layer.search(q)
+        ies = self.front_bool_to_back[self.request.query_params.get('is_everyday_supply', 'all')] #ies - stands for abbreviaton of is_everyday_supply
+        suppliers_dto = self.service_layer.search(q, ies)
         return self.queryset.filter(id__in=[dto.id for dto in suppliers_dto])
-        # return Supplier.objects.all()
     
     def perform_create(self, serializer):
         cache.delete('suppliers')
@@ -111,8 +114,9 @@ class ClientViewSet(viewsets.ModelViewSet):
     def add_debt(self, request, pk=None):
         client = self.get_object()
         debt_value = request.data.get('debt_value')
+        ruid = request.data.get('responsible_employee_id', None)
         try:
-            client_object = self.service_layer.add_debt(client, debt_value)
+            client_object = self.service_layer.add_debt(client, debt_value, ruid)
             return Response(vars(client_object))
         except ValidationError as e:
             logger.error(e)
@@ -176,6 +180,10 @@ class CashFlowViewSet(viewsets.ModelViewSet):
         cache.delete(f'cashflow_{timezone.now().date()}')
         return super().perform_update(serializer)
 
+class EmployeeViewSet(viewsets.ModelViewSet):
+    serializer_class = EmployeeSerializer
+    queryset = Employee.objects.all()
+
 class SupplierCustomAPIView(generics.ListAPIView):
     serializer_class = SupplierCustomSerializer
     def get_queryset(self):
@@ -189,18 +197,4 @@ class LoggingTemplateView(TemplateView):
         print(f"{view_name:-^60}")
         return super().dispatch(request, *args, **kwargs)
 
-class HomePageView(LoggingTemplateView):
-    template_name = 'home-page.html'
 
-class SuppliersPageView(LoggingTemplateView):
-    template_name = 'suppliers-page.html'
-
-
-class ClientsPageView(LoggingTemplateView):
-    template_name = 'clients-page.html'
-
-class FinancePageView(LoggingTemplateView):
-    template_name = 'finance-page.html'
-
-class SettingsPageView(LoggingTemplateView):
-    template_name = 'settings-page.html'

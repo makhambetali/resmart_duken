@@ -8,10 +8,11 @@ class SupplierService:
         self.dao = dao or SupplierDAO()
         # self.cache_service = CacheService()
 
-    def search(self, query: str = None) -> List[SupplierDTO]:
-        print('supplier:', query)
-        search_result = self.dao.search(query)
-        print(123)
+    def search(self, query: str = None, is_every_day_supply: Optional[bool] = None) -> List[SupplierDTO]:
+        search_result = self.dao.search(
+            query=query, 
+            is_every_day_supply=is_every_day_supply
+        )
         return [self._to_dto(result) for result in search_result]
     
     # def set_everydays(self, ids: List[int] = None) -> None:

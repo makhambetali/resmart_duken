@@ -3,7 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '@/components/Layout';
 import { SupplierTable } from '@/components/SupplierTable';
 import { SupplierModal } from '@/components/SupplierModal';
-import { Supplier, CreateSupplierData, SupplierFilters } from '@/types/supplier';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем импорты типов ---
+import { Supplier, CreateSupplierData, SupplierFilters, IsEverydaySupplyFilter } from '@/types/supplier';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import { suppliersApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
@@ -22,26 +24,36 @@ const SuppliersPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем is_everyday_supply в состояние фильтров ---
   const [filters, setFilters] = useState<SupplierFilters>({
     searchTerm: '',
     perPage: 10,
     currentPage: 1,
+    is_everyday_supply: 'all', // 'all', 'true', 'false'
   });
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем useQuery для отправки нового фильтра ---
   const { data: suppliersData, isLoading: suppliersLoading, error: suppliersError } = useQuery({
     queryKey: ['suppliers', filters],
     queryFn: () => suppliersApi.getSuppliers({
       page: filters.currentPage,
       page_size: filters.perPage,
       q: filters.searchTerm,
+      // Отправляем параметр, только если он не 'all'.
+      // API должно уметь обрабатывать 'true'/'false' как строки.
+      is_everyday_supply: filters.is_everyday_supply === 'all' 
+        ? undefined 
+        : filters.is_everyday_supply,
     }),
     keepPreviousData: true,
   });
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const createMutation = useMutation({
     mutationFn: suppliersApi.createSupplier,
     onSuccess: () => {
-      toast({ title: 'Поставщик создан',variant: "default", className: "bg-green-500 text-white"  });
+      toast({ title: 'Поставщик создан',variant: "default", className: "bg-green-500 text-white"   });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       setIsModalOpen(false);
     },
@@ -121,31 +133,48 @@ const SuppliersPage = () => {
           </div>
         </div>
         
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Фильтры встроены в страницу --- */}
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлен фильтр "Ежедневная поставка" --- */}
         <Card>
             <CardContent className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     <Input
                         placeholder="Поиск по названию..."
                         value={filters.searchTerm}
                         onChange={(e) => handleFilterChange({ searchTerm: e.target.value })}
-                        className="sm:col-span-2"
+                        className="md:col-span-2" // Занимает 2 колонки на средних экранах и больше
                     />
                     
                     <div>
+                        <label className="text-sm font-medium text-muted-foreground mb-2 block">Ежедневная поставка</label>
+                        <Select
+                           value={filters.is_everyday_supply}
+                           onValueChange={(value) => handleFilterChange({ is_everyday_supply: value as IsEverydaySupplyFilter })}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Фильтр..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Все</SelectItem>
+                                <SelectItem value="true">Да</SelectItem>
+                                <SelectItem value="false">Нет</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div>
                         <label className="text-sm font-medium text-muted-foreground mb-2 block">На странице</label>
                         <Select
-                        value={String(filters.perPage)}
-                        onValueChange={(value) => handleFilterChange({ perPage: Number(value) })}
+                          value={String(filters.perPage)}
+                          onValueChange={(value) => handleFilterChange({ perPage: Number(value) })}
                         >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Количество" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="10">10</SelectItem>
-                            <SelectItem value="25">25</SelectItem>
-                            <SelectItem value="100">100</SelectItem>
-                        </SelectContent>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Количество" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="10">10</SelectItem>
+                                <SelectItem value="25">25</SelectItem>
+                                <SelectItem value="100">100</SelectItem>
+                            </SelectContent>
                         </Select>
                     </div>
                 </div>
@@ -169,7 +198,6 @@ const SuppliersPage = () => {
           </CardContent>
         </Card>
 
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Пагинация с кнопками-ссылками --- */}
         {totalPages > 1 && (
           <div className="flex items-center justify-center space-x-2">
             <Button
@@ -219,7 +247,6 @@ const SuppliersPage = () => {
             </Button>
           </div>
         )}
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </div>
 
       <SupplierModal

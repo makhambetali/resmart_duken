@@ -144,7 +144,7 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
               <Table>
                 <TableHeader className="bg-gray-50">
                   <TableRow>
-                    <TableHead className="w-[180px]">Поставщик</TableHead>
+                    <TableHead className="w-[200px]">Поставщик</TableHead>
                     <TableHead className="w-[120px]">Оплата</TableHead>
                     <TableHead>Сумма</TableHead>
                     <TableHead className="hidden md:table-cell">Бонус</TableHead>

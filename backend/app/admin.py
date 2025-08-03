@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow
+from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow, Employee
 
 
 @admin.register(Supplier)
@@ -38,3 +38,5 @@ class ClientDebtAdmin(admin.ModelAdmin):
 class CashFlowAdmin(admin.ModelAdmin):
     list_display = ('amount', 'description', 'date_added')
     date_hierarchy = 'date_added'
+
+admin.site.register(Employee)

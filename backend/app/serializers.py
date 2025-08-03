@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow
+from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow, Employee
 from django.utils import timezone
 from django.core.cache import cache
 import logging
@@ -11,6 +11,10 @@ class ClientSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
 
+class EmployeeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = '__all__'
 
 
 class SupplierSerializer(serializers.ModelSerializer):

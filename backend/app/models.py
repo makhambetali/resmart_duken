@@ -15,6 +15,7 @@ class Supplier(models.Model):
     is_everyday_supply = models.BooleanField(default=False)
     last_accessed = models.DateTimeField(blank=True, null=True)
     date_added = models.DateTimeField(auto_now_add=True)
+    valid = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name
@@ -25,7 +26,7 @@ class Supplier(models.Model):
 
 
 def get_default_supplier():
-    return Supplier.objects.get_or_create(name="Удаленный поставщик")[0].id
+    return Supplier.objects.get_or_create(name="[удаленный поставщик]")[0].id
 
 class Supply(models.Model):
     supplier = models.ForeignKey(Supplier, on_delete=models.SET_DEFAULT, default=get_default_supplier, related_name='supplier')
@@ -78,12 +79,18 @@ class Client(models.Model):
     class Meta:
         verbose_name = "Клиент"
         verbose_name_plural = "Клиенты"
-    
+
+class Employee(models.Model):
+    name = models.CharField(max_length=30, verbose_name='Имя продавца')
+
+    def __str__(self):
+        return self.name
+        
 class ClientDebt(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='debts')
     debt_value = models.IntegerField()
     date_added = models.DateTimeField(auto_now_add=True)
-
+    responsible_employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     class Meta:
         verbose_name = "Долг"
         verbose_name_plural = "Долги"
@@ -100,3 +107,4 @@ class CashFlow(models.Model):
     class Meta:
         verbose_name = "Внос/вынос денег"
         verbose_name_plural = "Внос/вынос денег"
+

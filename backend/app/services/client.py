@@ -12,11 +12,14 @@ class ClientService:
     def __init__(self, dao: Optional[ClientDAO] = None):
         self.dao = dao or ClientDAO()
 
-    def add_debt(self, client, debt_value):
+    def add_debt(self, client, debt_value, responsible_employee_id):
         if debt_value == 0:
             raise ValidationError("Сумма не должна быть равна нулю")
         
-        self.dao.create_debt(client, debt_value)
+        if not responsible_employee_id:
+            raise ValidationError("Не указано ответственное лицо")
+        
+        self.dao.create_debt(client, debt_value, responsible_employee_id)
         client.debt += debt_value
         logger.info(f'Создание долга в размере {debt_value} клиенту #{client.id}({client.name})')
         if client.debt == 0:
@@ -61,6 +64,7 @@ class ClientService:
         return DebtDTO(
             id = debt.id, 
             debt_value=debt.debt_value,
+            responsible_employee_id= debt.responsible_employee_id,
             # client = debt.client.name,
             date_added = debt.date_added
         )

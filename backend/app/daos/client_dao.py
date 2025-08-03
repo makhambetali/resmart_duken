@@ -25,8 +25,8 @@ class ClientDAO:
         cache.delete(f'clients_{client.id}_debts')
         return client
 
-    def create_debt(self, client, debt_value):
-        ClientDebt.objects.create(client=client, debt_value=debt_value)
+    def create_debt(self, client, debt_value, responsible_employee_id):
+        ClientDebt.objects.create(client=client, debt_value=debt_value, responsible_employee_id = responsible_employee_id)
         cache.delete(f'clients_{client.id}_debts')
 
     def get_debts(self, client):

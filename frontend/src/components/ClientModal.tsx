@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { IMaskInput } from 'react-imask';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,10 +9,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Client, AddClientForm, ClientDebt } from '@/types/client';
-import { clientsApi } from '@/lib/api';
+import { clientsApi, employeesApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2 } from 'lucide-react';
+
+const phoneMask = '+{7} (000) 000-00-00';
+const inputClassName = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
 interface ClientModalProps {
   open: boolean;
@@ -40,20 +45,24 @@ export const ClientModal: React.FC<ClientModalProps> = ({
   
   const [newDebtValue, setNewDebtValue] = useState<string>('');
   const [showDebtForm, setShowDebtForm] = useState(false);
+  const [responsibleEmployeeId, setResponsibleEmployeeId] = useState<string>('');
 
-  // Загрузка долгов клиента
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees'],
+    queryFn: employeesApi.getEmployees,
+  });
+
   const { data: debts = [] } = useQuery({
     queryKey: ['client-debts', client?.id],
     queryFn: () => client ? clientsApi.getClientDebts(client.id) : Promise.resolve([]),
     enabled: !!client?.id,
   });
 
-  // Мутации для долгов
   const addDebtMutation = useMutation({
-    mutationFn: ({ id, debt_value }: { id: string; debt_value: number }) =>
-      clientsApi.addDebt(id, debt_value),
+    mutationFn: ({ id, debt_value, responsible_employee_id }: { id: string; debt_value: number, responsible_employee_id:string }) =>
+      clientsApi.addDebt( id, debt_value, responsible_employee_id ),
     onSuccess: () => {
-      toast({ title: 'Долг добавлен' });
+      toast({ title: 'Долг добавлен', variant: 'default', className: "bg-green-500 text-white", });
       queryClient.invalidateQueries({ queryKey: ['client-debts', client?.id] });
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       setNewDebtValue('');
@@ -67,7 +76,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
   const deleteDebtMutation = useMutation({
     mutationFn: clientsApi.deleteDebt,
     onSuccess: () => {
-      toast({ title: 'Долг удален' });
+      toast({ title: 'Долг удален', variant: 'default', className: "bg-green-500 text-white", });
       queryClient.invalidateQueries({ queryKey: ['client-debts', client?.id] });
       queryClient.invalidateQueries({ queryKey: ['clients'] });
     },
@@ -85,15 +94,11 @@ export const ClientModal: React.FC<ClientModalProps> = ({
         is_chosen: client.is_chosen,
       });
     } else {
-      setFormData({
-        name: '',
-        phone_number: '',
-        description: '',
-        is_chosen: false,
-      });
+      setFormData({ name: '', phone_number: '', description: '', is_chosen: false });
     }
     setShowDebtForm(false);
     setNewDebtValue('');
+    setResponsibleEmployeeId('');
   }, [client, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -105,14 +110,48 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     onSubmit(formData);
   };
 
+  // ++ НАЧАЛО ИЗМЕНЕНИЙ: Локальная функция форматирования ++
+  const handleDebtInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // 1. Определяем, является ли число отрицательным
+    const isNegative = value.startsWith('-');
+    // 2. Удаляем все символы, кроме цифр
+    let numericValue = value.replace(/[^\d]/g, '');
+
+    // 3. Ограничиваем количество цифр до 6
+    if (numericValue.length > 6) {
+      numericValue = numericValue.slice(0, 6);
+    }
+
+    // 4. Добавляем пробелы как разделители тысяч
+    const formattedNumericPart = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
+    // 5. Собираем итоговую строку
+    if (isNegative) {
+      // Если есть цифры, возвращаем "- 123 456", иначе просто "-"
+      setNewDebtValue(formattedNumericPart ? `- ${formattedNumericPart}` : '-');
+    } else {
+      setNewDebtValue(formattedNumericPart);
+    }
+  };
+  // ++ КОНЕЦ ИЗМЕНЕНИЙ ++
+
   const handleAddDebt = () => {
-    const debtValue = parseFloat(newDebtValue);
+    // Удаляем все пробелы из строки для корректного преобразования в число
+    const rawValue = newDebtValue.replace(/\s/g, '');
+    const debtValue = parseFloat(rawValue);
+
     if (isNaN(debtValue) || debtValue === 0) {
       toast({ title: 'Введите корректную сумму долга', variant: 'destructive' });
       return;
     }
+    if (!responsibleEmployeeId) {
+      toast({ title: 'Выберите ответственного сотрудника', variant: 'destructive' });
+      return;
+    }
     if (client) {
-      addDebtMutation.mutate({ id: client.id, debt_value: debtValue });
+      addDebtMutation.mutate({ id: client.id, debt_value: debtValue, responsible_employee_id: responsibleEmployeeId });
     }
   };
 
@@ -126,8 +165,12 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     return new Intl.NumberFormat('ru-RU', { style: 'decimal' }).format(value) + ' ₸';
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ru-RU');
+  const formatDateTime = (dateString: string) => {
+    const options: Intl.DateTimeFormatOptions = {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    };
+    return new Date(dateString).toLocaleString('ru-RU', options);
   };
 
   return (
@@ -140,46 +183,23 @@ export const ClientModal: React.FC<ClientModalProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* ... основная форма клиента ... */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Имя *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Имя клиента"
-                required
-              />
+              <Input id="name" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} placeholder="Имя клиента" required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Телефон</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone_number}
-                onChange={(e) => setFormData(prev => ({ ...prev, phone_number: e.target.value }))}
-                placeholder="Номер телефона"
-              />
+              <IMaskInput mask={phoneMask} id="phone" value={formData.phone_number} onAccept={(value) => setFormData(prev => ({ ...prev, phone_number: value as string }))} className={inputClassName} placeholder="+7 (___) ___-__-__" />
             </div>
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="description">Описание</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Дополнительная информация о клиенте"
-              rows={3}
-            />
+            <Textarea id="description" value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} placeholder="Дополнительная информация о клиенте" rows={3} />
           </div>
-
           <div className="flex items-center space-x-2">
-            <Checkbox
-              id="is_chosen"
-              checked={formData.is_chosen}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_chosen: !!checked }))}
-            />
+            <Checkbox id="is_chosen" checked={formData.is_chosen} onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_chosen: !!checked }))} />
             <Label htmlFor="is_chosen">Избранный клиент</Label>
           </div>
 
@@ -187,38 +207,46 @@ export const ClientModal: React.FC<ClientModalProps> = ({
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg">Долги клиента</CardTitle>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowDebtForm(!showDebtForm)}
-                >
+                <Button type="button" variant="outline" size="sm" onClick={() => setShowDebtForm(!showDebtForm)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Добавить долг
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4">
                 {showDebtForm && (
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      value={newDebtValue}
-                      onChange={(e) => setNewDebtValue(e.target.value)}
-                      placeholder="Сумма долга"
-                    />
-                    <Button type="button" onClick={handleAddDebt}>
-                      Сохранить
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => {
-                        setShowDebtForm(false);
-                        setNewDebtValue('');
-                      }}
-                    >
-                      Отмена
-                    </Button>
+                  <div className="space-y-4 p-4 border rounded-lg">
+                    <div className="flex gap-2 items-end">
+                      <div className="flex-grow space-y-2">
+                        <Label htmlFor="debt_value">Сумма</Label>
+                        {/* ++ НАЧАЛО ИЗМЕНЕНИЙ: Применяем локальный обработчик ++ */}
+                        <Input
+                          id="debt_value"
+                          type="text"
+                          value={newDebtValue}
+                          onChange={handleDebtInputChange}
+                          placeholder="Например: -50 000"
+                          autoComplete="off"
+                        />
+                        {/* ++ КОНЕЦ ИЗМЕНЕНИЙ ++ */}
+                      </div>
+                      <div className="flex-grow space-y-2">
+                        <Label htmlFor="employee">Ответственный</Label>
+                        <Select value={responsibleEmployeeId} onValueChange={setResponsibleEmployeeId}>
+                          <SelectTrigger id="employee">
+                            <SelectValue placeholder="Выберите сотрудника" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {employees.map((emp: { id: number; name: string }) => (
+                              <SelectItem key={emp.id} value={String(emp.id)}>{emp.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" onClick={handleAddDebt}>Сохранить</Button>
+                      <Button type="button" variant="outline" onClick={() => setShowDebtForm(false)}>Отмена</Button>
+                    </div>
                   </div>
                 )}
 
@@ -228,25 +256,24 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                       <TableRow>
                         <TableHead>Дата</TableHead>
                         <TableHead>Сумма</TableHead>
-                        <TableHead className="w-20">Действия</TableHead>
+                        <TableHead>Отв. лицо</TableHead>
+                        <TableHead>Действия</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {debts.map((debt) => (
                         <TableRow key={debt.id}>
-                          <TableCell>{formatDate(debt.date_added)}</TableCell>
+                          <TableCell>{formatDateTime(debt.date_added)}</TableCell>
                           <TableCell>
                             <span className={debt.debt_value > 0 ? 'text-red-600' : 'text-green-600'}>
                               {formatCurrency(debt.debt_value)}
                             </span>
                           </TableCell>
+                            <TableCell>
+                            {employees.find(emp => emp.id === debt.responsible_employee_id)?.name ?? 'Неизвестно'}
+                          </TableCell>
                           <TableCell>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteDebt(debt.id)}
-                            >
+                            <Button type="button" variant="outline" size="sm" onClick={() => handleDeleteDebt(debt.id)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
@@ -255,9 +282,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                     </TableBody>
                   </Table>
                 ) : (
-                  <p className="text-muted-foreground text-center py-4">
-                    Нет записей о долгах
-                  </p>
+                  <p className="text-muted-foreground text-center py-4">Нет записей о долгах</p>
                 )}
               </CardContent>
             </Card>
@@ -265,25 +290,18 @@ export const ClientModal: React.FC<ClientModalProps> = ({
 
           <DialogFooter className="flex justify-between">
             {client && (
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => {
-                  if (confirm('Вы уверены, что хотите удалить клиента?')) {
-                    onDelete(client.id);
-                    onOpenChange(false);
-                  }
-                }}
-              >
+              <Button type="button" variant="destructive" onClick={() => {
+                if (confirm('Вы уверены, что хотите удалить клиента?')) {
+                  onDelete(client.id);
+                  onOpenChange(false);
+                }
+              }}>
                 <Trash2 className="h-4 w-4 mr-2" />
                 Удалить клиента
               </Button>
             )}
             <div className="space-x-2">
-            
-              <Button type="submit">
-                {client ? 'Сохранить' : 'Добавить'}
-              </Button>
+              <Button type="submit">{client ? 'Сохранить' : 'Добавить'}</Button>
             </div>
           </DialogFooter>
         </form>

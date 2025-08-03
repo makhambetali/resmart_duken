@@ -1,6 +1,7 @@
 import { Supply, AddSupplyForm, CashFlowOperation, SupplyImage } from '@/types/supply';
 import { Client, ClientDebt, AddClientForm, ClientsResponse } from '@/types/client';
 import { CreateSupplierData, Supplier } from '@/types/suppliers';
+import { Employee } from '@/types/employees';
 
 const API_BASE_URL = 'http://localhost:8000/api/v1'; // Измените на ваш URL
 // const API_BASE_URL = 'http://192.168.43.14:8000/api/v1'; // Измените на ваш URL
@@ -232,15 +233,20 @@ export const clientsApi = {
     apiRequest<ClientDebt[]>(`/clients/${id}/get_debts/`),
   
   // Добавить долг
-  addDebt: (id: string, debt_value: number) => 
+    addDebt: (id: string, debt_value: number, responsible_employee_id: string) => 
     apiRequest<ClientDebt>(`/clients/${id}/add_debt/`, {
       method: 'POST',
-      body: JSON.stringify({ debt_value }),
+      body: JSON.stringify({ debt_value, responsible_employee_id }),
     }),
+    
   
   // Удалить долг
   deleteDebt: (debtId: string) => 
     apiRequest(`/clients/delete_debt/${debtId}/`, {
       method: 'DELETE',
     }),
+};
+
+export const employeesApi = {
+  getEmployees: () => apiRequest<Employee[]>(`/employees/`)
 };

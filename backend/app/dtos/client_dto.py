@@ -14,4 +14,5 @@ class DebtDTO:
     id: int
     # client: str
     debt_value: int
+    responsible_employee_id: int
     date_added: Optional[str]

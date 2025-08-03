@@ -1,17 +1,17 @@
-from celery import Celery
-from celery.schedules import crontab
-import os
+# myproject/celery.py
 
+import os
+from celery import Celery
+
+# Устанавливаем переменную окружения, чтобы Celery знал, где искать настройки Django.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
+# Создаем экземпляр приложения Celery.
 app = Celery('config')
+
+# Загружаем конфигурацию из файла settings.py.
+# 'CELERY_' — это префикс для всех настроек Celery.
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
-# Расписание
-app.conf.beat_schedule = {
-    'create-daily-supplies': {
-        'task': 'app.tasks.create_daily_supplies',
-        'schedule': crontab(hour=18, minute=31),  # Каждый день в 8:00 утра
-    },
-}
+# Автоматически находим файлы tasks.py во всех приложениях Django.
 app.autodiscover_tasks()

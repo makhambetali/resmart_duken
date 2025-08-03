@@ -43,14 +43,20 @@ INSTALLED_APPS = [
     'app',
     'rest_framework',
     'drf_yasg',
-    'corsheaders'
+    'corsheaders',
+    'django_celery_beat'
 ]
 # settings.py
-# CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Брокер (Redis)
-# CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-CELERY_BROKER_URL = 'redis://redis:6379/0'
-CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
-CELERY_TIMEZONE = 'Asia/Almaty'  # Часовой пояс
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Almaty' # Укажите ваш часовой пояс
+
+# --- НАСТРОЙКИ CELERY BEAT ---
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 MIDDLEWARE = [
      'corsheaders.middleware.CorsMiddleware',
@@ -108,7 +114,7 @@ DATABASES = {
         "NAME": "postgres",
         "USER": "postgres",
         "PASSWORD": "123",
-        "HOST": "127.0.0.1",
+        "HOST": "172.29.80.1",
         # "HOST": "db",
         "PORT": "5432",
     }
