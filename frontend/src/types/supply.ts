@@ -10,6 +10,7 @@ export interface Supply {
   is_confirmed: boolean;
   created_at?: string;
   updated_at?: string;
+  invoice: string | null
 }
 
 export interface AddSupplyForm {
@@ -21,8 +22,8 @@ export interface AddSupplyForm {
   exchange: number;
   delivery_date: string;
   comment: string;
-  images: File[];
   is_confirmed: boolean;
+  invoice: File | null; // Added this line
 }
 
 export interface Supplier {

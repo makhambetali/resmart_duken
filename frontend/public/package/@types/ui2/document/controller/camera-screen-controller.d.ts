@@ -1,0 +1,20 @@
+import React from "react";
+import { DocumentScanningFlow } from "../../configuration/document/DocumentScanningFlow";
+import type ScanbotSDK from "../../../scanbot-sdk";
+import { SBPage } from "../model/sb-page";
+import { RtuDocumentDetectionResultPromise } from "../model/document-detection-ui-result";
+export type SnappingMode = "auto" | "manual";
+type Props = {
+    visible: boolean;
+    configuration: DocumentScanningFlow;
+    onClose?: () => void;
+    onError: (error: any) => void;
+    onImageCaptured: (image: RtuDocumentDetectionResultPromise) => void;
+    onReviewButtonClick: () => void;
+    sdk: ScanbotSDK;
+    scanningPaused: boolean;
+    pages?: SBPage[];
+    scanLimitReached: boolean;
+};
+export declare function CameraScreenController(props: Props): React.JSX.Element;
+export {};

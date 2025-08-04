@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Supply, AddSupplyForm, SupplyImage } from '@/types/supply';
-import { suppliesApi } from '@/lib/api';
+import { Supply, AddSupplyForm } from '@/types/supply';
 import {
   Dialog,
   DialogContent,
@@ -15,8 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SupplierSearchCombobox } from '@/components/SupplierSearchCombobox';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Trash } from "lucide-react";
-import { ImagePreview } from '@/components/ImagePreview';
+import { Trash, FileText } from "lucide-react"; // Import FileText icon
 import { formatPrice, getNumericValue } from '@/lib/utils';
 
 interface SupplyModalProps {
@@ -24,7 +22,7 @@ interface SupplyModalProps {
   onOpenChange: (open: boolean) => void;
   handleDeleteSupply: (id: string) => void;
   supply?: Supply | null;
-  onSubmit: (data: AddSupplyForm) => Promise<void>;
+  onSubmit: (data: Omit<AddSupplyForm, 'images'>) => Promise<void>;
   suppliers: Array<{ id: string; name: string }>;
 }
 
@@ -38,8 +36,8 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
 }) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [existingImages, setExistingImages] = useState<SupplyImage[]>([]);
-  const [formData, setFormData] = useState<AddSupplyForm>({
+  const [existingInvoiceUrl, setExistingInvoiceUrl] = useState<string | null>(null); // State for existing invoice URL
+  const [formData, setFormData] = useState<Omit<AddSupplyForm, 'images'>>({
     supplier: '',
     paymentType: 'cash',
     price_cash: '0',
@@ -48,8 +46,8 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     exchange: 0,
     delivery_date: new Date().toISOString().split('T')[0],
     comment: '',
-    images: [],
     is_confirmed: false,
+    invoice: null,
   });
 
   const today = new Date().toISOString().split('T')[0];
@@ -74,11 +72,13 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
         exchange: supply.exchange,
         delivery_date: supply.delivery_date,
         comment: supply.comment || '',
-        images: [],
         is_confirmed: supply.is_confirmed,
+        invoice: null,
       });
+      
+      // Set the existing invoice URL
+      setExistingInvoiceUrl(supply.invoice || null);
 
-      loadExistingImages(supply.id);
     } else if (open) {
       setFormData({
         supplier: '',
@@ -89,25 +89,19 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
         exchange: 0,
         delivery_date: new Date().toISOString().split('T')[0],
         comment: '',
-        images: [],
         is_confirmed: false,
+        invoice: null,
       });
-      setExistingImages([]);
+
+      // Reset the existing invoice URL
+      setExistingInvoiceUrl(null);
     }
   }, [supply, open]);
 
-  const loadExistingImages = async (supplyId: string) => {
-    try {
-      const imagesData = await suppliesApi.getSupplyImages(supplyId);
-      setExistingImages(imagesData);
-    } catch (error) {
-      console.error('Error loading existing images:', error);
-    }
-  };
-
-  const handleFocus = (field: keyof AddSupplyForm) => {
+  const handleFocus = (field: keyof Omit<AddSupplyForm, 'images' | 'invoice'>) => {
     setFormData(prev => {
-      if (prev[field] === '0' || prev[field] === 0) {
+      const value = prev[field];
+      if (value === '0' || value === 0) {
         return { ...prev, [field]: '' };
       }
       return prev;
@@ -123,7 +117,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
       return prev;
     });
   };
-  
+
   const handlePriceChange = (field: 'price_cash' | 'price_bank', value: string) => {
     let numericValue = value.replace(/\D/g, '');
     if (numericValue.length > 6) {
@@ -132,28 +126,33 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     const formatted = formatPrice(numericValue);
     setFormData(prev => ({ ...prev, [field]: formatted }));
   };
-  
+
   const handleNumericInputChange = (field: 'bonus' | 'exchange', value: string) => {
     let numericValue = value.replace(/\D/g, '');
 
     if (numericValue.length > 3) {
       numericValue = numericValue.slice(0, 3);
     }
-    
+
     setFormData(prev => ({ ...prev, [field]: Number(numericValue) || 0 }));
+  };
+
+  const handleInvoiceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files ? e.target.files[0] : null;
+    setFormData(prev => ({ ...prev, invoice: file }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
       const submitData = {
         ...formData,
         price_cash: getNumericValue(formData.price_cash),
         price_bank: getNumericValue(formData.price_bank),
       };
-      
+
       await onSubmit(submitData);
       toast({
         title: supply ? 'Поставка обновлена' : 'Поставка добавлена',
@@ -172,11 +171,6 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setFormData(prev => ({ ...prev, images: files }));
   };
 
   const handlePaymentTypeChange = (newPaymentType: 'cash' | 'bank' | 'mixed') => {
@@ -206,31 +200,6 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     });
   };
 
-  const handleRemoveNewImage = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handleRemoveExistingImage = async (imageId: string) => {
-    if (!supply) return;
-    
-    try {
-      await suppliesApi.deleteSupplyImage(supply.id, imageId);
-      setExistingImages(prev => prev.filter(img => img.id !== imageId));
-      toast({
-        title: 'Изображение удалено',
-        variant: 'default',
-      });
-    } catch (error) {
-      toast({
-        title: 'Ошибка удаления изображения',
-        variant: 'destructive',
-      });
-    }
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-screen h-screen max-w-2xl rounded-none border-none overflow-y-auto">
@@ -242,7 +211,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
+
             <div className="space-y-2">
               <Label htmlFor="supplier">Поставщик</Label>
               <SupplierSearchCombobox
@@ -299,7 +268,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
 
             <div className="md:col-span-2">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                
+
                 <div className="space-y-2 md:col-span-1">
                   <Label htmlFor="bonus">Бонус</Label>
                   <Input
@@ -356,50 +325,45 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="images">Изображения</Label>
+              <Label htmlFor="invoice">Счет-фактура (PDF)</Label>
+              
+              {/* --- NEW: Link to existing invoice --- */}
+              {supply && existingInvoiceUrl && (
+                <div className="mb-2">
+                  <a
+                    href={existingInvoiceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center text-sm text-blue-600 hover:underline"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Просмотреть текущий счет-фактуру
+                  </a>
+                </div>
+              )}
+
               <Input
-                id="images"
+                id="invoice"
                 type="file"
-                multiple
-                accept="image/*"
-                onChange={handleFileChange}
+                accept=".pdf"
+                onChange={handleInvoiceChange}
                 disabled={!isToday}
               />
-              {!isToday && (
-                <p className="text-sm text-muted-foreground">
-                  Прикрепление документов доступно только для поставок на сегодняшнюю дату
-                </p>
-              )}
-              
-              {existingImages.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Загруженные изображения:</h4>
-                  <ImagePreview
-                    images={existingImages}
-                    onRemove={() => {}}
-                    onRemoveExisting={handleRemoveExistingImage}
-                    disabled={!isToday}
-                  />
-                </div>
-              )}
-              
-              {formData.images.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Новые изображения:</h4>
-                  <ImagePreview
-                    images={formData.images}
-                    onRemove={handleRemoveNewImage}
-                    disabled={!isToday}
-                  />
-                </div>
-              )}
+               <Input
+                id="invoice_phone"
+                type="file"
+                accept=".pdf"
+                // onChange={handleInvoiceChange}
+                disabled={!isToday}
+              />
+              {formData.invoice && <p className="text-sm text-muted-foreground mt-1">Выбран новый файл: {formData.invoice.name}</p>}
             </div>
 
             <div className="flex items-center space-x-2 md:col-span-2">
               <Checkbox
                 id="isConfirmed"
                 checked={formData.is_confirmed}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) =>
                   setFormData(prev => ({ ...prev, is_confirmed: Boolean(checked) }))
                 }
                 disabled={!isToday}

@@ -38,36 +38,6 @@ class SupplySerializer(serializers.ModelSerializer):
         model = Supply
         fields = '__all__'
 
-    def create(self, validated_data):
-        request = self.context.get('request')
-        images = request.FILES.getlist('images')
-        supply = Supply.objects.create(**validated_data)
-        supply.supplier.last_accessed = timezone.now()
-        supply.supplier.save()
-        cache.delete('supplies_future')
-        logger.info(f'Поставка #{supply.id} успешно создана: поставщик {supply.supplier} на {supply.delivery_date} ')
-        for image in images:
-            SupplyImage.objects.create(supply=supply, image=image)
-
-        if images:
-            logger.info(f'Добавлено {len(images)} изображении поставке #{supply.id}')
-        
-        
-        return supply
-
-    # def update(self, instance, validated_data):
-    #     request = self.context.get('request')
-    #     images = request.FILES.getlist('images')
-    #     # cache.delete(f"supplies_{timezone.now().date()}_True")
-    #     logger.info(f'Поставка #{instance.id} успешно изменена')
-    #     if images:
-    #         instance.images.all().delete()
-    #         for image in images:
-    #             SupplyImage.objects.create(supply=instance, image=image)
-    #         logger.info(f'Добавлено {len(images)} изображении поставке #{instance.id}')
-    #     return super().update(instance, validated_data)
-
-
 class SupplierCustomSerializer(serializers.ModelSerializer):
     class Meta:
         model = Supplier

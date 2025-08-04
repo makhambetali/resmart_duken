@@ -71,21 +71,7 @@ class SupplyViewSet(viewsets.ModelViewSet):
         only_confirmed = request.query_params.get('confirmed', 'true').lower() == 'true'
         supplies_dto = self.service_layer.get_supplies_by_date(target_date, only_confirmed)
         return Response([vars(dto) for dto in supplies_dto])
-    
-    @action(detail=True, methods=['get', 'delete'], url_path='images(?:/(?P<image_id>[^/.]+))?')
-    def images(self, request, pk=None, image_id=None):
-        supply = self.get_object()
 
-        if image_id and request.method == 'DELETE':
-            image = supply.images.get(pk=image_id)
-            image.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
-        elif request.method == 'GET':
-            images = supply.images.all()
-            serializer = SupplyImageSerializer(images, many=True, context={'request': request})
-            return Response(serializer.data)
-            
 
 class ClientViewSet(viewsets.ModelViewSet):
     serializer_class = ClientSerializer

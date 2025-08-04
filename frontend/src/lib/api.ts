@@ -3,8 +3,8 @@ import { Client, ClientDebt, AddClientForm, ClientsResponse } from '@/types/clie
 import { CreateSupplierData, Supplier } from '@/types/suppliers';
 import { Employee } from '@/types/employees';
 
-const API_BASE_URL = 'http://localhost:8000/api/v1'; // Измените на ваш URL
-//const API_BASE_URL = 'http://172.20.10.3:8000/api/v1'; // Измените на ваш URL
+// const API_BASE_URL = 'http://localhost:8000/api/v1'; // Измените на ваш URL
+const API_BASE_URL = 'http://172.20.10.3:8000/api/v1'; // Измените на ваш URL
 
 
 class ApiError extends Error {
@@ -18,29 +18,33 @@ class ApiError extends Error {
     this.body = body;
   }}
 
-const apiRequest = async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
+// api.ts
+
+const apiRequest = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   const url = `${API_BASE_URL}${endpoint}`;
-  
+
+  // Устанавливаем заголовки по умолчанию
+  const headers: HeadersInit = { ...options.headers };
+
+  // Если тело запроса НЕ является FormData, устанавливаем JSON заголовок
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+  // В противном случае (если это FormData), браузер сам установит правильный Content-Type
+
   try {
     const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
       ...options,
+      headers,
     });
 
-    // ++ 2. УЛУЧШАЕМ ЛОГИКУ ОБРАБОТКИ ОШИБКИ ++
     if (!response.ok) {
       let errorBody = null;
       try {
-        // Пытаемся распарсить тело ответа как JSON
         errorBody = await response.json();
       } catch (e) {
-        // Если не получилось, просто считываем как текст
         console.error("Could not parse error response JSON", e);
       }
-      // Бросаем нашу новую, улучшенную ошибку
       throw new ApiError(`API Error: ${response.statusText}`, response.status, errorBody);
     }
 
@@ -50,7 +54,6 @@ const apiRequest = async <T>(endpoint: string, options?: RequestInit): Promise<T
 
     return await response.json();
   } catch (error) {
-    // Теперь наша ошибка будет поймана здесь и передана в React Query
     console.error('API request failed:', error);
     throw error;
   }
@@ -67,35 +70,39 @@ export const suppliesApi = {
   // Создать новую поставку
   createSupply: (data: AddSupplyForm) => {
     const formData = new FormData();
+
     Object.entries(data).forEach(([key, value]) => {
-      if (key === 'images' && Array.isArray(value)) {
-        value.forEach((file) => formData.append('images', file));
-      } else {
+      if (key === 'invoice' && value instanceof File) {
+        formData.append(key, value);
+      } else if (key !== 'invoice' && value !== null) {
         formData.append(key, String(value));
       }
     });
+
     return apiRequest<Supply>('/supplies/', {
       method: 'POST',
       body: formData,
-      headers: {}, // Убираем Content-Type для FormData
     });
   },
-  
+
   // Обновить поставку
   updateSupply: (id: string, data: Partial<AddSupplyForm>) => {
     const formData = new FormData();
+
     Object.entries(data).forEach(([key, value]) => {
-      if (key === 'images' && Array.isArray(value)) {
-        value.forEach((file) => formData.append('images', file));
-      } else if (value !== undefined) {
-        formData.append(key, String(value));
+      // Проверяем, что значение не undefined (для PATCH запросов)
+      if (value !== undefined) {
+        if (key === 'invoice' && value instanceof File) {
+          formData.append(key, value);
+        } else if (key !== 'invoice' && value !== null) {
+          formData.append(key, String(value));
+        }
       }
     });
-    
+
     return apiRequest<Supply>(`/supplies/${id}/`, {
       method: 'PATCH',
       body: formData,
-      headers: {},
     });
   },
   
@@ -109,15 +116,6 @@ export const suppliesApi = {
     method: 'POST',
   }),
 
-  // Получить изображения поставки
-  getSupplyImages: (id: string) => apiRequest<Supply>(`/supplies/${id}/images`, {
-    method: 'GET'
-  }),
-
-  // Удалить изображение поставки
-  deleteSupplyImage: (supplyId: string, imageId: string) => apiRequest<Supply>(`/supplies/${supplyId}/images/${imageId}/`, {
-    method: 'DELETE'
-  })
 };
 
 // ... остальной код ...

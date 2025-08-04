@@ -1,0 +1,35 @@
+import { Size } from "./Size";
+import { Polygon } from "./Polygon";
+export declare class Point {
+    x: number;
+    y: number;
+    constructor(x: number, y: number);
+    static toPolygon(points: Point[], size: Size): Polygon;
+    static scaleToPoint(pt: Point, x: number, y: number, scale: number): Point;
+    static scaleListToHtmlElement(points: Point[], original: Size, html: HTMLElement): Point[];
+    static scaleToHtmlElement(point: Point, original: Size, html: HTMLElement): Point;
+    static scaleUpTo(pt: Point, size: Size): Point;
+    static scaleDownTo(pt: Point, size: Size): Point;
+    static fromHtmlElement(element: HTMLElement): Point;
+    static withScale(x: number, y: number, scale: number): Point;
+    static fromCoordinates(clientX: any, clientY: any, rotations: number, scale: number): Point;
+    static centerOf(points: Point[]): Point;
+    static smallerSizeOfQuad(points: Point[]): number;
+    static empty(): Point;
+    static centerX(points: Point[]): number;
+    static highestX(points: Point[]): number;
+    static lowestX(points?: Point[]): number;
+    static lowestY(points: Point[]): number;
+    static highestY(points: Point[]): number;
+    static width(points: Point[]): number;
+    static left(points: Point[]): any;
+    static right(points: Point[]): any;
+    static toSvgString(points: Point[]): string;
+    static toSvgPathStringWithRoundedCorners(points: Point[], cornerRadius?: number): string;
+    static distance(pointA: Point, pointB: Point): number;
+    static subtract(a: Point, b: Point): Point;
+    static add(a: Point, b: Point): Point;
+    static multiply(point: Point, scalar: number): Point;
+    static cross(a: Point, b: Point): number;
+    static clamp(point: Point, containerSize: Size): Point;
+}
