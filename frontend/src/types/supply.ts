@@ -1,3 +1,5 @@
+// @/types/supply.ts
+
 export interface Supply {
   id: string;
   supplier: string;
@@ -10,12 +12,13 @@ export interface Supply {
   is_confirmed: boolean;
   created_at?: string;
   updated_at?: string;
-  invoice: string | null
+  invoice: string | null;
+  invoice_html: string; // <-- Добавлено
 }
 
 export interface AddSupplyForm {
   supplier: string;
-  paymentType?: 'cash' | 'bank' | 'mixed';
+  paymentType: 'cash' | 'bank' | 'mixed';
   price_cash: string;
   price_bank: string;
   bonus: number;
@@ -23,9 +26,9 @@ export interface AddSupplyForm {
   delivery_date: string;
   comment: string;
   is_confirmed: boolean;
-  invoice: File | null; // Added this line
+  invoice: File | null;
+  invoice_html: string; // <-- Добавлено
 }
-
 export interface Supplier {
   id: string;
   name: string;
