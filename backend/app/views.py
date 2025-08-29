@@ -60,8 +60,8 @@ class SupplyViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def by_date(self, request):
         try:
-            date_param = request.query_params.get("date")
-            target_date = date.fromisoformat(date_param) if date_param else timezone.now().date()
+            date_param = request.query_params.get("date", timezone.now().date())
+            payment_type = request.query_params.get('payment_type', 'all')
         except ValueError:
             return Response(
                 {"detail": "Invalid date format. Use YYYY-MM-DD."},
@@ -69,7 +69,7 @@ class SupplyViewSet(viewsets.ModelViewSet):
             )
 
         only_confirmed = request.query_params.get('confirmed', 'true').lower() == 'true'
-        supplies_dto = self.service_layer.get_supplies_by_date(target_date, only_confirmed)
+        supplies_dto = self.service_layer.get_supplies_by_date(date_param, only_confirmed, payment_type)
         return Response([vars(dto) for dto in supplies_dto])
 
 
@@ -148,7 +148,8 @@ class CashFlowViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def by_date(self, request):
         date = request.query_params.get('date', timezone.now().date())
-        cashflows_dto = self.service_layer.get_cashflows_by_date(date)
+        flow_type = request.query_params.get('flow_type', 'all')
+        cashflows_dto = self.service_layer.get_cashflows_by_date(date, flow_type)
         return Response(vars(cashflow) for cashflow in cashflows_dto)
     
     def perform_create(self, serializer): 

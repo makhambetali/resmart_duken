@@ -15,11 +15,18 @@ class SupplyDAO:
         queryset = Supply.objects.filter(delivery_date__gte=timezone.now().date()).select_related('supplier')
         return queryset
     
-    def get_supplies_by_date(self, date, only_confirmed: bool = True):
+    def get_supplies_by_date(self, date, only_confirmed: bool = True, payment_type = 'all'):
         """Поставки на конкретную дату с опциональным фильтром по confirmed."""
+        payment_type_to_logic = {
+            'cash': ~Q(price_cash = 0) & Q(price_bank = 0),
+            'bank': ~Q(price_bank = 0) & Q(price_cash = 0),
+            'mix': ~Q(price_cash=0) & ~Q(price_bank=0)
+        }
         query = Q(delivery_date=date)
         if only_confirmed:
             query &= Q(is_confirmed=True)
+        
+        query &= payment_type_to_logic.get(payment_type, Q())
 
         queryset =Supply.objects.filter(query).select_related('supplier')
         return queryset

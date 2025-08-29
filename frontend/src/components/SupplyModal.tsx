@@ -246,16 +246,16 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cashAmount">Сумма наличными (₸)</Label>
-                <Input id="cashAmount" type="text" placeholder="0" value={formData.price_cash} onChange={(e) => handlePriceChange('price_cash', e.target.value)} disabled={formData.paymentType === 'bank'} onFocus={() => handleFocus('price_cash')} onBlur={() => handleBlur('price_cash')} />
+                <Input id="cashAmount" type="text"inputMode="numeric" placeholder="0" value={formData.price_cash} onChange={(e) => handlePriceChange('price_cash', e.target.value)} disabled={formData.paymentType === 'bank'} onFocus={() => handleFocus('price_cash')} onBlur={() => handleBlur('price_cash')} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="bankAmount">Сумма банком (₸)</Label>
-                <Input id="bankAmount" type="text" placeholder="0" value={formData.price_bank} onChange={(e) => handlePriceChange('price_bank', e.target.value)} disabled={formData.paymentType === 'cash'} onFocus={() => handleFocus('price_bank')} onBlur={() => handleBlur('price_bank')} />
+                <Input id="bankAmount" type="text"inputMode="numeric" placeholder="0" value={formData.price_bank} onChange={(e) => handlePriceChange('price_bank', e.target.value)} disabled={formData.paymentType === 'cash'} onFocus={() => handleFocus('price_bank')} onBlur={() => handleBlur('price_bank')} />
               </div>
               <div className="md:col-span-2">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="space-y-2"><Label htmlFor="bonus">Бонус</Label><Input id="bonus" type="number" max="999" value={formData.bonus} onChange={(e) => handleNumericInputChange('bonus', e.target.value)} onFocus={() => handleFocus('bonus')} onBlur={() => handleBlur('bonus')} /></div>
-                  <div className="space-y-2"><Label htmlFor="exchange">Обмен</Label><Input id="exchange" type="number" max="999" value={formData.exchange} onChange={(e) => handleNumericInputChange('exchange', e.target.value)} onFocus={() => handleFocus('exchange')} onBlur={() => handleBlur('exchange')} /></div>
+                  <div className="space-y-2"><Label htmlFor="bonus">Бонус</Label><Input id="bonus" type="number" max="999"inputMode="numeric" value={formData.bonus} onChange={(e) => handleNumericInputChange('bonus', e.target.value)} onFocus={() => handleFocus('bonus')} onBlur={() => handleBlur('bonus')} /></div>
+                  <div className="space-y-2"><Label htmlFor="exchange">Обмен</Label><Input id="exchange" type="number" max="999" inputMode="numeric"value={formData.exchange} onChange={(e) => handleNumericInputChange('exchange', e.target.value)} onFocus={() => handleFocus('exchange')} onBlur={() => handleBlur('exchange')} /></div>
                   <div className="space-y-2 md:col-span-2"><Label htmlFor="deliveryDate">Дата поставки</Label><Input id="deliveryDate" type="date" min={today} max={plus7} value={formData.delivery_date} onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))} /></div>
                 </div>
                 {!isToday && (<p className="text-sm text-amber-600 mt-2">⚠️ Подтверждение и загрузка документов доступны только для сегодняшней даты.</p>)}

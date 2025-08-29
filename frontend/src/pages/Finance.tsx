@@ -7,17 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cashFlowApi, suppliesApi } from '@/lib/api';
 import { CashFlowOperation, Supply } from '@/types/supply';
-// ++ НАЧАЛО ИЗМЕНЕНИЙ: Импорт иконок и компонентов для подсказок ++
 import { PlusCircle, AlertTriangle, ChevronsDown, ChevronsUp, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-// ++ КОНЕЦ ИЗМЕНЕНИЙ ++
 import { format } from 'date-fns';
 import { CashFlowModal } from '@/components/CashFlowModal';
 
 // Вспомогательные функции и компоненты
 const formatCurrency = (amount: number) => new Intl.NumberFormat('ru-RU').format(amount) + ' ₸';
 
-// ++ НАЧАЛО ИЗМЕНЕНИЙ: Обновляем StatCard для поддержки подсказок ++
 const StatCard = ({ title, value, className, tooltipContent }: { title: string, value: string, className?: string, tooltipContent: string }) => (
   <Card className={className}>
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -38,7 +35,25 @@ const StatCard = ({ title, value, className, tooltipContent }: { title: string, 
     </CardContent>
   </Card>
 );
-// ++ КОНЕЦ ИЗМЕНЕНИЙ ++
+
+const FilterButtons = ({ options, selectedValue, onValueChange }: {
+  options: { value: string; label: string }[];
+  selectedValue: string;
+  onValueChange: (value: string) => void;
+}) => (
+  <div className="flex items-center gap-2">
+    {options.map(option => (
+      <Button
+        key={option.value}
+        variant={selectedValue === option.value ? 'default' : 'outline'}
+        size="sm"
+        onClick={() => onValueChange(option.value)}
+      >
+        {option.label}
+      </Button>
+    ))}
+  </div>
+);
 
 
 const FinancePage = () => {
@@ -46,25 +61,42 @@ const FinancePage = () => {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState<CashFlowOperation | null>(null);
-  
   const [isCashFlowsExpanded, setIsCashFlowsExpanded] = useState(false);
+
+  const [cashFlowFilter, setCashFlowFilter] = useState('all');
+  const [supplyFilter, setSupplyFilter] = useState('all');
 
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const isToday = selectedDate === todayStr;
 
+  const cashFlowFilterOptions = [
+    { value: 'all', label: 'Все' },
+    { value: 'income', label: 'Доходы' },
+    { value: 'expense', label: 'Расходы' },
+  ];
+
+  const supplyFilterOptions = [
+    { value: 'all', label: 'Все' },
+    { value: 'cash', label: 'Наличные' },
+    { value: 'bank', label: 'Банк' },
+    { value: 'mix', label: 'Смешанные' },
+  ];
+
   // --- DATA FETCHING ---
   const { data: cashFlows, isLoading: cashFlowsLoading, error: cashFlowsError } = useQuery({
-    queryKey: ['cashFlows', selectedDate],
-    queryFn: () => cashFlowApi.getOperationsByDate(selectedDate),
+    queryKey: ['cashFlows', selectedDate, cashFlowFilter],
+    queryFn: () => cashFlowApi.getOperationsByDate(selectedDate, cashFlowFilter),
   });
 
   const { data: supplies, isLoading: suppliesLoading, error: suppliesError } = useQuery({
-    queryKey: ['supplies', selectedDate],
-    queryFn: () => suppliesApi.getSuppliesByDate(selectedDate),
+    queryKey: ['supplies', selectedDate, supplyFilter],
+    queryFn: () => suppliesApi.getSuppliesByDate(selectedDate, supplyFilter),
   });
 
   useEffect(() => {
     setIsCashFlowsExpanded(false);
+    setCashFlowFilter('all');
+    setSupplyFilter('all');
   }, [selectedDate]);
 
 
@@ -95,6 +127,7 @@ const FinancePage = () => {
   // --- HANDLERS ---
   const handleSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['cashFlows', selectedDate] });
+    queryClient.invalidateQueries({ queryKey: ['supplies', selectedDate] });
     setIsModalOpen(false);
   };
   
@@ -144,7 +177,6 @@ const FinancePage = () => {
           </div>
         </div>
 
-        {/* ++ НАЧАЛО ИЗМЕНЕНИЙ: Добавляем tooltipContent в StatCard ++ */}
         <div className="grid gap-4 md:grid-cols-3">
           <StatCard 
             title="Доходы" 
@@ -165,10 +197,16 @@ const FinancePage = () => {
             tooltipContent="Разница между доходами и расходами за день."
           />
         </div>
-        {/* ++ КОНЕЦ ИЗМЕНЕНИЙ ++ */}
 
         <Card>
-            <CardHeader><CardTitle>Движение средств за день</CardTitle></CardHeader>
+            <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <CardTitle>Движение средств за день</CardTitle>
+                <FilterButtons 
+                  options={cashFlowFilterOptions}
+                  selectedValue={cashFlowFilter}
+                  onValueChange={setCashFlowFilter}
+                />
+            </CardHeader>
             <CardContent>
                 <Table>
                     <TableHeader>
@@ -225,7 +263,14 @@ const FinancePage = () => {
         </Card>
         
         <Card>
-            <CardHeader><CardTitle>Поставки за день</CardTitle></CardHeader>
+            <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <CardTitle>Поставки за день</CardTitle>
+                <FilterButtons 
+                  options={supplyFilterOptions}
+                  selectedValue={supplyFilter}
+                  onValueChange={setSupplyFilter}
+                />
+            </CardHeader>
             <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-3">
                     <StatCard 

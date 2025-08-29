@@ -1,36 +1,30 @@
-import { Supply, AddSupplyForm, CashFlowOperation, SupplyImage } from '@/types/supply';
+import { Supply, AddSupplyForm, CashFlowOperation } from '@/types/supply';
 import { Client, ClientDebt, AddClientForm, ClientsResponse } from '@/types/client';
-import { CreateSupplierData, Supplier } from '@/types/suppliers';
+import { CreateSupplierData, Supplier, SuppliersResponse } from '@/types/suppliers';
 import { Employee } from '@/types/employees';
 
-// const API_BASE_URL = 'http://localhost:8000/api/v1'; // Измените на ваш URL
-const API_BASE_URL = 'http://10.101.58.132:8000/api/v1'; // Измените на ваш URL
-
+// Укажите ваш IP-адрес или домен
+const API_BASE_URL = 'http://10.101.27.49:8000/api/v1';
 
 class ApiError extends Error {
   status: number;
-  body: any; // Здесь будет храниться тело ответа с ошибкой (JSON)
+  body: any;
   
   constructor(message: string, status: number, body: any) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.body = body;
-  }}
-
-// api.ts
+  }
+}
 
 const apiRequest = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   const url = `${API_BASE_URL}${endpoint}`;
-
-  // Устанавливаем заголовки по умолчанию
   const headers: HeadersInit = { ...options.headers };
 
-  // Если тело запроса НЕ является FormData, устанавливаем JSON заголовок
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
-  // В противном случае (если это FormData), браузер сам установит правильный Content-Type
 
   try {
     const response = await fetch(url, {
@@ -43,7 +37,7 @@ const apiRequest = async <T>(endpoint: string, options: RequestInit = {}): Promi
       try {
         errorBody = await response.json();
       } catch (e) {
-        console.error("Could not parse error response JSON", e);
+        // Ошибка парсинга JSON не критична, если тело ответа пустое или не JSON
       }
       throw new ApiError(`API Error: ${response.statusText}`, response.status, errorBody);
     }
@@ -59,18 +53,19 @@ const apiRequest = async <T>(endpoint: string, options: RequestInit = {}): Promi
   }
 };
 
-
 export const suppliesApi = {
-  // Получить все поставки
   getSupplies: () => apiRequest<Supply[]>('/supplies/'),
   
-  // Получить поставки по дате
-  getSuppliesByDate: (date: string) => apiRequest<Supply[]>(`/supplies/by_date/?date=${date}`),
+  getSuppliesByDate: (date: string, payment_type?: string) => {
+    let endpoint = `/supplies/by_date/?date=${date}`;
+    if (payment_type && payment_type !== 'all') {
+      endpoint += `&payment_type=${payment_type}`;
+    }
+    return apiRequest<Supply[]>(endpoint);
+  },
 
-  // Создать новую поставку
   createSupply: (data: AddSupplyForm) => {
     const formData = new FormData();
-
     Object.entries(data).forEach(([key, value]) => {
       if (key === 'invoice' && value instanceof File) {
         formData.append(key, value);
@@ -78,19 +73,15 @@ export const suppliesApi = {
         formData.append(key, String(value));
       }
     });
-
     return apiRequest<Supply>('/supplies/', {
       method: 'POST',
       body: formData,
     });
   },
 
-  // Обновить поставку
   updateSupply: (id: string, data: Partial<AddSupplyForm>) => {
     const formData = new FormData();
-
     Object.entries(data).forEach(([key, value]) => {
-      // Проверяем, что значение не undefined (для PATCH запросов)
       if (value !== undefined) {
         if (key === 'invoice' && value instanceof File) {
           formData.append(key, value);
@@ -99,29 +90,22 @@ export const suppliesApi = {
         }
       }
     });
-
     return apiRequest<Supply>(`/supplies/${id}/`, {
       method: 'PATCH',
       body: formData,
     });
   },
   
-  // Удалить поставку
   deleteSupply: (id: string) => apiRequest(`/supplies/${id}/`, {
     method: 'DELETE',
   }),
   
-  // Подтвердить поставку
   confirmSupply: (id: string) => apiRequest<Supply>(`/supplies/${id}/confirm/`, {
     method: 'POST',
   }),
-
 };
 
-// ... остальной код ...
-
 export const suppliersApi = {
-  // ++ ОБНОВЛЕННАЯ ФУНКЦИЯ ++
   getSuppliers: (params?: {
     page?: number;
     page_size?: number;
@@ -136,7 +120,6 @@ export const suppliersApi = {
         }
       });
     }
-    // Используем новый тип SuppliersResponse
     return apiRequest<SuppliersResponse>(`/suppliers/?${searchParams.toString()}`);
   },
 
@@ -146,10 +129,9 @@ export const suppliersApi = {
       body: JSON.stringify(data),
     }),
     
-  // ++ ДОБАВЬТЕ ФУНКЦИИ UPDATE И DELETE (по аналогии с clientsApi) ++
   updateSupplier: (id: string, data: Partial<CreateSupplierData>) => 
     apiRequest<Supplier>(`/suppliers/${id}/`, {
-      method: 'PATCH', // или PUT
+      method: 'PATCH',
       body: JSON.stringify(data),
     }),
 
@@ -159,27 +141,27 @@ export const suppliersApi = {
     }),
 };
 
-// ... остальной код ...
-
 export const cashFlowApi = {
-  // Получить операции по дате
-  getOperationsByDate: (date: string) => apiRequest<CashFlowOperation[]>(`/cashflows/by_date/?date=${date}`),
+  getOperationsByDate: (date: string, flow_type?: string) => {
+    let endpoint = `/cashflows/by_date/?date=${date}`;
+    if (flow_type && flow_type !== 'all') {
+      endpoint += `&flow_type=${flow_type}`;
+    }
+    return apiRequest<CashFlowOperation[]>(endpoint);
+  },
 
-  // Создать новую операцию
   createOperation: (data: { amount: number; description: string, type: 'cash' | 'bank' }) => 
     apiRequest<CashFlowOperation>('/cashflows/', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  // Обновить операцию
   updateOperation: (id: string, data: { amount: number; description: string }) => 
     apiRequest<CashFlowOperation>(`/cashflows/${id}/`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
-  // Удалить операцию
   deleteOperation: (id: string) => 
     apiRequest(`/cashflows/${id}/`, {
       method: 'DELETE',
@@ -187,7 +169,6 @@ export const cashFlowApi = {
 };
 
 export const clientsApi = {
-  // Получить всех клиентов с фильтрами
   getClients: (params?: {
     page?: number;
     page_size?: number;
@@ -206,39 +187,32 @@ export const clientsApi = {
     return apiRequest<ClientsResponse>(`/clients/?${searchParams.toString()}`);
   },
   
-  // Создать нового клиента
   createClient: (data: AddClientForm) => 
     apiRequest<Client>('/clients/', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   
-  // Обновить клиента
   updateClient: (id: string, data: AddClientForm) => 
     apiRequest<Client>(`/clients/${id}/`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
   
-  // Удалить клиента
   deleteClient: (id: string) => 
     apiRequest(`/clients/${id}/`, {
       method: 'DELETE',
     }),
   
-  // Получить долги клиента
   getClientDebts: (id: string) => 
     apiRequest<ClientDebt[]>(`/clients/${id}/get_debts/`),
   
-  // Добавить долг
-    addDebt: (id: string, debt_value: number, responsible_employee_id: string) => 
+  addDebt: (id: string, debt_value: number, responsible_employee_id: string) => 
     apiRequest<ClientDebt>(`/clients/${id}/add_debt/`, {
       method: 'POST',
       body: JSON.stringify({ debt_value, responsible_employee_id }),
     }),
     
-  
-  // Удалить долг
   deleteDebt: (debtId: string) => 
     apiRequest(`/clients/delete_debt/${debtId}/`, {
       method: 'DELETE',
