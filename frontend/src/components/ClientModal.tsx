@@ -379,18 +379,13 @@ export const ClientModal: React.FC<ClientModalProps> = ({
 
           <TabsContent value="quick-debt" className="space-y-6 mt-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  {client ? `Добавление долга для: ${client.name}` : 'Быстрое добавление долга'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 mt-4">
                 <div className="space-y-2">
                   <Label htmlFor="client-search">Клиент *</Label>
                   {client ? (
                     // ++ ЕСЛИ РЕДАКТИРУЕМ КЛИЕНТА, ПОКАЗЫВАЕМ ЕГО ИМЯ КАК ВЫБРАННОЕ ++
                     <div className="p-3 border rounded-md bg-muted/50">
-                      <p className="font-medium">{client.name}</p>
+                      <p className="font-medium">{client.name}: {client.debt} ₸</p>
                       {client.phone_number && (
                         <p className="text-sm text-muted-foreground">{client.phone_number}</p>
                       )}
