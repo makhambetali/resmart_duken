@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'; // ++ 1. ИМПОРТИРУЕМ useRef ++
+import React, { useState, useEffect, useRef } from 'react';
 import { IMaskInput } from 'react-imask';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -10,10 +10,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Client, AddClientForm, ClientDebt } from '@/types/client';
 import { clientsApi, employeesApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2 } from 'lucide-react';
+import { ClientSearchCombobox } from './ClientSearchCombobox';
 
 const phoneMask = '+{7} (000) 000-00-00';
 const inputClassName = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
@@ -36,7 +38,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  // ++ 2. СОЗДАЕМ REF ДЛЯ ПОЛЯ ВВОДА ++
   const debtInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<AddClientForm>({
@@ -49,8 +50,14 @@ export const ClientModal: React.FC<ClientModalProps> = ({
   const [newDebtValue, setNewDebtValue] = useState<string>('');
   const [showDebtForm, setShowDebtForm] = useState(false);
   const [responsibleEmployeeId, setResponsibleEmployeeId] = useState<string>('');
+  
+  // Состояния для второй вкладки
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [selectedClientName, setSelectedClientName] = useState<string>('');
+  const [quickDebtValue, setQuickDebtValue] = useState<string>('');
+  const [quickResponsibleEmployeeId, setQuickResponsibleEmployeeId] = useState<string>('');
 
-  const { data: employees = [] } = useQuery({
+  const { data: employees = [] } = useQuery<Array<{ id: number; name: string }>>({
     queryKey: ['employees'],
     queryFn: employeesApi.getEmployees,
   });
@@ -70,6 +77,22 @@ export const ClientModal: React.FC<ClientModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       setNewDebtValue('');
       setShowDebtForm(false);
+    },
+    onError: () => {
+      toast({ title: 'Ошибка добавления долга', variant: 'destructive' });
+    },
+  });
+
+  const addQuickDebtMutation = useMutation({
+    mutationFn: ({ id, debt_value, responsible_employee_id }: { id: string; debt_value: number, responsible_employee_id:string }) =>
+      clientsApi.addDebt( id, debt_value, responsible_employee_id ),
+    onSuccess: () => {
+      toast({ title: `Долг успешно добавлен для ${selectedClientName}`, variant: 'default', className: "bg-green-500 text-white", });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      setSelectedClientId('');
+      setSelectedClientName('');
+      setQuickDebtValue('');
+      setQuickResponsibleEmployeeId('');
     },
     onError: () => {
       toast({ title: 'Ошибка добавления долга', variant: 'destructive' });
@@ -102,18 +125,19 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     setShowDebtForm(false);
     setNewDebtValue('');
     setResponsibleEmployeeId('');
+    setSelectedClientId('');
+    setSelectedClientName('');
+    setQuickDebtValue('');
+    setQuickResponsibleEmployeeId('');
   }, [client, open]);
 
-  // ++ 3. ИСПОЛЬЗУЕМ useEffect ДЛЯ ФОКУСИРОВКИ ++
   useEffect(() => {
-    // Если форма стала видимой и ссылка на инпут существует...
     if (showDebtForm && debtInputRef.current) {
-      // Небольшая задержка, чтобы браузер успел отрендерить элемент перед фокусом
       setTimeout(() => {
         debtInputRef.current?.focus();
       }, 100);
     }
-  }, [showDebtForm]); // Этот эффект будет срабатывать каждый раз, когда меняется showDebtForm
+  }, [showDebtForm]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,6 +179,43 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     }
   };
 
+  const handleQuickDebtInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const isNegative = value.startsWith('-');
+    let numericValue = value.replace(/[^\d]/g, '');
+    if (numericValue.length > 6) {
+      numericValue = numericValue.slice(0, 6);
+    }
+    const formattedNumericPart = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    if (isNegative) {
+      setQuickDebtValue(formattedNumericPart ? `- ${formattedNumericPart}` : '-');
+    } else {
+      setQuickDebtValue(formattedNumericPart);
+    }
+  };
+
+  const handleAddQuickDebt = () => {
+    if (!selectedClientId) {
+      toast({ title: 'Выберите клиента', variant: 'destructive' });
+      return;
+    }
+    const rawValue = quickDebtValue.replace(/\s/g, '');
+    const debtValue = parseFloat(rawValue);
+    if (isNaN(debtValue) || debtValue === 0) {
+      toast({ title: 'Введите корректную сумму долга', variant: 'destructive' });
+      return;
+    }
+    if (!quickResponsibleEmployeeId) {
+      toast({ title: 'Выберите ответственного сотрудника', variant: 'destructive' });
+      return;
+    }
+    addQuickDebtMutation.mutate({ 
+      id: selectedClientId, 
+      debt_value: debtValue, 
+      responsible_employee_id: quickResponsibleEmployeeId 
+    });
+  };
+
   const handleDeleteDebt = (debtId: string) => {
     if (confirm('Вы уверены, что хотите удалить эту запись о долге?')) {
       deleteDebtMutation.mutate(debtId);
@@ -178,132 +239,199 @@ export const ClientModal: React.FC<ClientModalProps> = ({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {client ? `Редактирование: ${client.name}` : 'Добавить клиента'}
+            {client ? `Редактирование: ${client.name}` : 'Управление клиентами'}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Имя *</Label>
-              <Input id="name" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} placeholder="Имя клиента" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Телефон</Label>
-              <IMaskInput mask={phoneMask} id="phone" value={formData.phone_number} onAccept={(value) => setFormData(prev => ({ ...prev, phone_number: value as string }))} className={inputClassName} placeholder="+7 (___) ___-__-__" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Описание</Label>
-            <Textarea id="description" value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} placeholder="Дополнительная информация о клиенте" rows={3} />
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox id="is_chosen" checked={formData.is_chosen} onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_chosen: !!checked }))} />
-            <Label htmlFor="is_chosen">Избранный клиент</Label>
-          </div>
+        <Tabs defaultValue="manage" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="manage">Управление клиентом</TabsTrigger>
+            <TabsTrigger value="quick-debt">Добавить долг клиенту</TabsTrigger>
+          </TabsList>
 
-          {client && (
+          <TabsContent value="manage">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Имя *</Label>
+                  <Input id="name" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} placeholder="Имя клиента" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Телефон</Label>
+                  <IMaskInput mask={phoneMask} id="phone" value={formData.phone_number} onAccept={(value) => setFormData(prev => ({ ...prev, phone_number: value as string }))} className={inputClassName} placeholder="+7 (___) ___-__-__" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Описание</Label>
+                <Textarea id="description" value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} placeholder="Дополнительная информация о клиенте" rows={3} />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox id="is_chosen" checked={formData.is_chosen} onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_chosen: !!checked }))} />
+                <Label htmlFor="is_chosen">Избранный клиент</Label>
+              </div>
+
+              {client && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg">Долги клиента</CardTitle>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setShowDebtForm(!showDebtForm)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Добавить долг
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {showDebtForm && (
+                      <div className="space-y-4 p-4 border rounded-lg">
+                        <div className="flex gap-2 items-end">
+                          <div className="flex-grow space-y-2">
+                            <Label htmlFor="debt_value">Сумма</Label>
+                            <Input
+                              ref={debtInputRef}
+                              id="debt_value"
+                              type="text"
+                              value={newDebtValue}
+                              onChange={handleDebtInputChange}
+                              placeholder="Например: -50 000"
+                              autoComplete="off"
+                            />
+                          </div>
+                          <div className="flex-grow space-y-2">
+                            <Label htmlFor="employee">Ответственный</Label>
+                            <Select value={responsibleEmployeeId} onValueChange={setResponsibleEmployeeId}>
+                              <SelectTrigger id="employee">
+                                <SelectValue placeholder="Выберите сотрудника" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {employees.map((emp: { id: number; name: string }) => (
+                                  <SelectItem key={emp.id} value={String(emp.id)}>{emp.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button type="button" onClick={handleAddDebt}>Сохранить</Button>
+                          <Button type="button" variant="outline" onClick={() => setShowDebtForm(false)}>Отмена</Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {debts.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Дата</TableHead>
+                            <TableHead>Сумма</TableHead>
+                            <TableHead>Отв. лицо</TableHead>
+                            <TableHead>Действия</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {debts.map((debt) => (
+                            <TableRow key={debt.id}>
+                              <TableCell>{formatDateTime(debt.date_added)}</TableCell>
+                              <TableCell>
+                                <span className={debt.debt_value > 0 ? 'text-red-600' : 'text-green-600'}>
+                                  {formatCurrency(debt.debt_value)}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                {employees.find(emp => emp.id === debt.responsible_employee_id)?.name ?? 'Неизвестно'}
+                              </TableCell>
+                              <TableCell>
+                                <Button type="button" variant="outline" size="sm" onClick={() => handleDeleteDebt(debt.id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <p className="text-muted-foreground text-center py-4">Нет записей о долгах</p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              <DialogFooter className="flex justify-between">
+                {client && (
+                  <Button type="button" variant="destructive" onClick={() => {
+                    if (confirm('Вы уверены, что хотите удалить клиента?')) {
+                      onDelete(client.id);
+                      onOpenChange(false);
+                    }
+                  }}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Удалить клиента
+                  </Button>
+                )}
+                <div className="space-x-2">
+                  <Button type="submit">{client ? 'Сохранить' : 'Добавить'}</Button>
+                </div>
+              </DialogFooter>
+            </form>
+          </TabsContent>
+
+          <TabsContent value="quick-debt" className="space-y-6 mt-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">Долги клиента</CardTitle>
-                <Button type="button" variant="outline" size="sm" onClick={() => setShowDebtForm(!showDebtForm)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Добавить долг
-                </Button>
+              <CardHeader>
+                <CardTitle className="text-lg">Быстрое добавление долга</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {showDebtForm && (
-                  <div className="space-y-4 p-4 border rounded-lg">
-                    <div className="flex gap-2 items-end">
-                      <div className="flex-grow space-y-2">
-                        <Label htmlFor="debt_value">Сумма</Label>
-                        <Input
-                          // ++ 4. ПРИВЯЗЫВАЕМ REF К ПОЛЮ ВВОДА ++
-                          ref={debtInputRef}
-                          id="debt_value"
-                          type="text"
-                          value={newDebtValue}
-                          onChange={handleDebtInputChange}
-                          placeholder="Например: -50 000"
-                          autoComplete="off"
-                        />
-                      </div>
-                      <div className="flex-grow space-y-2">
-                        <Label htmlFor="employee">Ответственный</Label>
-                        <Select value={responsibleEmployeeId} onValueChange={setResponsibleEmployeeId}>
-                          <SelectTrigger id="employee">
-                            <SelectValue placeholder="Выберите сотрудника" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {employees.map((emp: { id: number; name: string }) => (
-                              <SelectItem key={emp.id} value={String(emp.id)}>{emp.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" onClick={handleAddDebt}>Сохранить</Button>
-                      <Button type="button" variant="outline" onClick={() => setShowDebtForm(false)}>Отмена</Button>
-                    </div>
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label htmlFor="client-search">Клиент *</Label>
+                  <ClientSearchCombobox
+                    value={selectedClientId}
+                    onValueChange={(clientId, clientName) => {
+                      setSelectedClientId(clientId);
+                      setSelectedClientName(clientName);
+                    }}
+                    placeholder="Найдите клиента..."
+                  />
+                </div>
 
-                {debts.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Дата</TableHead>
-                        <TableHead>Сумма</TableHead>
-                        <TableHead>Отв. лицо</TableHead>
-                        <TableHead>Действия</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {debts.map((debt) => (
-                        <TableRow key={debt.id}>
-                          <TableCell>{formatDateTime(debt.date_added)}</TableCell>
-                          <TableCell>
-                            <span className={debt.debt_value > 0 ? 'text-red-600' : 'text-green-600'}>
-                              {formatCurrency(debt.debt_value)}
-                            </span>
-                          </TableCell>
-                            <TableCell>
-                            {employees.find(emp => emp.id === debt.responsible_employee_id)?.name ?? 'Неизвестно'}
-                          </TableCell>
-                          <TableCell>
-                            <Button type="button" variant="outline" size="sm" onClick={() => handleDeleteDebt(debt.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                <div className="space-y-2">
+                  <Label htmlFor="quick_debt_value">Сумма долга *</Label>
+                  <Input
+                    id="quick_debt_value"
+                    type="text"
+                    value={quickDebtValue}
+                    onChange={handleQuickDebtInputChange}
+                    placeholder="Например: -50 000"
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Положительное число для долга клиента, отрицательное для переплаты
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="quick_employee">Ответственный сотрудник *</Label>
+                  <Select value={quickResponsibleEmployeeId} onValueChange={setQuickResponsibleEmployeeId}>
+                    <SelectTrigger id="quick_employee">
+                      <SelectValue placeholder="Выберите сотрудника" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map((emp: { id: number; name: string }) => (
+                        <SelectItem key={emp.id} value={String(emp.id)}>{emp.name}</SelectItem>
                       ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <p className="text-muted-foreground text-center py-4">Нет записей о долгах</p>
-                )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button 
+                  type="button" 
+                  onClick={handleAddQuickDebt}
+                  disabled={!selectedClientId || !quickDebtValue || !quickResponsibleEmployeeId || addQuickDebtMutation.isPending}
+                  className="w-full"
+                >
+                  {addQuickDebtMutation.isPending ? 'Добавление...' : 'Добавить долг'}
+                </Button>
               </CardContent>
             </Card>
-          )}
-
-          <DialogFooter className="flex justify-between">
-            {client && (
-              <Button type="button" variant="destructive" onClick={() => {
-                if (confirm('Вы уверены, что хотите удалить клиента?')) {
-                  onDelete(client.id);
-                  onOpenChange(false);
-                }
-              }}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Удалить клиента
-              </Button>
-            )}
-            <div className="space-x-2">
-              <Button type="submit">{client ? 'Сохранить' : 'Добавить'}</Button>
-            </div>
-          </DialogFooter>
-        </form>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

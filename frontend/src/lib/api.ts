@@ -4,7 +4,7 @@ import { CreateSupplierData, Supplier, SuppliersResponse } from '@/types/supplie
 import { Employee } from '@/types/employees';
 
 // Укажите ваш IP-адрес или домен
-const API_BASE_URL = 'http://10.101.27.49:8000/api/v1';
+const API_BASE_URL = 'http://localhost:8000/api/v1';
 
 class ApiError extends Error {
   status: number;
