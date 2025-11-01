@@ -221,7 +221,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     <>
       {/* ОСНОВНОЕ МОДАЛЬНОЕ ОКНО */}
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-screen h-screen max-w-2xl rounded-none border-none overflow-y-auto">
+        <DialogContent className="w-screen h-screen max-w-2xl  max-h-[650px] rounded-none border-none overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{supply ? 'Редактировать поставку' : 'Добавить поставку'}</DialogTitle>
           </DialogHeader>

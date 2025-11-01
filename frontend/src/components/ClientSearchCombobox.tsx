@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,10 +18,12 @@ import {
 } from '@/components/ui/popover';
 import { clientsApi } from '@/lib/api';
 import { Client } from '@/types/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface ClientSearchComboboxProps {
   value: string;
   onValueChange: (clientId: string, clientName: string) => void;
+  onAddNewClient?: (clientName: string) => void; // ++ НОВЫЙ ПРОП ++
   placeholder?: string;
   disabled?: boolean;
 }
@@ -29,12 +31,16 @@ interface ClientSearchComboboxProps {
 export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
   value,
   onValueChange,
+  onAddNewClient,
   placeholder = "Выберите клиента...",
   disabled = false,
 }) => {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -44,21 +50,29 @@ export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // ++ ИСПРАВЛЕНИЕ: Правильный запрос с поиском ++
   const { data: clientsData, isLoading } = useQuery({
     queryKey: ['clients-search-combobox', debouncedSearch],
     queryFn: () => clientsApi.getClients({
-      q: debouncedSearch, // Используем поисковый запрос
+      q: debouncedSearch,
       page_size: 50,
       page: 1,
-      show_zeros: 1, // Показываем всех клиентов
+      show_zeros: 1,
     }),
-    enabled: open, // Загружаем только когда попап открыт
+    enabled: open,
   });
 
-  // ++ ИСПРАВЛЕНИЕ: Правильное получение результатов ++
   const clients = clientsData?.results || [];
   const selectedClient = clients.find((client: Client) => client.id === value);
+
+  // ++ ФУНКЦИЯ ДЛЯ ДОБАВЛЕНИЯ НОВОГО КЛИЕНТА ++
+  const handleAddNewClient = () => {
+    if (!searchQuery.trim()) return;
+    if (onAddNewClient) {
+      onAddNewClient(searchQuery.trim());
+      setOpen(false);
+      setSearchQuery('');
+    }
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -79,7 +93,7 @@ export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
-        <Command shouldFilter={false}> {/* Отключаем встроенную фильтрацию */}
+        <Command shouldFilter={false}>
           <div className="flex items-center border-b px-3">
             <CommandInput
               placeholder="Поиск клиента..."
@@ -96,19 +110,32 @@ export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
             ) : (
               <>
                 <CommandEmpty>
-                  <div className="p-4 text-sm text-center text-muted-foreground">
-                    {debouncedSearch ? `Клиенты по запросу "${debouncedSearch}" не найдены` : 'Начните вводить имя клиента'}
+                  <div className="p-4 text-sm text-center">
+                    <div className="text-muted-foreground mb-2">
+                      Клиент не найден
+                    </div>
+                    {searchQuery && onAddNewClient && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAddNewClient}
+                        className="w-full"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Добавить "{searchQuery}"
+                      </Button>
+                    )}
                   </div>
                 </CommandEmpty>
                 <CommandGroup>
                   {clients.map((client: Client) => (
                     <CommandItem
                       key={client.id}
-                      value={client.name} // Используем имя для поиска
+                      value={client.name}
                       onSelect={() => {
                         onValueChange(client.id, client.name);
                         setOpen(false);
-                        setSearchQuery(''); // Очищаем поиск
+                        setSearchQuery('');
                       }}
                       className="cursor-pointer"
                     >

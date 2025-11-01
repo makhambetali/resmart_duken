@@ -39,6 +39,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
   const { toast } = useToast();
   
   const debtInputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<AddClientForm>({
     name: '',
@@ -56,6 +57,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
   const [selectedClientName, setSelectedClientName] = useState<string>('');
   const [quickDebtValue, setQuickDebtValue] = useState<string>('');
   const [quickResponsibleEmployeeId, setQuickResponsibleEmployeeId] = useState<string>('');
+  const [activeTab, setActiveTab] = useState('manage');
 
   const { data: employees = [] } = useQuery<Array<{ id: number; name: string }>>({
     queryKey: ['employees'],
@@ -65,7 +67,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
   const { data: debts = [] } = useQuery({
     queryKey: ['client-debts', client?.id],
     queryFn: () => client ? clientsApi.getClientDebts(client.id) : Promise.resolve([]),
-    enabled: !!client?.id,
+    enabled: !!client?.id && open && activeTab === 'manage', // Только в управлении клиентом
   });
 
   const addDebtMutation = useMutation({
@@ -93,6 +95,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
       setSelectedClientName('');
       setQuickDebtValue('');
       setQuickResponsibleEmployeeId('');
+      onOpenChange(false); // Закрываем модалку после успешного добавления
     },
     onError: () => {
       toast({ title: 'Ошибка добавления долга', variant: 'destructive' });
@@ -111,33 +114,58 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     },
   });
 
+  // ++ ИСПРАВЛЕНИЕ: При редактировании сразу открываем вкладку добавления долга ++
   useEffect(() => {
-    if (client) {
-      setFormData({
-        name: client.name,
-        phone_number: client.phone_number || '',
-        description: client.description || '',
-        is_chosen: client.is_chosen,
-      });
-    } else {
-      setFormData({ name: '', phone_number: '', description: '', is_chosen: false });
+    if (open) {
+      if (client) {
+        // Режим редактирования - заполняем форму данными клиента И открываем вкладку добавления долга
+        setFormData({
+          name: client.name,
+          phone_number: client.phone_number || '',
+          description: client.description || '',
+          is_chosen: client.is_chosen,
+        });
+        setSelectedClientId(client.id);
+        setSelectedClientName(client.name);
+        setActiveTab('quick-debt'); // ++ СРАЗУ ОТКРЫВАЕМ ВКЛАДКУ ДОБАВЛЕНИЯ ДОЛГА ++
+      } else {
+        // Режим добавления - очищаем форму
+        setFormData({ name: '', phone_number: '', description: '', is_chosen: false });
+        setActiveTab('manage');
+      }
+      
+      // Сбрасываем остальные состояния
+      setNewDebtValue('');
+      setResponsibleEmployeeId('');
+      setQuickDebtValue('');
+      setQuickResponsibleEmployeeId('');
+      setShowDebtForm(false);
     }
-    setShowDebtForm(false);
-    setNewDebtValue('');
-    setResponsibleEmployeeId('');
-    setSelectedClientId('');
-    setSelectedClientName('');
-    setQuickDebtValue('');
-    setQuickResponsibleEmployeeId('');
-  }, [client, open]);
+  }, [open, client]);
 
+  // ++ ФОКУС НА ПОЛЕ СУММЫ ДОЛГА ПРИ ОТКРЫТИИ ВКЛАДКИ ДОБАВЛЕНИЯ ДОЛГА ++
   useEffect(() => {
-    if (showDebtForm && debtInputRef.current) {
-      setTimeout(() => {
+    if (open && activeTab === 'quick-debt') {
+      const timer = setTimeout(() => {
         debtInputRef.current?.focus();
       }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [showDebtForm]);
+  }, [open, activeTab]);
+
+  // Фокус при смене вкладок
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => {
+        if (activeTab === 'manage') {
+          nameInputRef.current?.focus();
+        } else if (activeTab === 'quick-debt') {
+          debtInputRef.current?.focus();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [open, activeTab]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,6 +244,14 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     });
   };
 
+  const handleAddNewClientFromSearch = (clientName: string) => {
+    setFormData(prev => ({ ...prev, name: clientName }));
+    setActiveTab('manage');
+    setTimeout(() => {
+      nameInputRef.current?.focus();
+    }, 100);
+  };
+
   const handleDeleteDebt = (debtId: string) => {
     if (confirm('Вы уверены, что хотите удалить эту запись о долге?')) {
       deleteDebtMutation.mutate(debtId);
@@ -239,22 +275,33 @@ export const ClientModal: React.FC<ClientModalProps> = ({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {client ? `Редактирование: ${client.name}` : 'Управление клиентами'}
+            {client ? `Добавление долга: ${client.name}` : 'Управление клиентами'}
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="manage" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="manage">Управление клиентом</TabsTrigger>
-            <TabsTrigger value="quick-debt">Добавить долг клиенту</TabsTrigger>
+            <TabsTrigger value="manage">
+              {client ? 'Редактировать клиента' : 'Добавить клиента'}
+            </TabsTrigger>
+            <TabsTrigger value="quick-debt">
+              {client ? 'Добавить долг' : 'Добавить долг клиенту'}
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="manage">
+          <TabsContent value="manage" className="space-y-6">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Имя *</Label>
-                  <Input id="name" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} placeholder="Имя клиента" required />
+                  <Input 
+                    ref={nameInputRef}
+                    id="name" 
+                    value={formData.name} 
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} 
+                    placeholder="Имя клиента" 
+                    required 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Телефон</Label>
@@ -270,86 +317,43 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                 <Label htmlFor="is_chosen">Избранный клиент</Label>
               </div>
 
-              {client && (
+              {/* ++ УБРАНА ФОРМА ДОБАВЛЕНИЯ ДОЛГА ИЗ РЕДАКТИРОВАНИЯ ++ */}
+              {client && debts.length > 0 && (
                 <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg">Долги клиента</CardTitle>
-                    <Button type="button" variant="outline" size="sm" onClick={() => setShowDebtForm(!showDebtForm)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Добавить долг
-                    </Button>
+                  <CardHeader>
+                    <CardTitle className="text-lg">История долгов</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    {showDebtForm && (
-                      <div className="space-y-4 p-4 border rounded-lg">
-                        <div className="flex gap-2 items-end">
-                          <div className="flex-grow space-y-2">
-                            <Label htmlFor="debt_value">Сумма</Label>
-                            <Input
-                              ref={debtInputRef}
-                              id="debt_value"
-                              type="text"
-                              value={newDebtValue}
-                              onChange={handleDebtInputChange}
-                              placeholder="Например: -50 000"
-                              autoComplete="off"
-                            />
-                          </div>
-                          <div className="flex-grow space-y-2">
-                            <Label htmlFor="employee">Ответственный</Label>
-                            <Select value={responsibleEmployeeId} onValueChange={setResponsibleEmployeeId}>
-                              <SelectTrigger id="employee">
-                                <SelectValue placeholder="Выберите сотрудника" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {employees.map((emp: { id: number; name: string }) => (
-                                  <SelectItem key={emp.id} value={String(emp.id)}>{emp.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <Button type="button" onClick={handleAddDebt}>Сохранить</Button>
-                          <Button type="button" variant="outline" onClick={() => setShowDebtForm(false)}>Отмена</Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {debts.length > 0 ? (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Дата</TableHead>
-                            <TableHead>Сумма</TableHead>
-                            <TableHead>Отв. лицо</TableHead>
-                            <TableHead>Действия</TableHead>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Дата</TableHead>
+                          <TableHead>Сумма</TableHead>
+                          <TableHead>Отв. лицо</TableHead>
+                          <TableHead>Действия</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {debts.map((debt) => (
+                          <TableRow key={debt.id}>
+                            <TableCell>{formatDateTime(debt.date_added)}</TableCell>
+                            <TableCell>
+                              <span className={debt.debt_value > 0 ? 'text-red-600' : 'text-green-600'}>
+                                {formatCurrency(debt.debt_value)}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              {employees.find(emp => emp.id === debt.responsible_employee_id)?.name ?? 'Неизвестно'}
+                            </TableCell>
+                            <TableCell>
+                              <Button type="button" variant="outline" size="sm" onClick={() => handleDeleteDebt(debt.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {debts.map((debt) => (
-                            <TableRow key={debt.id}>
-                              <TableCell>{formatDateTime(debt.date_added)}</TableCell>
-                              <TableCell>
-                                <span className={debt.debt_value > 0 ? 'text-red-600' : 'text-green-600'}>
-                                  {formatCurrency(debt.debt_value)}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                {employees.find(emp => emp.id === debt.responsible_employee_id)?.name ?? 'Неизвестно'}
-                              </TableCell>
-                              <TableCell>
-                                <Button type="button" variant="outline" size="sm" onClick={() => handleDeleteDebt(debt.id)}>
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    ) : (
-                      <p className="text-muted-foreground text-center py-4">Нет записей о долгах</p>
-                    )}
+                        ))}
+                      </TableBody>
+                    </Table>
                   </CardContent>
                 </Card>
               )}
@@ -376,24 +380,39 @@ export const ClientModal: React.FC<ClientModalProps> = ({
           <TabsContent value="quick-debt" className="space-y-6 mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Быстрое добавление долга</CardTitle>
+                <CardTitle className="text-lg">
+                  {client ? `Добавление долга для: ${client.name}` : 'Быстрое добавление долга'}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="client-search">Клиент *</Label>
-                  <ClientSearchCombobox
-                    value={selectedClientId}
-                    onValueChange={(clientId, clientName) => {
-                      setSelectedClientId(clientId);
-                      setSelectedClientName(clientName);
-                    }}
-                    placeholder="Найдите клиента..."
-                  />
+                  {client ? (
+                    // ++ ЕСЛИ РЕДАКТИРУЕМ КЛИЕНТА, ПОКАЗЫВАЕМ ЕГО ИМЯ КАК ВЫБРАННОЕ ++
+                    <div className="p-3 border rounded-md bg-muted/50">
+                      <p className="font-medium">{client.name}</p>
+                      {client.phone_number && (
+                        <p className="text-sm text-muted-foreground">{client.phone_number}</p>
+                      )}
+                    </div>
+                  ) : (
+                    // ++ ЕСЛИ ДОБАВЛЯЕМ НОВЫЙ ДОЛГ, ПОКАЗЫВАЕМ ПОИСК ++
+                    <ClientSearchCombobox
+                      value={selectedClientId}
+                      onValueChange={(clientId, clientName) => {
+                        setSelectedClientId(clientId);
+                        setSelectedClientName(clientName);
+                      }}
+                      onAddNewClient={handleAddNewClientFromSearch}
+                      placeholder="Найдите клиента..."
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="quick_debt_value">Сумма долга *</Label>
                   <Input
+                    ref={debtInputRef}
                     id="quick_debt_value"
                     type="text"
                     value={quickDebtValue}
