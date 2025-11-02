@@ -39,7 +39,6 @@ class Supply(models.Model):
     is_confirmed = models.BooleanField(default=False)
     arrival_date = models.DateTimeField(null=True, blank=True)
     date_added = models.DateTimeField(auto_now_add=True)
-    invoice = models.FileField(upload_to='pdfs/', blank=True)
     invoice_html = models.TextField(blank=True)
     def __str__(self):
         return f"{self.supplier}: {self.price_bank + self.price_cash}"

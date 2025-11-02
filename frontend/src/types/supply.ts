@@ -12,7 +12,6 @@ export interface Supply {
   is_confirmed: boolean;
   created_at?: string;
   updated_at?: string;
-  invoice: string | null;
   invoice_html: string; // <-- Добавлено
 }
 
@@ -26,7 +25,6 @@ export interface AddSupplyForm {
   delivery_date: string;
   comment: string;
   is_confirmed: boolean;
-  invoice: File | null;
   invoice_html: string; // <-- Добавлено
 }
 export interface Supplier {

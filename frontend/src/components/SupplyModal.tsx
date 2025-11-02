@@ -45,7 +45,6 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   // --- СОСТОЯНИЕ КОМПОНЕНТА ---
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
-  const [existingInvoiceUrl, setExistingInvoiceUrl] = useState<string | null>(null);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [formData, setFormData] = useState<Omit<AddSupplyForm, 'images'>>({
@@ -58,7 +57,6 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     delivery_date: new Date().toISOString().split('T')[0],
     comment: '',
     is_confirmed: false,
-    invoice: null,
     invoice_html: '',
   });
 
@@ -100,10 +98,8 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
           delivery_date: supply.delivery_date,
           comment: supply.comment || '',
           is_confirmed: supply.is_confirmed,
-          invoice: null,
           invoice_html: supply.invoice_html || '',
         });
-        setExistingInvoiceUrl(supply.invoice || null);
         
         // ОБНОВЛЕНО: Проверяем наличие существующего HTML
         const existingHtml = supply.invoice_html || '';
@@ -117,9 +113,8 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
           supplier: '', paymentType: 'cash', price_cash: '0',
           price_bank: '0', bonus: 0, exchange: 0,
           delivery_date: new Date().toISOString().split('T')[0],
-          comment: '', is_confirmed: false, invoice: null, invoice_html: '',
+          comment: '', is_confirmed: false, invoice_html: '',
         });
-        setExistingInvoiceUrl(null);
         setSelectedFiles([]);
         setProcessedFiles([]);
         setHasExistingHtml(false);
@@ -162,7 +157,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
           parts: [
             { 
               text: `Проанализируй этот файл (PDF или изображение) и преобразуй содержимое ВСЕГО документа в чистый HTML-код. 
-Сохрани структуру таблиц, данные и форматирование. Если в документе несколько страниц или таблиц, создай единый HTML с пагинацией.
+Сохрани структуру таблиц, данные и форматирование. Если в документе несколько страниц или таблиц, создай единый HTML с пагинацией(кнопки для нескольких страниц).
 Используй CSS для стилизации. Предоставь только чистый HTML-код без пояснений.
 
 Пример структуры для многостраничных документов:
@@ -320,7 +315,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   };
 
   // (Остальные обработчики без изменений)
-  const handleFocus = (field: keyof Omit<AddSupplyForm, 'images' | 'invoice' | 'invoice_html'>) => {
+  const handleFocus = (field: keyof Omit<AddSupplyForm, 'images' | 'invoice_html'>) => {
     setFormData(prev => ({ ...prev, [field]: (prev[field] === '0' || prev[field] === 0) ? '' : prev[field] }));
   };
   const handleBlur = (field: 'price_cash' | 'price_bank' | 'bonus' | 'exchange') => {
@@ -401,10 +396,10 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                 <Textarea id="comment" value={formData.comment} onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))} rows={3} />
               </div>
 
-              {/* ++ ОБНОВЛЕННЫЙ БЛОК ЗАГРУЗКИ ФАЙЛА С МНОЖЕСТВЕННЫМ ВЫБОРОМ ++ */}
+              {/* ++ ОБНОВЛЕННЫЙ БЛОК ЗАГРУЗКИ ФАЙЛОВ ++ */}
               <div className="space-y-2 md:col-span-2">
                 <div className="flex justify-between items-center">
-                  <Label>Счет-фактура (PDF или Фото)</Label>
+                  <Label>Документы (PDF или Фото)</Label>
                   {hasPreviewContent && (
                     <Button 
                       type="button" 
@@ -418,20 +413,6 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                     </Button>
                   )}
                 </div>
-                
-                {supply && existingInvoiceUrl && (
-                  <div className="my-2">
-                    <a 
-                      href={existingInvoiceUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="flex items-center text-sm text-blue-600 hover:underline"
-                    >
-                      <FileText className="w-4 h-4 mr-2" />
-                      Просмотреть текущий счет-фактуру
-                    </a>
-                  </div>
-                )}
 
                 {/* ++ ИНФОРМАЦИЯ О СТАТУСЕ ++ */}
                 {hasNewProcessedFiles && (
@@ -594,47 +575,153 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* МОДАЛЬНОЕ ОКНО ДЛЯ ПРЕДПРОСМОТРА ОБЩЕГО HTML */}
+      {/* МОДАЛЬНОЕ ОКНО ДЛЯ ПРЕДПРОСМОТРА ОБЩЕГО HTML - ПОЛНЫЙ ЭКРАН */}
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
-        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>
-              Предпросмотр счета-фактуры
-              {hasNewProcessedFiles && (
-                <span className="text-sm font-normal text-muted-foreground ml-2">
-                  ({processedFilesWithHtml.length} файл{processedFilesWithHtml.length > 1 ? 'а' : ''})
-                </span>
-              )}
-              {!hasNewProcessedFiles && hasExistingHtml && (
-                <span className="text-sm font-normal text-muted-foreground ml-2">
-                  (существующий документ)
-                </span>
-              )}
+        <DialogContent className="w-screen h-screen max-w-none max-h-none rounded-none border-none p-0 flex flex-col">
+          <DialogHeader className="flex-shrink-0 px-6 py-4 border-b bg-white">
+            <DialogTitle className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span>Предпросмотр документов</span>
+                {hasNewProcessedFiles && (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    ({processedFilesWithHtml.length} файл{processedFilesWithHtml.length > 1 ? 'а' : ''})
+                  </span>
+                )}
+                {!hasNewProcessedFiles && hasExistingHtml && (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    (существующий документ)
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.print()}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Печать
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsPreviewModalOpen(false)}
+                >
+                  Закрыть
+                </Button>
+              </div>
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-grow overflow-auto p-1 border rounded-md bg-gray-50">
+          <div className="flex-grow overflow-auto bg-gray-50 p-4 print:p-0">
             <style>{`
-              .combined-invoice-document { font-family: Arial, sans-serif; }
-              .invoice-file-section { margin-bottom: 40px; }
-              .file-header { padding: 12px; background: #e8f4fd; margin-bottom: 20px; border-radius: 6px; border-left: 4px solid #1890ff; }
-              .invoice-table-preview table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-              .invoice-table-preview th, .invoice-table-preview td { border: 1px solid #d1d5db; padding: 8px 12px; text-align: left; font-size: 14px; }
-              .invoice-table-preview th { background-color: #f3f4f6; font-weight: 600; color: #374151; }
-              .invoice-table-preview tr:nth-child(even) { background-color: #f9fafb; }
-              .invoice-table-preview tr:hover { background-color: #f0f9ff; }
-              .page { margin-bottom: 30px; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+              @media print {
+                body * {
+                  visibility: hidden;
+                }
+                .invoice-print-container,
+                .invoice-print-container * {
+                  visibility: visible;
+                }
+                .invoice-print-container {
+                  position: absolute;
+                  left: 0;
+                  top: 0;
+                  width: 100%;
+                  padding: 0;
+                  margin: 0;
+                }
+                .no-print {
+                  display: none !important;
+                }
+              }
+              
+              .combined-invoice-document { 
+                font-family: Arial, sans-serif; 
+                background: white;
+                min-height: 100%;
+              }
+              .invoice-file-section { 
+                margin-bottom: 40px; 
+                page-break-inside: avoid;
+              }
+              .file-header { 
+                padding: 12px; 
+                background: #e8f4fd; 
+                margin-bottom: 20px; 
+                border-radius: 6px; 
+                border-left: 4px solid #1890ff; 
+              }
+              .invoice-table-preview table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin: 10px 0; 
+                font-size: 14px;
+              }
+              .invoice-table-preview th, 
+              .invoice-table-preview td { 
+                border: 1px solid #d1d5db; 
+                padding: 8px 12px; 
+                text-align: left; 
+              }
+              .invoice-table-preview th { 
+                background-color: #f3f4f6; 
+                font-weight: 600; 
+                color: #374151; 
+              }
+              .invoice-table-preview tr:nth-child(even) { 
+                background-color: #f9fafb; 
+              }
+              .invoice-table-preview tr:hover { 
+                background-color: #f0f9ff; 
+              }
+              .page { 
+                margin-bottom: 30px; 
+                padding: 20px; 
+                background: white; 
+                border-radius: 8px; 
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+                page-break-inside: avoid;
+              }
+              
+              /* Стили для печати */
+              @media print {
+                .combined-invoice-document {
+                  box-shadow: none;
+                  border: none;
+                }
+                .file-header {
+                  background: #f8f9fa !important;
+                  border-left: 4px solid #000 !important;
+                  color: #000 !important;
+                }
+                .invoice-table-preview table {
+                  font-size: 12px;
+                }
+                .invoice-table-preview th,
+                .invoice-table-preview td {
+                  border-color: #000 !important;
+                  color: #000 !important;
+                }
+              }
             `}</style>
-            <div 
-              className="invoice-table-preview" 
-              dangerouslySetInnerHTML={{ 
-                __html: generateCombinedHtml() 
-              }} 
-            />
+            <div className="invoice-print-container bg-white rounded-lg shadow-lg p-6 print:shadow-none print:rounded-none">
+              <div 
+                className="invoice-table-preview" 
+                dangerouslySetInnerHTML={{ 
+                  __html: generateCombinedHtml() 
+                }} 
+              />
+            </div>
           </div>
-          <DialogFooter className="mt-4">
-            <Button onClick={() => setIsPreviewModalOpen(false)}>
-              Закрыть
-            </Button>
+          <DialogFooter className="flex-shrink-0 px-6 py-4 border-t bg-white no-print">
+            <div className="flex justify-between items-center w-full">
+              <div className="text-sm text-muted-foreground">
+                Используйте Ctrl+P для печати документа
+              </div>
+              <Button onClick={() => setIsPreviewModalOpen(false)}>
+                Закрыть
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
