@@ -53,8 +53,9 @@ class SupplyViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         supply_type = self.request.query_params.get('type', 'future')
+        supplier_name = self.request.query_params.get('supplier', None)
         if supply_type in ('past', 'future'):
-            supplies_dto = self.service_layer.get_supplies(supply_type)
+            supplies_dto = self.service_layer.get_supplies(supply_type, supplier_name)
             return self.queryset.filter(id__in=[dto.id for dto in supplies_dto])
 
     @action(detail=False, methods=['get'])
@@ -71,6 +72,7 @@ class SupplyViewSet(viewsets.ModelViewSet):
         only_confirmed = request.query_params.get('confirmed', 'true').lower() == 'true'
         supplies_dto = self.service_layer.get_supplies_by_date(date_param, only_confirmed, payment_type)
         return Response([vars(dto) for dto in supplies_dto])
+    
 
 
 class ClientViewSet(viewsets.ModelViewSet):
