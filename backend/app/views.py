@@ -84,7 +84,7 @@ class ClientViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         q = self.request.query_params.get('q', '')
         show_zeros = int(self.request.query_params.get('show_zeros', 1))
-        print('views.py: ',type(show_zeros))
+        # print('views.py: ',type(show_zeros))
         filter_tag = self.request.query_params.get('filter_tag', 'latest')
         if q or filter_tag:
             filter_dict = {

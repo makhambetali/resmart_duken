@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 interface ClientSearchComboboxProps {
   value: string;
   onValueChange: (clientId: string, clientName: string) => void;
-  onAddNewClient?: (clientName: string) => void; // ++ НОВЫЙ ПРОП ++
+  onAddNewClient?: (clientName: string) => void;
   placeholder?: string;
   disabled?: boolean;
 }
@@ -58,13 +58,13 @@ export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
       page: 1,
       show_zeros: 1,
     }),
-    enabled: open,
+    enabled: open && debouncedSearch.length >= 1, // Запрос только при открытом попапе и хотя бы 1 символе
+    staleTime: 1000 * 60 * 5, // 5 минут кэша
   });
 
   const clients = clientsData?.results || [];
   const selectedClient = clients.find((client: Client) => client.id === value);
 
-  // ++ ФУНКЦИЯ ДЛЯ ДОБАВЛЕНИЯ НОВОГО КЛИЕНТА ++
   const handleAddNewClient = () => {
     if (!searchQuery.trim()) return;
     if (onAddNewClient) {

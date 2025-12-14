@@ -34,7 +34,7 @@ class ClientService:
         return [self._to_debt_dto(debt) for debt in all_debts]
     
     def search(self, query=None, show_zeros = True) -> List[ClientDTO]:
-        print('service:', show_zeros)
+        # print('service:', show_zeros)
         search_results = self.dao.search(query, show_zeros)
         return [self._to_client_dto(result) for result in search_results]
     

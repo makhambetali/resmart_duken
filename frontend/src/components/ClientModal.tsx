@@ -52,7 +52,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({
   const [showDebtForm, setShowDebtForm] = useState(false);
   const [responsibleEmployeeId, setResponsibleEmployeeId] = useState<string>('');
   
-  // Состояния для второй вкладки
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedClientName, setSelectedClientName] = useState<string>('');
   const [quickDebtValue, setQuickDebtValue] = useState<string>('');
@@ -62,12 +61,15 @@ export const ClientModal: React.FC<ClientModalProps> = ({
   const { data: employees = [] } = useQuery<Array<{ id: number; name: string }>>({
     queryKey: ['employees'],
     queryFn: employeesApi.getEmployees,
+    enabled: open, // Запрос только при открытом модальном окне
+    staleTime: 1000 * 60 * 30, // 30 минут кэша
   });
 
   const { data: debts = [] } = useQuery({
     queryKey: ['client-debts', client?.id],
     queryFn: () => client ? clientsApi.getClientDebts(client.id) : Promise.resolve([]),
-    enabled: !!client?.id && open && activeTab === 'manage', // Только в управлении клиентом
+    enabled: !!client?.id && open && activeTab === 'manage', // Только в управлении клиентом и при открытом модальном окне
+    staleTime: 1000 * 60 * 5, // 5 минут кэша
   });
 
   const addDebtMutation = useMutation({
@@ -95,7 +97,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
       setSelectedClientName('');
       setQuickDebtValue('');
       setQuickResponsibleEmployeeId('');
-      onOpenChange(false); // Закрываем модалку после успешного добавления
+      onOpenChange(false);
     },
     onError: () => {
       toast({ title: 'Ошибка добавления долга', variant: 'destructive' });
@@ -114,11 +116,9 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     },
   });
 
-  // ++ ИСПРАВЛЕНИЕ: При редактировании сразу открываем вкладку добавления долга ++
   useEffect(() => {
     if (open) {
       if (client) {
-        // Режим редактирования - заполняем форму данными клиента И открываем вкладку добавления долга
         setFormData({
           name: client.name,
           phone_number: client.phone_number || '',
@@ -127,14 +127,12 @@ export const ClientModal: React.FC<ClientModalProps> = ({
         });
         setSelectedClientId(client.id);
         setSelectedClientName(client.name);
-        setActiveTab('quick-debt'); // ++ СРАЗУ ОТКРЫВАЕМ ВКЛАДКУ ДОБАВЛЕНИЯ ДОЛГА ++
+        setActiveTab('quick-debt');
       } else {
-        // Режим добавления - очищаем форму
         setFormData({ name: '', phone_number: '', description: '', is_chosen: false });
         setActiveTab('manage');
       }
       
-      // Сбрасываем остальные состояния
       setNewDebtValue('');
       setResponsibleEmployeeId('');
       setQuickDebtValue('');
@@ -143,7 +141,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     }
   }, [open, client]);
 
-  // ++ ФОКУС НА ПОЛЕ СУММЫ ДОЛГА ПРИ ОТКРЫТИИ ВКЛАДКИ ДОБАВЛЕНИЯ ДОЛГА ++
   useEffect(() => {
     if (open && activeTab === 'quick-debt') {
       const timer = setTimeout(() => {
@@ -153,7 +150,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     }
   }, [open, activeTab]);
 
-  // Фокус при смене вкладок
   useEffect(() => {
     if (open) {
       const timer = setTimeout(() => {
@@ -317,7 +313,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                 <Label htmlFor="is_chosen">Избранный клиент</Label>
               </div>
 
-              {/* ++ УБРАНА ФОРМА ДОБАВЛЕНИЯ ДОЛГА ИЗ РЕДАКТИРОВАНИЯ ++ */}
               {client && debts.length > 0 && (
                 <Card>
                   <CardHeader>
@@ -383,7 +378,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                 <div className="space-y-2">
                   <Label htmlFor="client-search">Клиент *</Label>
                   {client ? (
-                    // ++ ЕСЛИ РЕДАКТИРУЕМ КЛИЕНТА, ПОКАЗЫВАЕМ ЕГО ИМЯ КАК ВЫБРАННОЕ ++
                     <div className="p-3 border rounded-md bg-muted/50">
                       <p className="font-medium">{client.name}: {client.debt} ₸</p>
                       {client.phone_number && (
@@ -391,7 +385,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                       )}
                     </div>
                   ) : (
-                    // ++ ЕСЛИ ДОБАВЛЯЕМ НОВЫЙ ДОЛГ, ПОКАЗЫВАЕМ ПОИСК ++
                     <ClientSearchCombobox
                       value={selectedClientId}
                       onValueChange={(clientId, clientName) => {

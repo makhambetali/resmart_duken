@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-// ++ ИМПОРТЫ ДЛЯ РАБОТЫ С REACT QUERY И УВЕДОМЛЕНИЯМИ ++
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 
@@ -39,11 +38,9 @@ export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // ++ ИНИЦИАЛИЗАЦИЯ ХУКОВ ++
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
@@ -52,25 +49,29 @@ export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const { data: suppliers = [], isLoading } = useQuery({
-    queryKey: ['suppliers', debouncedSearch],
-    // Предполагается, что ваша функция getSuppliers может принимать строку для поиска
-    queryFn: () => suppliersApi.getSuppliers(), 
-    enabled: true,
+  // 🔧 ИСПРАВЛЕНО: Добавлен enabled для предотвращения запросов при закрытом попапе
+  const { data: suppliersData = [], isLoading } = useQuery({
+    queryKey: ['suppliers', 'search', debouncedSearch],
+    queryFn: () => suppliersApi.getSuppliers({ 
+      q: debouncedSearch,
+      page_size: 50 
+    }),
+    enabled: open, // Запрос только при открытом попапе
+    staleTime: 1000 * 60 * 5, // 5 минут кэша
+    gcTime: 1000 * 60 * 10, // 10 минут хранения в кэше
   });
 
-  // ++ 1. МУТАЦИЯ ДЛЯ СОЗДАНИЯ ПОСТАВЩИКА ++
   const { mutate: createSupplier, isLoading: isCreating } = useMutation({
     mutationFn: suppliersApi.createSupplier,
     onSuccess: (newSupplier) => {
-      // Обновляем список поставщиков в кеше
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      // Сразу выбираем нового поставщика
       onValueChange(newSupplier.name);
-      // Закрываем выпадающий список
       setOpen(false);
-      toast({ title: `Поставщик "${newSupplier.name}" успешно создан.`,variant: "default",
-        className: "bg-green-500 text-white", });
+      toast({ 
+        title: `Поставщик "${newSupplier.name}" успешно создан.`,
+        variant: "default",
+        className: "bg-green-500 text-white", 
+      });
     },
     onError: () => {
       toast({
@@ -81,14 +82,13 @@ export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
     },
   });
 
-  // ++ 2. ОБРАБОТЧИК ДЛЯ КНОПКИ "ДОБАВИТЬ" ++
   const handleCreateSupplier = () => {
-    // Проверяем, что строка не пустая и не идет процесс создания
     if (!searchQuery.trim() || isCreating) return;
     createSupplier({ name: searchQuery.trim() });
   };
 
-  const selectedSupplier = suppliers.find(supplier => supplier.name === value);
+  const suppliers = suppliersData?.results || suppliersData || [];
+  const selectedSupplier = suppliers.find((supplier: Supplier) => supplier.name === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -109,7 +109,7 @@ export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
-        <Command>
+        <Command shouldFilter={false}>
           <div className="flex items-center border-b px-3">
             <CommandInput
               placeholder="Поиск или создание..."
@@ -131,7 +131,6 @@ export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
                       Поставщик не найден
                     </div>
                     {searchQuery && (
-                      // ++ 3. ОБНОВЛЕННАЯ КНОПКА ++
                       <Button
                         variant="outline"
                         size="sm"
@@ -144,7 +143,7 @@ export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
                   </div>
                 </CommandEmpty>
                 <CommandGroup>
-                  {suppliers.map((supplier) => (
+                  {suppliers.map((supplier: Supplier) => (
                     <CommandItem
                       key={supplier.id}
                       value={supplier.name}

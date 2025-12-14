@@ -45,7 +45,7 @@ class ClientDAO:
         #     timeout=300
         # )
         queryset = Client.objects.all()
-        print('dao:', show_zeros)
+        # print('dao:', show_zeros)
         if not show_zeros:
             queryset = queryset.exclude(debt = 0)
         if query:

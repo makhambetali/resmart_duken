@@ -7,22 +7,18 @@ import { ClientModal } from '@/components/ClientModal';
 import { Client, AddClientForm, ClientFilters as Filters } from '@/types/client';
 import { clientsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-// ++ ИМПОРТЫ ДЛЯ НОВЫХ КОМПОНЕНТОВ ++
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ListFilter, X, Plus } from 'lucide-react';
+import { ListFilter, Plus } from 'lucide-react';
+
 const Clients = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  // State для модалей
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-
-  // ++ 1. СОСТОЯНИЕ ДЛЯ ВИДИМОСТИ ФИЛЬТРОВ ++
   const [showFilters, setShowFilters] = useState(false);
   
-  // State для фильтров
   const [filters, setFilters] = useState<Filters>({
     searchTerm: '',
     filterType: 'latest',
@@ -31,7 +27,6 @@ const Clients = () => {
     showZeros: true,
   });
 
-  // Запросы данных
   const { data: clientsData, isLoading: clientsLoading, error: clientsError } = useQuery({
     queryKey: ['clients', filters],
     queryFn: () => clientsApi.getClients({
@@ -41,76 +36,61 @@ const Clients = () => {
       q: filters.searchTerm,
       show_zeros: filters.showZeros ? 1 : 0,
     }),
+    staleTime: 1000 * 60, // 1 минута кэша, чтобы предотвратить частые запросы
+    gcTime: 1000 * 60 * 5, // 5 минут хранения в кэше
   });
 
-  // Мутации
   const createClientMutation = useMutation({
-  mutationFn: clientsApi.createClient,
-  onSuccess: () => {
-    toast({ title: 'Клиент добавлен',variant: "default",
-        className: "bg-green-500 text-white", });
-    queryClient.invalidateQueries({ queryKey: ['clients'] });
-    setIsClientModalOpen(false);
-  },
-  // ++ ПРИНИМАЕМ ОБЪЕКТ ОШИБКИ ++
-  onError: (error: any) => {
-    // Сообщение по умолчанию
-    let errorMessage = 'Произошла неизвестная ошибка.';
-
-    // Проверяем, есть ли у ошибки тело (body) и пытаемся извлечь сообщение от Django
-    if (error && error.body) {
-      // Ищем ошибки в полях (например, {'name': ['Клиент...']})
-      const fieldErrors = Object.values(error.body);
-      if (Array.isArray(fieldErrors[0]) && fieldErrors[0].length > 0) {
-        errorMessage = fieldErrors[0][0];
+    mutationFn: clientsApi.createClient,
+    onSuccess: () => {
+      toast({ title: 'Клиент добавлен', variant: "default", className: "bg-green-500 text-white", });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      setIsClientModalOpen(false);
+    },
+    onError: (error: any) => {
+      let errorMessage = 'Произошла неизвестная ошибка.';
+      if (error && error.body) {
+        const fieldErrors = Object.values(error.body);
+        if (Array.isArray(fieldErrors[0]) && fieldErrors[0].length > 0) {
+          errorMessage = fieldErrors[0][0];
+        }
       }
-    }
-    
-    // Показываем toast с конкретной ошибкой
-    toast({ 
-      title: 'Ошибка добавления клиента', 
-      description: errorMessage, // ++ ВЫВОДИМ КОНКРЕТНОЕ СООБЩЕНИЕ ++
-      variant: 'destructive' 
-    });
-  },
-});
+      toast({ 
+        title: 'Ошибка добавления клиента', 
+        description: errorMessage,
+        variant: 'destructive' 
+      });
+    },
+  });
 
   const updateClientMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: AddClientForm }) =>
       clientsApi.updateClient(id, data),
     onSuccess: () => {
-      toast({ title: 'Клиент обновлен', variant: "default",
-        className: "bg-green-500 text-white", });
+      toast({ title: 'Клиент обновлен', variant: "default", className: "bg-green-500 text-white", });
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       setIsClientModalOpen(false);
     },
     onError: (error: any) => {
-    // Сообщение по умолчанию
-    let errorMessage = 'Произошла неизвестная ошибка.';
-
-    // Проверяем, есть ли у ошибки тело (body) и пытаемся извлечь сообщение от Django
-    if (error && error.body) {
-      // Ищем ошибки в полях (например, {'name': ['Клиент...']})
-      const fieldErrors = Object.values(error.body);
-      if (Array.isArray(fieldErrors[0]) && fieldErrors[0].length > 0) {
-        errorMessage = fieldErrors[0][0];
+      let errorMessage = 'Произошла неизвестная ошибка.';
+      if (error && error.body) {
+        const fieldErrors = Object.values(error.body);
+        if (Array.isArray(fieldErrors[0]) && fieldErrors[0].length > 0) {
+          errorMessage = fieldErrors[0][0];
+        }
       }
-    }
-    
-    // Показываем toast с конкретной ошибкой
-    toast({ 
-      title: 'Ошибка добавления клиента', 
-      description: errorMessage, // ++ ВЫВОДИМ КОНКРЕТНОЕ СООБЩЕНИЕ ++
-      variant: 'destructive' 
-    });
-  },
+      toast({ 
+        title: 'Ошибка добавления клиента', 
+        description: errorMessage,
+        variant: 'destructive' 
+      });
+    },
   });
 
   const deleteClientMutation = useMutation({
     mutationFn: clientsApi.deleteClient,
     onSuccess: () => {
-      toast({ title: 'Клиент удален',variant: "default",
-        className: "bg-green-500 text-white",});
+      toast({ title: 'Клиент удален', variant: "default", className: "bg-green-500 text-white",});
       queryClient.invalidateQueries({ queryKey: ['clients'] });
     },
     onError: () => {
@@ -118,7 +98,6 @@ const Clients = () => {
     },
   });
 
-  // Обработчики
   const handleEditClient = (client: Client) => {
     setEditingClient(client);
     setIsClientModalOpen(true);
@@ -145,17 +124,6 @@ const Clients = () => {
 
   const handleFilterChange = (newFilters: Partial<Filters>) => {
     setFilters(prev => ({ ...prev, ...newFilters, currentPage: 1 }));
-  };
-
-  // ++ 2. ОБРАБОТЧИК ДЛЯ СБРОСА ФИЛЬТРОВ ++
-  const handleClearFilters = () => {
-    setFilters({
-      searchTerm: '',
-      filterType: 'latest',
-      perPage: 10,
-      currentPage: 1,
-      showZeros: true,
-    });
   };
 
   const handlePageChange = (page: number) => {
@@ -186,29 +154,26 @@ const Clients = () => {
             <div className="text-sm text-muted-foreground">
               Найдено: {clientsData?.count || 0}
             </div>
-            {/* ++ 3. КНОПКА ДЛЯ УПРАВЛЕНИЯ ВИДИМОСТЬЮ ++ */}
             <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
               <ListFilter className="mr-2 h-4 w-4" />
               {showFilters ? 'Скрыть фильтры' : 'Показать фильтры'}
             </Button>
             <Button onClick={handleAddClient}>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Добавить
-                        </Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Добавить
+            </Button>
           </div>
         </div>
 
-        {/* ++ 4. УСЛОВНЫЙ РЕНДЕРИНГ БЛОКА С ФИЛЬТРАМИ ++ */}
         {showFilters && (
-            <Card>
-                <CardContent className="p-6 space-y-4">
-                    <ClientFilters
-                        filters={filters}
-                        onFilterChange={handleFilterChange}
-                    />
-                   
-                </CardContent>
-            </Card>
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <ClientFilters
+                filters={filters}
+                onFilterChange={handleFilterChange}
+              />
+            </CardContent>
+          </Card>
         )}
 
         {clientsLoading ? (

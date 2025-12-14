@@ -89,21 +89,52 @@ const FinancePage = () => {
     { value: 'mix', label: 'Смешанные' },
   ];
 
-  const { data: cashFlows, isLoading: cashFlowsLoading, error: cashFlowsError } = useQuery({
+  // 🔧 ИСПРАВЛЕНО: Добавлены параметры кэширования и refetchOnWindowFocus
+  const { 
+    data: cashFlows, 
+    isLoading: cashFlowsLoading, 
+    error: cashFlowsError 
+  } = useQuery({
     queryKey: ['cashFlows', selectedDate, cashFlowFilter],
     queryFn: () => cashFlowApi.getOperationsByDate(selectedDate, cashFlowFilter),
+    staleTime: 1000 * 60, // 1 минута кэша
+    gcTime: 1000 * 60 * 5, // 5 минут хранения в кэше
+    refetchOnWindowFocus: false, // Не обновлять при переключении вкладок
+    enabled: !!selectedDate, // Запрос только при наличии даты
   });
 
-  const { data: supplies, isLoading: suppliesLoading, error: suppliesError } = useQuery({
+  // 🔧 ИСПРАВЛЕНО: Добавлены параметры кэширования
+  const { 
+    data: supplies, 
+    isLoading: suppliesLoading, 
+    error: suppliesError 
+  } = useQuery({
     queryKey: ['supplies', selectedDate, supplyFilter],
     queryFn: () => suppliesApi.getSuppliesByDate(selectedDate, supplyFilter),
+    staleTime: 1000 * 60, // 1 минута кэша
+    gcTime: 1000 * 60 * 5, // 5 минут хранения в кэше
+    refetchOnWindowFocus: false, // Не обновлять при переключении вкладок
+    enabled: !!selectedDate, // Запрос только при наличии даты
   });
 
+  // 🔧 ИСПРАВЛЕНО: useEffect для сброса состояния при изменении даты
   useEffect(() => {
-    setIsCashFlowsExpanded(false);
-    setCashFlowFilter('all');
-    setSupplyFilter('all');
-  }, [selectedDate]);
+    if (selectedDate) {
+      setIsCashFlowsExpanded(false);
+      setCashFlowFilter('all');
+      setSupplyFilter('all');
+      
+      // Предварительная загрузка данных при изменении даты
+      queryClient.prefetchQuery({
+        queryKey: ['cashFlows', selectedDate, 'all'],
+        queryFn: () => cashFlowApi.getOperationsByDate(selectedDate, 'all'),
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['supplies', selectedDate, 'all'],
+        queryFn: () => suppliesApi.getSuppliesByDate(selectedDate, 'all'),
+      });
+    }
+  }, [selectedDate, queryClient]);
 
   const visibleCashFlows = useMemo(() => {
     if (!cashFlows) return [];
@@ -128,6 +159,7 @@ const FinancePage = () => {
     queryClient.invalidateQueries({ queryKey: ['cashFlows', selectedDate] });
     queryClient.invalidateQueries({ queryKey: ['supplies', selectedDate] });
     setIsModalOpen(false);
+    setSelectedOperation(null);
   };
 
   const handleAddOperationClick = () => {
