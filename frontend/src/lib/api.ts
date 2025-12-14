@@ -54,10 +54,10 @@ const apiRequest = async <T>(endpoint: string, options: RequestInit = {}): Promi
 };
 
 export const suppliesApi = {
-  getSupplies: () => apiRequest<Supply[]>('/supplies/'),
+  getSupplies: () => apiRequest<Supply[]>('/supplies/?type=future'),
   
   getSuppliesByDate: (date: string, payment_type?: string) => {
-    let endpoint = `/supplies/by_date/?date=${date}`;
+    let endpoint = `/supplies/?date=${date}`;
     if (payment_type && payment_type !== 'all') {
       endpoint += `&payment_type=${payment_type}`;
     }

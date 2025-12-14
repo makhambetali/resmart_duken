@@ -52,7 +52,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddSupplyClick }) =>
             >
               Финансы
             </Link>
-
+{/* 
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center text-blue-600 hover:text-blue-800 px-3 py-2 rounded-md hover:bg-blue-50 transition-colors">
                 Профиль <ChevronDown className="ml-1 h-4 w-4" />
@@ -68,7 +68,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddSupplyClick }) =>
                 </DropdownMenuItem>
                 <DropdownMenuItem>Выйти</DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu> */}
           </div>
 
 

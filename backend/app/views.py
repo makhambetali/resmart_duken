@@ -52,26 +52,27 @@ class SupplyViewSet(viewsets.ModelViewSet):
     service_layer = SupplyService()
 
     def get_queryset(self):
-        supply_type = self.request.query_params.get('type', 'future')
+        if self.action != 'list':
+            return self.queryset
+        
+        supply_time = self.request.query_params.get('type', None)
         supplier_name = self.request.query_params.get('supplier', None)
-        if supply_type in ('past', 'future'):
-            supplies_dto = self.service_layer.get_supplies(supply_type, supplier_name)
+        if supply_time:
+            supplies_dto = self.service_layer.get_supplies(supply_time, supplier_name)
             return self.queryset.filter(id__in=[dto.id for dto in supplies_dto])
+        else:
+            try:
+                date_param = self.request.query_params.get("date", timezone.now().date())
+                payment_type = self.request.query_params.get('payment_type', 'all')
+            except ValueError:
+                return Response(
+                    {"detail": "Invalid date format. Use YYYY-MM-DD."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-    @action(detail=False, methods=['get'])
-    def by_date(self, request):
-        try:
-            date_param = request.query_params.get("date", timezone.now().date())
-            payment_type = request.query_params.get('payment_type', 'all')
-        except ValueError:
-            return Response(
-                {"detail": "Invalid date format. Use YYYY-MM-DD."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        only_confirmed = request.query_params.get('confirmed', 'true').lower() == 'true'
-        supplies_dto = self.service_layer.get_supplies_by_date(date_param, only_confirmed, payment_type)
-        return Response([vars(dto) for dto in supplies_dto])
+            only_confirmed = self.request.query_params.get('confirmed', 'true').lower() == 'true'
+            supplies_dto = self.service_layer.get_supplies_by_date(date_param, only_confirmed, payment_type)
+            return self.queryset.filter(id__in=[dto.id for dto in supplies_dto])
     
 
 
