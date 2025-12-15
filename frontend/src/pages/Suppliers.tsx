@@ -3,13 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '@/components/Layout';
 import { SupplierTable } from '@/components/SupplierTable';
 import { SupplierModal } from '@/components/SupplierModal';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем импорты типов ---
 import { Supplier, CreateSupplierData, SupplierFilters, IsEverydaySupplyFilter } from '@/types/supplier';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import { suppliersApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
-// UI компоненты
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -24,59 +21,94 @@ const SuppliersPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем is_everyday_supply в состояние фильтров ---
   const [filters, setFilters] = useState<SupplierFilters>({
     searchTerm: '',
     perPage: 10,
     currentPage: 1,
-    is_everyday_supply: 'all', // 'all', 'true', 'false'
+    is_everyday_supply: 'all',
   });
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем useQuery для отправки нового фильтра ---
-  const { data: suppliersData, isLoading: suppliersLoading, error: suppliersError } = useQuery({
+  // 🔧 ИСПРАВЛЕНО: Добавлены параметры кэширования и отключено обновление при фокусе окна
+  const { 
+    data: suppliersData, 
+    isLoading: suppliersLoading, 
+    error: suppliersError,
+    isFetching: isSuppliersFetching
+  } = useQuery({
     queryKey: ['suppliers', filters],
     queryFn: () => suppliersApi.getSuppliers({
       page: filters.currentPage,
       page_size: filters.perPage,
       q: filters.searchTerm,
-      // Отправляем параметр, только если он не 'all'.
-      // API должно уметь обрабатывать 'true'/'false' как строки.
       is_everyday_supply: filters.is_everyday_supply === 'all' 
         ? undefined 
         : filters.is_everyday_supply,
     }),
-    keepPreviousData: true,
+    staleTime: 1000 * 60 * 2, // 2 минуты кэша
+    gcTime: 1000 * 60 * 10, // 10 минут хранения в кэше
+    refetchOnWindowFocus: false, // Не обновлять при переключении вкладок
+    keepPreviousData: true, // Сохранять предыдущие данные при загрузке
+    refetchOnMount: false, // Не обновлять при монтировании
   });
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const createMutation = useMutation({
     mutationFn: suppliersApi.createSupplier,
     onSuccess: () => {
-      toast({ title: 'Поставщик создан',variant: "default", className: "bg-green-500 text-white"   });
+      toast({ 
+        title: 'Поставщик создан',
+        variant: "default", 
+        className: "bg-green-500 text-white"   
+      });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       setIsModalOpen(false);
     },
-    onError: (error: any) => toast({ title: 'Ошибка', description: error.body?.name?.[0] || 'Не удалось создать поставщика', variant: 'destructive' }),
+    onError: (error: any) => {
+      toast({ 
+        title: 'Ошибка', 
+        description: error.body?.name?.[0] || 'Не удалось создать поставщика', 
+        variant: 'destructive' 
+      });
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateSupplierData> }) => suppliersApi.updateSupplier(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateSupplierData> }) => 
+      suppliersApi.updateSupplier(id, data),
     onSuccess: () => {
-      toast({ title: 'Поставщик обновлен', variant: "default", className: "bg-green-500 text-white" });
+      toast({ 
+        title: 'Поставщик обновлен', 
+        variant: "default", 
+        className: "bg-green-500 text-white" 
+      });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       setIsModalOpen(false);
     },
-    onError: (error: any) => toast({ title: 'Ошибка', description: error.body?.name?.[0] || 'Не удалось обновить поставщика', variant: 'destructive' }),
+    onError: (error: any) => {
+      toast({ 
+        title: 'Ошибка', 
+        description: error.body?.name?.[0] || 'Не удалось обновить поставщика', 
+        variant: 'destructive' 
+      });
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: suppliersApi.deleteSupplier,
     onSuccess: () => {
-      toast({ title: 'Поставщик удален', variant: "default", className: "bg-green-500 text-white" });
+      toast({ 
+        title: 'Поставщик удален', 
+        variant: "default", 
+        className: "bg-green-500 text-white" 
+      });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
     },
-    onError: () => toast({ title: 'Ошибка', description: 'Не удалось удалить поставщика', variant: 'destructive' }),
+    onError: () => {
+      toast({ 
+        title: 'Ошибка', 
+        description: 'Не удалось удалить поставщика', 
+        variant: 'destructive' 
+      });
+    },
   });
 
   const handleAdd = () => {
@@ -96,10 +128,14 @@ const SuppliersPage = () => {
   };
 
   const handleSubmit = async (data: CreateSupplierData) => {
-    if (editingSupplier) {
-      await updateMutation.mutateAsync({ id: editingSupplier.id, data });
-    } else {
-      await createMutation.mutateAsync(data);
+    try {
+      if (editingSupplier) {
+        await updateMutation.mutateAsync({ id: editingSupplier.id, data });
+      } else {
+        await createMutation.mutateAsync(data);
+      }
+    } catch (error) {
+      console.error('Error submitting supplier:', error);
     }
   };
 
@@ -114,7 +150,13 @@ const SuppliersPage = () => {
   const totalPages = Math.ceil((suppliersData?.count || 0) / filters.perPage);
 
   if (suppliersError) {
-    return <Layout><div className="text-red-600 p-4 bg-red-50 border border-red-200 rounded-lg">Ошибка загрузки данных.</div></Layout>;
+    return (
+      <Layout>
+        <div className="text-red-600 p-4 bg-red-50 border border-red-200 rounded-lg">
+          Ошибка загрузки данных.
+        </div>
+      </Layout>
+    );
   }
 
   return (
@@ -125,68 +167,79 @@ const SuppliersPage = () => {
           <div className="flex items-center gap-2">
             <div className="text-sm text-muted-foreground">
               Найдено: {suppliersData?.count || 0}
+              {isSuppliersFetching && (
+                <span className="ml-2 text-blue-500 text-xs">(обновление...)</span>
+              )}
             </div>
-            <Button onClick={handleAdd}>
+            <Button onClick={handleAdd} disabled={createMutation.isPending}>
               <Plus className="mr-2 h-4 w-4" />
               Добавить
             </Button>
           </div>
         </div>
         
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлен фильтр "Ежедневная поставка" --- */}
+        {/* Фильтры */}
         <Card>
-            <CardContent className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                    <Input
-                        placeholder="Поиск по названию..."
-                        value={filters.searchTerm}
-                        onChange={(e) => handleFilterChange({ searchTerm: e.target.value })}
-                        className="md:col-span-2" // Занимает 2 колонки на средних экранах и больше
-                    />
-                    
-                    <div>
-                        <label className="text-sm font-medium text-muted-foreground mb-2 block">Ежедневная поставка</label>
-                        <Select
-                           value={filters.is_everyday_supply}
-                           onValueChange={(value) => handleFilterChange({ is_everyday_supply: value as IsEverydaySupplyFilter })}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Фильтр..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Все</SelectItem>
-                                <SelectItem value="true">Да</SelectItem>
-                                <SelectItem value="false">Нет</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <Input
+                placeholder="Поиск по названию..."
+                value={filters.searchTerm}
+                onChange={(e) => handleFilterChange({ searchTerm: e.target.value })}
+                className="md:col-span-2"
+              />
+              
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Ежедневная поставка
+                </label>
+                <Select
+                  value={filters.is_everyday_supply}
+                  onValueChange={(value) => handleFilterChange({ 
+                    is_everyday_supply: value as IsEverydaySupplyFilter 
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Фильтр..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все</SelectItem>
+                    <SelectItem value="true">Да</SelectItem>
+                    <SelectItem value="false">Нет</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                    <div>
-                        <label className="text-sm font-medium text-muted-foreground mb-2 block">На странице</label>
-                        <Select
-                          value={String(filters.perPage)}
-                          onValueChange={(value) => handleFilterChange({ perPage: Number(value) })}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Количество" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="10">10</SelectItem>
-                                <SelectItem value="25">25</SelectItem>
-                                <SelectItem value="100">100</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-            </CardContent>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  На странице
+                </label>
+                <Select
+                  value={String(filters.perPage)}
+                  onValueChange={(value) => handleFilterChange({ perPage: Number(value) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Количество" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
         </Card>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
         <Card>
           <CardContent className="p-0">
             {suppliersLoading ? (
               <div className="p-6 space-y-4">
-                {[...Array(filters.perPage)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                {[...Array(filters.perPage)].map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
               </div>
             ) : (
               <SupplierTable 
@@ -204,7 +257,7 @@ const SuppliersPage = () => {
               variant="outline"
               size="sm"
               onClick={() => handlePageChange(filters.currentPage - 1)}
-              disabled={filters.currentPage === 1}
+              disabled={filters.currentPage === 1 || isSuppliersFetching}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -213,13 +266,13 @@ const SuppliersPage = () => {
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 let page;
                 if (totalPages <= 5) {
-                    page = i + 1;
+                  page = i + 1;
                 } else if (filters.currentPage <= 3) {
-                    page = i + 1;
+                  page = i + 1;
                 } else if (filters.currentPage >= totalPages - 2) {
-                    page = totalPages - 4 + i;
+                  page = totalPages - 4 + i;
                 } else {
-                    page = filters.currentPage - 2 + i;
+                  page = filters.currentPage - 2 + i;
                 }
 
                 if (page > totalPages || page < 1) return null;
@@ -230,6 +283,7 @@ const SuppliersPage = () => {
                     variant={page === filters.currentPage ? "default" : "outline"}
                     size="sm"
                     onClick={() => handlePageChange(page)}
+                    disabled={isSuppliersFetching}
                   >
                     {page}
                   </Button>
@@ -241,7 +295,7 @@ const SuppliersPage = () => {
               variant="outline"
               size="sm"
               onClick={() => handlePageChange(filters.currentPage + 1)}
-              disabled={filters.currentPage === totalPages}
+              disabled={filters.currentPage === totalPages || isSuppliersFetching}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
