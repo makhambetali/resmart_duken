@@ -11,5 +11,6 @@ router.register(r'employees', EmployeeViewSet, basename='employees')
 
 urlpatterns = [
     path('api/v1/', include(router.urls)),
-    path('api/v1/all_suppliers/', SupplierCustomAPIView.as_view()),
+    path('server-time/', getServerTime)
+    # path('api/v1/all_suppliers/', SupplierCustomAPIView.as_view()),
 ]

@@ -1,7 +1,7 @@
 from django.views.generic.base import TemplateView
 from django.utils import timezone
 from django.core.cache import cache
-
+from django.http import JsonResponse
 from datetime import date
 from rest_framework import viewsets, generics, status
 from rest_framework.decorators import action
@@ -20,6 +20,11 @@ import logging
 
 logger = logging.getLogger('app')
 
+def getServerTime(request):
+    return JsonResponse(
+        {"server_time": timezone.localtime().date()},
+        status=200
+    )
 class SupplierViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierSerializer
     pagination_class = SupplierResultsPaginationPage

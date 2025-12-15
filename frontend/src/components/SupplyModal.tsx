@@ -48,7 +48,9 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     price_bank: '0',
     bonus: 0,
     exchange: 0,
-    delivery_date: new Date().toISOString().split('T')[0],
+    // delivery_date: new Date().toISOString().split('T')[0],
+    delivery_date: new Date().toLocaleDateString('en-CA'),
+
     comment: '',
     is_confirmed: false,
     invoice_html: '',
@@ -64,8 +66,11 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   const [hasExistingHtml, setHasExistingHtml] = useState(false);
   const [isProcessingAnyFile, setIsProcessingAnyFile] = useState(false);
 
-  const today = new Date().toISOString().split('T')[0];
-  const plus7 = new Date(Date.now() + 7 * 864e5).toISOString().split('T')[0];
+const today = new Date().toLocaleDateString('en-CA');
+const plus7 = new Date(
+  Date.now() + 7 * 864e5
+).toLocaleDateString('en-CA');
+
   const isToday = formData.delivery_date === today;
 
   useEffect(() => {
@@ -102,7 +107,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
         setFormData({
           supplier: '', paymentType: 'cash', price_cash: '0',
           price_bank: '0', bonus: 0, exchange: 0,
-          delivery_date: new Date().toISOString().split('T')[0],
+          delivery_date: new Date().toLocaleDateString('en-CA'),
           comment: '', is_confirmed: false, invoice_html: '',
         });
         setSelectedFiles([]);
