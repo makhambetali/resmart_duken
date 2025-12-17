@@ -17,14 +17,12 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-// --- Начало изменений: Импорт Tooltip ---
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-// --- Конец изменений ---
 import { MoreHorizontal, Edit, CheckCircle, AlertCircle, CalendarDays, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -57,7 +55,6 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
     });
   };
   
-  // --- Начало изменений: Функция для форматирования даты прибытия ---
   const formatArrivalDate = (dateString: string | null) => {
     if (!dateString) {
       return "Дата прибытия не указана";
@@ -71,7 +68,6 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
       minute: '2-digit'
     });
   };
-  // --- Конец изменений ---
 
   const groupSuppliesByDate = (supplies: Supply[]): [string, Supply[]][] => {
     const grouped = supplies.reduce((acc, supply) => {
@@ -116,7 +112,6 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
   }
 
   return (
-    // --- Начало изменений: Добавлен TooltipProvider ---
     <TooltipProvider>
       <div className="space-y-4">
         {groupedSupplies.map(([date, daySupplies]) => (
@@ -161,6 +156,33 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             {supply.supplier}
+                            {/* --- Начало изменений: Добавлен символ переноса --- */}
+                            {(supply as any).is_rescheduled && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <svg 
+                                    xmlns="http://www.w3.org/2000/svg" 
+                                    width="16" 
+                                    height="16" 
+                                    fill="currentColor" 
+                                    className="bi bi-arrow-clockwise text-amber-600 cursor-help"
+                                    viewBox="0 0 16 16"
+                                  >
+                                    <path 
+                                      fillRule="evenodd" 
+                                      d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"
+                                    />
+                                    <path 
+                                      d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"
+                                    />
+                                  </svg>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Перенесенная поставка</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {/* --- Конец изменений --- */}
                             {supply.comment && (
                               <Info className="h-4 w-4 text-gray-400 lg:hidden" />
                             )}
@@ -215,7 +237,6 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
                             {supply.comment || '-'}
                           </div>
                         </TableCell>
-                        {/* --- Начало изменений: Ячейка со статусом обернута в Tooltip --- */}
                         <TableCell>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -242,11 +263,10 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
                               </Badge>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{formatArrivalDate(supply.arrival_date)}</p>
+                              <p>{formatArrivalDate((supply as any).arrival_date)}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TableCell>
-                        {/* --- Конец изменений --- */}
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -279,6 +299,5 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
         ))}
       </div>
     </TooltipProvider>
-    // --- Конец изменений ---
   );
 };

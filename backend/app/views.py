@@ -22,7 +22,7 @@ logger = logging.getLogger('app')
 
 def getServerTime(request):
     return JsonResponse(
-        {"server_time": timezone.localtime().date()},
+        {"server_time": timezone.localtime()},
         status=200
     )
 class SupplierViewSet(viewsets.ModelViewSet):

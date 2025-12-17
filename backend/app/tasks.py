@@ -20,6 +20,7 @@ def shift_supply_to_the_next_day():
     today = timezone.localdate()
     supplies = Supply.objects.filter(delivery_date = today, is_confirmed=False)
     supplies.update(
-        delivery_date = today + timedelta(days=1)
+        delivery_date = today + timedelta(days=1),
+        is_rescheduled = True
     )
     
