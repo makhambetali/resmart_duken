@@ -35,11 +35,7 @@ interface SupplyModalProps {
 }
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const loadPrompt = async () => {
-    const res = await fetch('/invoice_table_extraction.prompt');
-    return await res.text();
-  };
-const prompt = await loadPrompt();
+
 export const SupplyModal: React.FC<SupplyModalProps> = ({
   open,
   onOpenChange,
@@ -94,6 +90,17 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     const mobileCheck = /Mobi|Android/i.test(navigator.userAgent);
     setIsMobile(mobileCheck);
   }, []);
+const [prompt, setPrompt] = useState<string>('');
+
+useEffect(() => {
+  const loadPrompt = async () => {
+    const res = await fetch('/invoice_table_extraction.prompt');
+    const text = await res.text();
+    setPrompt(text);
+  };
+
+  loadPrompt();
+}, []);
 
   useEffect(() => {
     if (open) {
