@@ -8,7 +8,7 @@ class SupplyDAO:
     def get_past_supplies(self, supplier_name=None):
         """Поставки с delivery_date раньше текущей даты."""
         queryset = Supply.objects.filter(
-            delivery_date__lt=timezone.localtime().date()
+            delivery_date__lte=timezone.localtime().date()
         ).select_related('supplier')
 
         if supplier_name:

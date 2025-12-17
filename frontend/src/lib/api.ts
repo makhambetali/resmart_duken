@@ -63,7 +63,10 @@ export const suppliesApi = {
     }
     return apiRequest<Supply[]>(endpoint);
   },
-
+  getSupplyHistory: (supplierName: string) =>
+    apiRequest<Supply[]>(
+      `/supplies/?type=past&supplier=${encodeURIComponent(supplierName)}`
+    ),
   createSupply: (data: AddSupplyForm) => {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {

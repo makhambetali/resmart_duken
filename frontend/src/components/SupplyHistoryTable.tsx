@@ -17,6 +17,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, ChevronRight, Package, Calendar, Banknote, MessageSquare, CheckCircle2, Clock, FileText, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { suppliesApi } from '@/lib/api';
+
 
 interface SupplyHistoryModalProps {
   isOpen: boolean;
@@ -42,21 +44,19 @@ export const SupplyHistoryModal: React.FC<SupplyHistoryModalProps> = ({
   }, [isOpen, supplierName]);
 
   const fetchSupplyHistory = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/v1/supplies/?type=past&supplier=${encodeURIComponent(supplierName)}`
-      );
-      if (!response.ok) throw new Error('Ошибка загрузки данных');
-      const data = await response.json();
-      setSupplies(data.results || data);
-    } catch (err) {
-      setError('Не удалось загрузить историю поставок');
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  setError(null);
+
+  try {
+    const data = await suppliesApi.getSupplyHistory(supplierName);
+    setSupplies(data);
+  } catch (err) {
+    setError('Не удалось загрузить историю поставок');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const toggleItem = (id: number) => {
     setOpenItems(prev => {
