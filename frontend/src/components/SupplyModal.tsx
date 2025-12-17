@@ -23,6 +23,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { formatPrice, getNumericValue } from '@/lib/utils';
+import { EditableInvoiceTable } from '@/components/EditableInvoiceTable';
 
 interface SupplyModalProps {
   open: boolean;
@@ -73,10 +74,10 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
 
   const [hasExistingHtml, setHasExistingHtml] = useState(false);
   const [isProcessingAnyFile, setIsProcessingAnyFile] = useState(false);
-
-  // 🔧 НОВОЕ: Состояние для времени создания и флага переноса
   const [createdAt, setCreatedAt] = useState<string>('');
   const [isRescheduled, setIsRescheduled] = useState<boolean>(false);
+  const [currentHtmlForTable, setCurrentHtmlForTable] = useState<string>('');
+  const [tableHasChanges, setTableHasChanges] = useState<boolean>(false);
 
   const today = new Date().toLocaleDateString('en-CA');
   const plus7 = new Date(
@@ -97,10 +98,13 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
         if (supply.price_cash > 0 && supply.price_bank > 0) paymentType = 'mixed';
         else if (supply.price_bank > 0) paymentType = 'bank';
 
-        // 🔧 НОВОЕ: Устанавливаем время создания и флаг переноса
-        console.log(supply.date_added)
         setCreatedAt(supply.date_added || '');
         setIsRescheduled((supply as any).is_rescheduled || false);
+
+        const existingHtml = supply.invoice_html || '';
+        setHasExistingHtml(!!existingHtml && existingHtml.length > 0);
+        setCurrentHtmlForTable(existingHtml);
+        setTableHasChanges(false);
 
         setFormData({
           supplier: supply.supplier,
@@ -112,18 +116,17 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
           delivery_date: supply.delivery_date,
           comment: supply.comment || '',
           is_confirmed: supply.is_confirmed,
-          invoice_html: supply.invoice_html || '',
+          invoice_html: existingHtml,
         });
-        
-        const existingHtml = supply.invoice_html || '';
-        setHasExistingHtml(!!existingHtml && existingHtml.length > 0);
         
         setSelectedFiles([]);
         setProcessedFiles([]);
       } else {
-        // 🔧 НОВОЕ: Сброс для новой поставки
+        // Новая поставка - без дефолтной таблицы
         setCreatedAt('');
         setIsRescheduled(false);
+        setCurrentHtmlForTable('');
+        setTableHasChanges(false);
 
         setFormData({
           supplier: '', paymentType: 'cash', price_cash: '0',
@@ -138,22 +141,29 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     }
   }, [supply, open]);
 
-  // 🔧 НОВОЕ: Функция для форматирования времени создания
+  // Обновляем currentHtmlForTable при обработке файлов
+  useEffect(() => {
+    const filesWithHtml = processedFiles.filter(item => item.html && !item.isProcessing);
+    
+    if (filesWithHtml.length > 0) {
+      const combined = filesWithHtml.map(item => item.html).join('\n');
+      setCurrentHtmlForTable(combined);
+      setFormData(prev => ({ ...prev, invoice_html: combined }));
+      setTableHasChanges(true); // Помечаем, что есть изменения
+    }
+  }, [processedFiles]);
+
   const formatCreatedAt = (dateString: string) => {
     if (!dateString) return 'Дата создания неизвестна';
     
     const date = new Date(dateString);
-    // const now = new Date();
-    // const diffMs = now.getTime() - date.getTime();
-    // const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    
     return date.toLocaleString('ru-RU', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const fileToBase64 = useCallback((file: File): Promise<string> => {
@@ -193,21 +203,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
         contents: [{
           parts: [
             { 
-              text: `Проанализируй этот файл (PDF или изображение) и преобразуй содержимое ВСЕГО документа в чистый HTML-код. 
-Сохрани структуру таблиц, данные и форматирование. Если в документе несколько страниц или таблиц, создай единый HTML с пагинацией(кнопки для нескольких страниц).
-Используй CSS для стилизации. Предоставь только чистый HTML-код без пояснений.
-
-Пример структуры для многостраничных документов:
-<div class="invoice-document">
-  <div class="page">
-    <!-- содержимое страницы 1 -->
-  </div>
-  <div class="page">
-    <!-- содержимое страницы 2 -->
-  </div>
-</div>
-
-Начни с \`<div class="invoice-document">\`` 
+              text: 'Ты — OCR-экстрактор бухгалтерских документов. На входе: изображение или PDF накладной. На выходе: ТОЛЬКО HTML-код ТАБЛИЦЫ товаров. ❗ ОБЯЗАТЕЛЬНОЕ ТРЕБОВАНИЕ: Ты ДОЛЖЕН вернуть ПОЛНЫЙ HTML-код таблицы, НАЧИНАЯ С <table> И ЗАКАНЧИВАЯ </table>. ❌ Запрещено возвращать только <tbody>, <tr> или фрагменты. ❌ Запрещено возвращать Markdown (```html). ❌ Запрещено любой текст вне <table>...</table>. Структура таблицы СТРОГО ФИКСИРОВАНА и не может меняться: <table> <thead> <tr> <th rowspan="2">№</th> <th rowspan="2">Наименование, характеристика</th> <th rowspan="2">Номенклатурный номер</th> <th rowspan="2">Единица измерения</th> <th colspan="2">Количество</th> <th rowspan="2">Цена за единицу, KZT</th> <th rowspan="2">Сумма с НДС, KZT</th> <th rowspan="2">Сумма НДС, KZT</th> </tr> <tr> <th>подлежит отпуску</th> <th>отпущено</th> </tr> </thead> <tbody> <!-- строки товаров --> </tbody> </table> Правила заполнения: 1) Заполняй ТОЛЬКО <tbody>. 2) Каждая строка товара = ровно 9 <td>. 3) Значения переписывай строго из документа. 4) Если значение отсутствует — <td></td>. 5) Если значения в колонках "Количество" совпадают — ОБЯЗАТЕЛЬНО продублируй число в обе подколонки. 6) Строку "Итого" включай как обычную строку таблицы. 7) Не добавляй комментарии, атрибуты, классы или стили. Вывод: Верни ТОЛЬКО один HTML-блок: <table>...</table>'
             },
             { inline_data: { mime_type: file.type, data: base64Data } }
           ]
@@ -303,47 +299,31 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   const handleRemoveFile = (index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     setProcessedFiles(prev => prev.filter((_, i) => i !== index));
+    
+    // Если удаляем последний файл, сбрасываем HTML
+    if (selectedFiles.length === 1) {
+      setCurrentHtmlForTable('');
+      setFormData(prev => ({ ...prev, invoice_html: '' }));
+      setTableHasChanges(false);
+    }
   };
 
-  const generateCombinedHtml = (): string => {
-    const filesWithHtml = processedFiles.filter(item => item.html && !item.isProcessing);
-    
-    if (filesWithHtml.length > 0) {
-      return `
-        <div class="combined-invoice-document">
-          ${filesWithHtml.map((item, index) => `
-            <div class="invoice-file-section" data-file-name="${item.file.name}">
-              <div class="file-header" style="padding: 10px; background: #f5f5f5; margin-bottom: 20px; border-radius: 4px;">
-                <h3 style="margin: 0; font-size: 16px; color: #333;">Документ: ${item.file.name}</h3>
-              </div>
-              ${item.html}
-            </div>
-          `).join('')}
-        </div>
-      `;
-    } else if (hasExistingHtml && formData.invoice_html) {
-      return formData.invoice_html;
-    }
-    
-    return '';
+  const handleHtmlChangeFromTable = (newHtml: string) => {
+    setFormData(prev => ({ ...prev, invoice_html: newHtml }));
+    setCurrentHtmlForTable(newHtml);
+    setTableHasChanges(true);
   };
 
-  const handlePreviewCombinedHtml = () => {
-    const combinedHtml = generateCombinedHtml();
+  const handleSaveAndCloseTableModal = () => {
+    // Обновляем formData с изменениями из таблицы
+    setFormData(prev => ({ ...prev, invoice_html: currentHtmlForTable }));
     
-    const hasHtmlContent = combinedHtml && 
-                          combinedHtml.length > 0 && 
-                          combinedHtml.replace(/<\/?[^>]+(>|$)/g, "").trim().length > 0;
-
-    if (!hasHtmlContent) {
-      toast({ 
-        title: 'Нет данных для просмотра', 
-        description: 'Файлы еще не обработаны или нет HTML данных', 
-        variant: 'destructive' 
-      });
-      return;
-    }
-    setIsPreviewModalOpen(true);
+    toast({ 
+      title: 'Изменения сохранены', 
+      variant: "default",
+      className: "bg-green-500 text-white" 
+    });
+    setIsPreviewModalOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -360,13 +340,11 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     
     setIsLoading(true);
     try {
-      const combinedHtml = generateCombinedHtml();
-
       await onSubmit({
         ...formData,
         price_cash: getNumericValue(formData.price_cash),
         price_bank: getNumericValue(formData.price_bank),
-        invoice_html: combinedHtml,
+        invoice_html: formData.invoice_html,
       });
       
       toast({ 
@@ -417,7 +395,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
 
   const processedFilesWithHtml = processedFiles.filter(item => item.html && !item.isProcessing);
   const hasNewProcessedFiles = processedFilesWithHtml.length > 0;
-  const hasPreviewContent = hasNewProcessedFiles || hasExistingHtml;
+  const hasPreviewContent = hasNewProcessedFiles || hasExistingHtml || currentHtmlForTable.length > 0;
   const isProcessingFiles = processedFiles.some(item => item.isProcessing) || isProcessingAnyFile;
 
   return (
@@ -428,7 +406,6 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
             <DialogTitle className="flex justify-between items-center">
               <span>{supply ? 'Редактировать поставку' : 'Добавить поставку'}</span>
               
-              {/* 🔧 НОВОЕ: Отображение метки о переносе поставки */}
               {isRescheduled && supply && (
                 <div className="flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
                   <RefreshCw className="w-3.5 h-3.5" />
@@ -551,25 +528,22 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                 />
               </div>
 
-              
-
               {/* Блок загрузки файлов */}
               <div className="space-y-2 md:col-span-2">
                 <div className="flex justify-between items-center">
                   <Label>Документы (PDF или Фото)</Label>
-                  {hasPreviewContent && (
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={handlePreviewCombinedHtml}
-                      disabled={isProcessingFiles}
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      Показать таблицу
-                      {hasNewProcessedFiles && ` (${processedFilesWithHtml.length})`}
-                    </Button>
-                  )}
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setIsPreviewModalOpen(true)}
+                    disabled={!hasPreviewContent || isProcessingFiles}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Редактировать таблицу
+                    {hasNewProcessedFiles && ` (${processedFilesWithHtml.length})`}
+                    {tableHasChanges && <span className="ml-1 text-green-600">*</span>}
+                  </Button>
                 </div>
 
                 {hasNewProcessedFiles && (
@@ -603,6 +577,42 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                       </div>
                       <div className="text-sm text-blue-700 font-medium">
                         ✓ Загружен
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!hasExistingHtml && !hasNewProcessedFiles && currentHtmlForTable.length > 0 && (
+                  <div className="mt-4 p-3 border rounded-lg bg-amber-50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-amber-800">
+                          Таблица загружена
+                        </h4>
+                        <p className="text-sm text-amber-600 mt-1">
+                          Нажмите "Редактировать таблицу" для просмотра и изменения
+                        </p>
+                      </div>
+                      <div className="text-sm text-amber-700 font-medium">
+                        ⓘ Загружено
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!hasExistingHtml && !hasNewProcessedFiles && currentHtmlForTable.length === 0 && (
+                  <div className="mt-4 p-3 border rounded-lg bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-gray-800">
+                          Нет таблицы
+                        </h4>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Загрузите файлы чтобы создать таблицу или создайте пустую таблицу в редакторе
+                        </p>
+                      </div>
+                      <div className="text-sm text-gray-700 font-medium">
+                        ⓘ Нет данных
                       </div>
                     </div>
                   </div>
@@ -703,15 +713,15 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                 </Label>
               </div>
             </div>
-            {/* 🔧 НОВОЕ: Блок информации о времени создания (только для редактирования) */}
-              {supply && createdAt && (
-                <div className="md:col-span-2 p-3 border rounded-lg bg-gray-50">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <CalendarClock className="w-4 h-4" />
-                    <span>Создано: {formatCreatedAt(createdAt)}</span>
-                  </div>
+            
+            {supply && createdAt && (
+              <div className="md:col-span-2 p-3 border rounded-lg bg-gray-50">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <CalendarClock className="w-4 h-4" />
+                  <span>Создано: {formatCreatedAt(createdAt)}</span>
                 </div>
-              )}
+              </div>
+            )}
 
             <div className="flex justify-between items-center pt-4">
               <div>
@@ -748,13 +758,13 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Модальное окно для предпросмотра */}
+      {/* Модальное окно для редактирования таблицы */}
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
         <DialogContent className="w-screen h-screen max-w-none max-h-none rounded-none border-none p-0 flex flex-col">
           <DialogHeader className="flex-shrink-0 px-6 py-4 border-b bg-white">
             <DialogTitle className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <span>Предпросмотр документов</span>
+                <span>Редактирование таблицы</span>
                 {hasNewProcessedFiles && (
                   <span className="text-sm font-normal text-muted-foreground">
                     ({processedFilesWithHtml.length} файл{processedFilesWithHtml.length > 1 ? 'а' : ''})
@@ -765,23 +775,11 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                     (существующий документ)
                   </span>
                 )}
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.print()}
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Печать
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsPreviewModalOpen(false)}
-                >
-                  Закрыть
-                </Button>
+                {tableHasChanges && (
+                  <span className="text-sm font-normal text-green-600">
+                    (есть изменения)
+                  </span>
+                )}
               </div>
             </DialogTitle>
           </DialogHeader>
@@ -807,81 +805,12 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                   display: none !important;
                 }
               }
-              
-              .combined-invoice-document { 
-                font-family: Arial, sans-serif; 
-                background: white;
-                min-height: 100%;
-              }
-              .invoice-file-section { 
-                margin-bottom: 40px; 
-                page-break-inside: avoid;
-              }
-              .file-header { 
-                padding: 12px; 
-                background: #e8f4fd; 
-                margin-bottom: 20px; 
-                border-radius: 6px; 
-                border-left: 4px solid #1890ff; 
-              }
-              .invoice-table-preview table { 
-                width: 100%; 
-                border-collapse: collapse; 
-                margin: 10px 0; 
-                font-size: 14px;
-              }
-              .invoice-table-preview th, 
-              .invoice-table-preview td { 
-                border: 1px solid #d1d5db; 
-                padding: 8px 12px; 
-                text-align: left; 
-              }
-              .invoice-table-preview th { 
-                background-color: #f3f4f6; 
-                font-weight: 600; 
-                color: #374151; 
-              }
-              .invoice-table-preview tr:nth-child(even) { 
-                background-color: #f9fafb; 
-              }
-              .invoice-table-preview tr:hover { 
-                background-color: #f0f9ff; 
-              }
-              .page { 
-                margin-bottom: 30px; 
-                padding: 20px; 
-                background: white; 
-                border-radius: 8px; 
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-                page-break-inside: avoid;
-              }
-              
-              @media print {
-                .combined-invoice-document {
-                  box-shadow: none;
-                  border: none;
-                }
-                .file-header {
-                  background: #f8f9fa !important;
-                  border-left: 4px solid #000 !important;
-                  color: #000 !important;
-                }
-                .invoice-table-preview table {
-                  font-size: 12px;
-                }
-                .invoice-table-preview th,
-                .invoice-table-preview td {
-                  border-color: #000 !important;
-                  color: #000 !important;
-                }
-              }
             `}</style>
+            
             <div className="invoice-print-container bg-white rounded-lg shadow-lg p-6 print:shadow-none print:rounded-none">
-              <div 
-                className="invoice-table-preview" 
-                dangerouslySetInnerHTML={{ 
-                  __html: generateCombinedHtml() 
-                }} 
+              <EditableInvoiceTable
+                html={currentHtmlForTable}
+                onHtmlChange={handleHtmlChangeFromTable}
               />
             </div>
           </div>
@@ -890,9 +819,20 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
               <div className="text-sm text-muted-foreground">
                 Используйте Ctrl+P для печати документа
               </div>
-              <Button onClick={() => setIsPreviewModalOpen(false)}>
-                Закрыть
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsPreviewModalOpen(false)}
+                >
+                  Закрыть
+                </Button>
+                <Button 
+                  onClick={handleSaveAndCloseTableModal}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  Сохранить
+                </Button>
+              </div>
             </div>
           </DialogFooter>
         </DialogContent>
