@@ -250,14 +250,7 @@ export const CashFlowModal: React.FC<CashFlowModalProps> = ({
             ) : <div />}
             
             <div className="flex justify-end space-x-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => onOpenChange(false)}
-                disabled={isLoading}
-              >
-                Отмена
-              </Button>
+             
               
               {!isReadOnly && (
                 <Button 
