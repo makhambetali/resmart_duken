@@ -35,7 +35,11 @@ interface SupplyModalProps {
 }
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-
+const loadPrompt = async () => {
+    const res = await fetch('/invoice_table_extraction.prompt');
+    return await res.text();
+  };
+const prompt = await loadPrompt();
 export const SupplyModal: React.FC<SupplyModalProps> = ({
   open,
   onOpenChange,
@@ -178,7 +182,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
       reader.onerror = error => reject(error);
     });
   }, []);
-
+ 
   const processFileWithGemini = useCallback(async (file: File, index: number) => {
     if (!GEMINI_API_KEY) {
       toast({ 
@@ -202,9 +206,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
       const requestBody = {
         contents: [{
           parts: [
-            { 
-              text: 'Ты — OCR-экстрактор бухгалтерских документов. На входе: изображение или PDF накладной. На выходе: ТОЛЬКО HTML-код ТАБЛИЦЫ товаров. ❗ ОБЯЗАТЕЛЬНОЕ ТРЕБОВАНИЕ: Ты ДОЛЖЕН вернуть ПОЛНЫЙ HTML-код таблицы, НАЧИНАЯ С <table> И ЗАКАНЧИВАЯ </table>. ❌ Запрещено возвращать только <tbody>, <tr> или фрагменты. ❌ Запрещено возвращать Markdown (```html). ❌ Запрещено любой текст вне <table>...</table>. Структура таблицы СТРОГО ФИКСИРОВАНА и не может меняться: <table> <thead> <tr> <th rowspan="2">№</th> <th rowspan="2">Наименование, характеристика</th> <th rowspan="2">Номенклатурный номер</th> <th rowspan="2">Единица измерения</th> <th colspan="2">Количество</th> <th rowspan="2">Цена за единицу, KZT</th> <th rowspan="2">Сумма с НДС, KZT</th> <th rowspan="2">Сумма НДС, KZT</th> </tr> <tr> <th>подлежит отпуску</th> <th>отпущено</th> </tr> </thead> <tbody> <!-- строки товаров --> </tbody> </table> Правила заполнения: 1) Заполняй ТОЛЬКО <tbody>. 2) Каждая строка товара = ровно 9 <td>. 3) Значения переписывай строго из документа. 4) Если значение отсутствует — <td></td>. 5) Если значения в колонках "Количество" совпадают — ОБЯЗАТЕЛЬНО продублируй число в обе подколонки. 6) Строку "Итого" включай как обычную строку таблицы. 7) Не добавляй комментарии, атрибуты, классы или стили. Вывод: Верни ТОЛЬКО один HTML-блок: <table>...</table>'
-            },
+            { text: prompt },
             { inline_data: { mime_type: file.type, data: base64Data } }
           ]
         }]

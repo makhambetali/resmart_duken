@@ -302,6 +302,7 @@ const FullscreenInvoiceModal = ({
   );
 };
 
+
 const FinancePage = () => {
   const queryClient = useQueryClient();
 
