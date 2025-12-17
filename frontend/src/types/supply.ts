@@ -11,7 +11,7 @@ export interface Supply {
   comment?: string;
   is_confirmed: boolean;
   is_rescheduled?: boolean; // <-- Добавлено
-  created_at?: string;
+  date_added?: string;
   updated_at?: string;
   invoice_html: string;
   arrival_date?: string | null; // <-- Добавлено, если еще нет

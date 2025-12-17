@@ -11,7 +11,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SupplierSearchCombobox } from '@/components/SupplierSearchCombobox';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, FileText, Loader2, Eye, Camera, Upload, X } from "lucide-react";
+import { 
+  Trash, 
+  FileText, 
+  Loader2, 
+  Eye, 
+  Camera, 
+  Upload, 
+  X, 
+  CalendarClock,
+  RefreshCw
+} from "lucide-react";
 import { formatPrice, getNumericValue } from '@/lib/utils';
 
 interface SupplyModalProps {
@@ -48,9 +58,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     price_bank: '0',
     bonus: 0,
     exchange: 0,
-    // delivery_date: new Date().toISOString().split('T')[0],
     delivery_date: new Date().toLocaleDateString('en-CA'),
-
     comment: '',
     is_confirmed: false,
     invoice_html: '',
@@ -66,10 +74,14 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   const [hasExistingHtml, setHasExistingHtml] = useState(false);
   const [isProcessingAnyFile, setIsProcessingAnyFile] = useState(false);
 
-const today = new Date().toLocaleDateString('en-CA');
-const plus7 = new Date(
-  Date.now() + 7 * 864e5
-).toLocaleDateString('en-CA');
+  // 🔧 НОВОЕ: Состояние для времени создания и флага переноса
+  const [createdAt, setCreatedAt] = useState<string>('');
+  const [isRescheduled, setIsRescheduled] = useState<boolean>(false);
+
+  const today = new Date().toLocaleDateString('en-CA');
+  const plus7 = new Date(
+    Date.now() + 7 * 864e5
+  ).toLocaleDateString('en-CA');
 
   const isToday = formData.delivery_date === today;
 
@@ -84,6 +96,11 @@ const plus7 = new Date(
         let paymentType: 'cash' | 'bank' | 'mixed' = 'cash';
         if (supply.price_cash > 0 && supply.price_bank > 0) paymentType = 'mixed';
         else if (supply.price_bank > 0) paymentType = 'bank';
+
+        // 🔧 НОВОЕ: Устанавливаем время создания и флаг переноса
+        console.log(supply.date_added)
+        setCreatedAt(supply.date_added || '');
+        setIsRescheduled((supply as any).is_rescheduled || false);
 
         setFormData({
           supplier: supply.supplier,
@@ -104,6 +121,10 @@ const plus7 = new Date(
         setSelectedFiles([]);
         setProcessedFiles([]);
       } else {
+        // 🔧 НОВОЕ: Сброс для новой поставки
+        setCreatedAt('');
+        setIsRescheduled(false);
+
         setFormData({
           supplier: '', paymentType: 'cash', price_cash: '0',
           price_bank: '0', bonus: 0, exchange: 0,
@@ -117,7 +138,24 @@ const plus7 = new Date(
     }
   }, [supply, open]);
 
-  // 🔧 ИСПРАВЛЕНО: Используем useCallback для мемоизации функции
+  // 🔧 НОВОЕ: Функция для форматирования времени создания
+  const formatCreatedAt = (dateString: string) => {
+    if (!dateString) return 'Дата создания неизвестна';
+    
+    const date = new Date(dateString);
+    // const now = new Date();
+    // const diffMs = now.getTime() - date.getTime();
+    // const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    
+    return date.toLocaleString('ru-RU', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+  };
+
   const fileToBase64 = useCallback((file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -131,7 +169,6 @@ const plus7 = new Date(
     });
   }, []);
 
-  // 🔧 ИСПРАВЛЕНО: Добавлена проверка на дублирование обработки
   const processFileWithGemini = useCallback(async (file: File, index: number) => {
     if (!GEMINI_API_KEY) {
       toast({ 
@@ -142,7 +179,6 @@ const plus7 = new Date(
       return;
     }
 
-    // Проверяем, не обрабатывается ли уже этот файл
     setProcessedFiles(prev => prev.map((item, i) => 
       i === index ? { ...item, isProcessing: true } : item
     ));
@@ -214,7 +250,6 @@ const plus7 = new Date(
         i === index ? { ...item, html: '', isProcessing: false } : item
       ));
     } finally {
-      // Проверяем, остались ли еще файлы в обработке
       const stillProcessing = processedFiles.some((item, i) => 
         i !== index ? item.isProcessing : false
       );
@@ -228,7 +263,6 @@ const plus7 = new Date(
 
     const newFiles = Array.from(files);
     
-    // 🔧 ИСПРАВЛЕНО: Фильтруем дубликаты по имени и размеру
     const uniqueNewFiles = newFiles.filter(newFile => 
       !selectedFiles.some(existingFile => 
         existingFile.name === newFile.name && 
@@ -254,7 +288,6 @@ const plus7 = new Date(
     
     setProcessedFiles(prev => [...prev, ...newProcessedFiles]);
     
-    // 🔧 ИСПРАВЛЕНО: Обрабатываем файлы последовательно, а не параллельно
     const processFilesSequentially = async () => {
       for (let i = 0; i < newProcessedFiles.length; i++) {
         const globalIndex = processedFiles.length + i;
@@ -316,7 +349,6 @@ const plus7 = new Date(
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 🔧 ИСПРАВЛЕНО: Проверяем, идут ли еще обработки файлов
     if (isProcessingAnyFile) {
       toast({ 
         title: 'Пожалуйста, подождите', 
@@ -386,8 +418,6 @@ const plus7 = new Date(
   const processedFilesWithHtml = processedFiles.filter(item => item.html && !item.isProcessing);
   const hasNewProcessedFiles = processedFilesWithHtml.length > 0;
   const hasPreviewContent = hasNewProcessedFiles || hasExistingHtml;
-
-  // 🔧 ИСПРАВЛЕНО: Определяем статус обработки файлов
   const isProcessingFiles = processedFiles.some(item => item.isProcessing) || isProcessingAnyFile;
 
   return (
@@ -395,7 +425,17 @@ const plus7 = new Date(
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="w-screen h-screen max-w-2xl max-h-[650px] rounded-none border-none overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{supply ? 'Редактировать поставку' : 'Добавить поставку'}</DialogTitle>
+            <DialogTitle className="flex justify-between items-center">
+              <span>{supply ? 'Редактировать поставку' : 'Добавить поставку'}</span>
+              
+              {/* 🔧 НОВОЕ: Отображение метки о переносе поставки */}
+              {isRescheduled && supply && (
+                <div className="flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Перенесена</span>
+                </div>
+              )}
+            </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -510,6 +550,8 @@ const plus7 = new Date(
                   rows={3} 
                 />
               </div>
+
+              
 
               {/* Блок загрузки файлов */}
               <div className="space-y-2 md:col-span-2">
@@ -661,6 +703,15 @@ const plus7 = new Date(
                 </Label>
               </div>
             </div>
+            {/* 🔧 НОВОЕ: Блок информации о времени создания (только для редактирования) */}
+              {supply && createdAt && (
+                <div className="md:col-span-2 p-3 border rounded-lg bg-gray-50">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <CalendarClock className="w-4 h-4" />
+                    <span>Создано: {formatCreatedAt(createdAt)}</span>
+                  </div>
+                </div>
+              )}
 
             <div className="flex justify-between items-center pt-4">
               <div>
@@ -735,7 +786,6 @@ const plus7 = new Date(
             </DialogTitle>
           </DialogHeader>
           <div className="flex-grow overflow-auto bg-gray-50 p-4 print:p-0">
-            {/* Стили остались без изменений */}
             <style>{`
               @media print {
                 body * {
