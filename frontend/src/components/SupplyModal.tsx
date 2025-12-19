@@ -1,5 +1,4 @@
 // @/components/SupplyModal.tsx
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Supply, AddSupplyForm } from '@/types/supply';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -20,7 +19,10 @@ import {
   Upload, 
   X, 
   CalendarClock,
-  RefreshCw
+  RefreshCw,
+  Table,
+  Merge,
+  Split
 } from "lucide-react";
 import { formatPrice, getNumericValue } from '@/lib/utils';
 import { EditableInvoiceTable } from '@/components/EditableInvoiceTable';
@@ -35,6 +37,13 @@ interface SupplyModalProps {
 }
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+interface ProcessedFile {
+  file: File;
+  html: string;
+  isProcessing: boolean;
+  structureSignature?: string; // сигнатура структуры таблицы
+}
 
 export const SupplyModal: React.FC<SupplyModalProps> = ({
   open,
@@ -66,10 +75,13 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   });
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [processedFiles, setProcessedFiles] = useState<Array<{
-    file: File;
-    html: string;
-    isProcessing: boolean;
+  const [processedFiles, setProcessedFiles] = useState<ProcessedFile[]>([]);
+  
+  // Для группировки таблиц по структуре
+  const [tableGroups, setTableGroups] = useState<Array<{
+    signature: string;
+    files: ProcessedFile[];
+    combinedHtml: string;
   }>>([]);
 
   const [hasExistingHtml, setHasExistingHtml] = useState(false);
@@ -78,6 +90,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   const [isRescheduled, setIsRescheduled] = useState<boolean>(false);
   const [currentHtmlForTable, setCurrentHtmlForTable] = useState<string>('');
   const [tableHasChanges, setTableHasChanges] = useState<boolean>(false);
+  const [processingStrategy, setProcessingStrategy] = useState<'auto' | 'separate'>('auto');
 
   const today = new Date().toLocaleDateString('en-CA');
   const plus7 = new Date(
@@ -90,17 +103,202 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     const mobileCheck = /Mobi|Android/i.test(navigator.userAgent);
     setIsMobile(mobileCheck);
   }, []);
-const [prompt, setPrompt] = useState<string>('');
 
-useEffect(() => {
-  const loadPrompt = async () => {
-    const res = await fetch('/invoice_table_extraction.prompt');
-    const text = await res.text();
-    setPrompt(text);
+  const [prompt, setPrompt] = useState<string>('');
+
+  useEffect(() => {
+    const loadPrompt = async () => {
+      try {
+        const res = await fetch('/invoice_table_extraction.prompt');
+        if (res.ok) {
+          const text = await res.text();
+          setPrompt(text);
+        }
+      } catch (error) {
+        console.error('Failed to load prompt:', error);
+        // Fallback prompt
+        setPrompt(`Извлеки таблицу из изображения накладной. Верни только HTML код таблицы без объяснений.
+Используй теги: <table>, <thead>, <tbody>, <tr>, <th>, <td>
+Сохрани все числовые данные как есть.`);
+      }
+    };
+
+    loadPrompt();
+  }, []);
+
+  // Функция для анализа структуры таблицы
+  const analyzeTableStructure = (html: string): string => {
+    if (!html) return '';
+    
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const table = doc.querySelector('table');
+      
+      if (!table) return 'no-table';
+      
+      const headers: string[] = [];
+      const thElements = table.querySelectorAll('th');
+      const tdElements = table.querySelectorAll('td');
+      
+      if (thElements.length > 0) {
+        thElements.forEach(th => {
+          headers.push(th.textContent?.toLowerCase().replace(/\s+/g, '') || '');
+        });
+      } else if (tdElements.length > 0) {
+        // Если нет заголовков, используем первую строку как шаблон
+        const firstRow = table.querySelector('tr');
+        if (firstRow) {
+          Array.from(firstRow.children).forEach(cell => {
+            headers.push(cell.textContent?.toLowerCase().replace(/\s+/g, '') || '');
+          });
+        }
+      }
+      
+      // Создаем сигнатуру на основе структуры
+      const signature = JSON.stringify({
+        headers,
+        columnCount: Math.max(thElements.length, tdElements.length > 0 ? 
+          Array.from(table.querySelector('tr')?.children || []).length : 0)
+      });
+      
+      return signature;
+    } catch (error) {
+      console.error('Error analyzing table structure:', error);
+      return 'error';
+    }
   };
 
-  loadPrompt();
-}, []);
+  // Группировка таблиц по структуре
+  const groupTablesByStructure = useCallback((files: ProcessedFile[]) => {
+    const groups = new Map<string, ProcessedFile[]>();
+    
+    files.forEach(file => {
+      if (file.html && !file.isProcessing) {
+        const signature = analyzeTableStructure(file.html);
+        
+        if (!groups.has(signature)) {
+          groups.set(signature, []);
+        }
+        groups.get(signature)!.push(file);
+      }
+    });
+    
+    // Преобразуем Map в массив групп
+    const groupedArray: Array<{
+      signature: string;
+      files: ProcessedFile[];
+      combinedHtml: string;
+    }> = [];
+    
+    groups.forEach((files, signature) => {
+      if (files.length === 1) {
+        groupedArray.push({
+          signature,
+          files,
+          combinedHtml: files[0].html
+        });
+      } else {
+        // Объединяем HTML таблиц с одинаковой структурой
+        let combinedHtml = files[0].html;
+        for (let i = 1; i < files.length; i++) {
+          combinedHtml = combineTablesHtml(combinedHtml, files[i].html);
+        }
+        
+        groupedArray.push({
+          signature,
+          files,
+          combinedHtml
+        });
+      }
+    });
+    
+    return groupedArray;
+  }, []);
+
+  // Функция для объединения двух HTML таблиц
+  const combineTablesHtml = (html1: string, html2: string): string => {
+    try {
+      const parser = new DOMParser();
+      const doc1 = parser.parseFromString(html1, 'text/html');
+      const doc2 = parser.parseFromString(html2, 'text/html');
+      
+      const table1 = doc1.querySelector('table');
+      const table2 = doc2.querySelector('table');
+      
+      if (!table1 || !table2) return html1;
+      
+      // Клонируем первую таблицу
+      const combinedTable = table1.cloneNode(true) as HTMLTableElement;
+      
+      // Находим или создаем tbody
+      let tbody1 = combinedTable.querySelector('tbody');
+      const tbody2 = table2.querySelector('tbody');
+      
+      if (!tbody1) {
+        tbody1 = document.createElement('tbody');
+        // Перемещаем все строки в tbody
+        const rows = combinedTable.querySelectorAll('tr:not(thead tr)');
+        rows.forEach(row => tbody1!.appendChild(row.cloneNode(true)));
+        // Очищаем таблицу и добавляем thead и tbody
+        const thead = combinedTable.querySelector('thead');
+        combinedTable.innerHTML = '';
+        if (thead) combinedTable.appendChild(thead);
+        combinedTable.appendChild(tbody1);
+      }
+      
+      if (tbody2) {
+        // Добавляем строки из второй таблицы
+        Array.from(tbody2.querySelectorAll('tr')).forEach(row => {
+          tbody1!.appendChild(row.cloneNode(true));
+        });
+      }
+      
+      return combinedTable.outerHTML;
+    } catch (error) {
+      console.error('Error combining tables:', error);
+      return html1 + '\n' + html2;
+    }
+  };
+
+  // Обновление текущего HTML при изменении групп таблиц
+  useEffect(() => {
+    if (tableGroups.length > 0) {
+      let combinedHtml = '';
+      
+      if (processingStrategy === 'auto' && tableGroups.length === 1) {
+        // Если только одна группа, используем объединенный HTML
+        combinedHtml = tableGroups[0].combinedHtml;
+      } else {
+        // Иначе создаем раздельные таблицы
+        tableGroups.forEach((group, index) => {
+          if (index > 0) combinedHtml += '\n<br/><br/>\n';
+          combinedHtml += group.combinedHtml;
+        });
+      }
+      
+      setCurrentHtmlForTable(combinedHtml);
+      setFormData(prev => ({ ...prev, invoice_html: combinedHtml }));
+      setTableHasChanges(true);
+    } else if (processedFiles.length === 0) {
+      // Если нет обработанных файлов, но есть существующий HTML
+      if (!hasExistingHtml) {
+        setCurrentHtmlForTable('');
+        setFormData(prev => ({ ...prev, invoice_html: '' }));
+      }
+    }
+  }, [tableGroups, processingStrategy, hasExistingHtml]);
+
+  // Группировка таблиц при изменении processedFiles
+  useEffect(() => {
+    const validProcessedFiles = processedFiles.filter(f => f.html && !f.isProcessing);
+    if (validProcessedFiles.length > 0) {
+      const groups = groupTablesByStructure(validProcessedFiles);
+      setTableGroups(groups);
+    } else {
+      setTableGroups([]);
+    }
+  }, [processedFiles, groupTablesByStructure]);
 
   useEffect(() => {
     if (open) {
@@ -132,8 +330,9 @@ useEffect(() => {
         
         setSelectedFiles([]);
         setProcessedFiles([]);
+        setTableGroups([]);
       } else {
-        // Новая поставка - без дефолтной таблицы
+        // Новая поставка
         setCreatedAt('');
         setIsRescheduled(false);
         setCurrentHtmlForTable('');
@@ -147,22 +346,11 @@ useEffect(() => {
         });
         setSelectedFiles([]);
         setProcessedFiles([]);
+        setTableGroups([]);
         setHasExistingHtml(false);
       }
     }
   }, [supply, open]);
-
-  // Обновляем currentHtmlForTable при обработке файлов
-  useEffect(() => {
-    const filesWithHtml = processedFiles.filter(item => item.html && !item.isProcessing);
-    
-    if (filesWithHtml.length > 0) {
-      const combined = filesWithHtml.map(item => item.html).join('\n');
-      setCurrentHtmlForTable(combined);
-      setFormData(prev => ({ ...prev, invoice_html: combined }));
-      setTableHasChanges(true); // Помечаем, что есть изменения
-    }
-  }, [processedFiles]);
 
   const formatCreatedAt = (dateString: string) => {
     if (!dateString) return 'Дата создания неизвестна';
@@ -189,31 +377,33 @@ useEffect(() => {
       reader.onerror = error => reject(error);
     });
   }, []);
- 
-  const processFileWithGemini = useCallback(async (file: File, index: number) => {
+
+  const processSingleFileWithGemini = async (file: File, index: number) => {
     if (!GEMINI_API_KEY) {
       toast({ 
         title: 'Ошибка', 
         description: 'API-ключ Gemini не настроен', 
         variant: 'destructive' 
       });
-      return;
+      return '';
     }
-
-    setProcessedFiles(prev => prev.map((item, i) => 
-      i === index ? { ...item, isProcessing: true } : item
-    ));
-
-    setIsProcessingAnyFile(true);
 
     try {
       const base64Data = await fileToBase64(file);
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
       
+      // Улучшенный prompt для обработки таблиц
+      const enhancedPrompt = prompt + '\n\n' + `
+        ВАЖНО: Верни ТОЛЬКО HTML код таблицы без каких-либо пояснений, комментариев или дополнительного текста.
+        Используй только следующие теги: <table>, <thead>, <tbody>, <tr>, <th>, <td>.
+        Сохрани точные значения из документа, не меняй и не форматируй числа.
+        Если в документе несколько таблиц, извлеки все в одной HTML таблице.
+      `;
+      
       const requestBody = {
         contents: [{
           parts: [
-            { text: prompt },
+            { text: enhancedPrompt },
             { inline_data: { mime_type: file.type, data: base64Data } }
           ]
         }]
@@ -233,34 +423,19 @@ useEffect(() => {
       const responseData = await response.json();
       const htmlResult = responseData.candidates[0].content.parts[0].text;
       
-      setProcessedFiles(prev => prev.map((item, i) => 
-        i === index ? { ...item, html: htmlResult, isProcessing: false } : item
-      ));
-
-      toast({ 
-        title: 'Файл обработан', 
-        description: `"${file.name}" успешно обработан.`, 
-        variant: 'default', 
-        className: "bg-green-500 text-white" 
-      });
-
+      // Очистка HTML от возможных лишних тегов
+      const cleanHtml = htmlResult.replace(/```html|```/g, '').trim();
+      
+      return cleanHtml;
     } catch (error: any) {
       toast({ 
         title: 'Ошибка обработки файла', 
         description: `"${file.name}": ${error.message}`, 
         variant: 'destructive' 
       });
-      
-      setProcessedFiles(prev => prev.map((item, i) => 
-        i === index ? { ...item, html: '', isProcessing: false } : item
-      ));
-    } finally {
-      const stillProcessing = processedFiles.some((item, i) => 
-        i !== index ? item.isProcessing : false
-      );
-      setIsProcessingAnyFile(stillProcessing);
+      return '';
     }
-  }, [fileToBase64, toast, processedFiles]);
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -285,7 +460,7 @@ useEffect(() => {
     
     setSelectedFiles(prev => [...prev, ...uniqueNewFiles]);
     
-    const newProcessedFiles = uniqueNewFiles.map(file => ({
+    const newProcessedFiles: ProcessedFile[] = uniqueNewFiles.map(file => ({
       file,
       html: '',
       isProcessing: true
@@ -294,10 +469,33 @@ useEffect(() => {
     setProcessedFiles(prev => [...prev, ...newProcessedFiles]);
     
     const processFilesSequentially = async () => {
+      setIsProcessingAnyFile(true);
+      
       for (let i = 0; i < newProcessedFiles.length; i++) {
         const globalIndex = processedFiles.length + i;
-        await processFileWithGemini(newProcessedFiles[i].file, globalIndex);
+        
+        try {
+          const html = await processSingleFileWithGemini(newProcessedFiles[i].file, globalIndex);
+          
+          setProcessedFiles(prev => prev.map((item, idx) => 
+            idx === globalIndex ? { ...item, html, isProcessing: false } : item
+          ));
+          
+          toast({ 
+            title: 'Файл обработан', 
+            description: `"${newProcessedFiles[i].file.name}" успешно обработан.`, 
+            variant: 'default', 
+            className: "bg-green-500 text-white" 
+          });
+          
+        } catch (error: any) {
+          setProcessedFiles(prev => prev.map((item, idx) => 
+            idx === globalIndex ? { ...item, html: '', isProcessing: false } : item
+          ));
+        }
       }
+      
+      setIsProcessingAnyFile(false);
     };
     
     processFilesSequentially();
@@ -308,13 +506,6 @@ useEffect(() => {
   const handleRemoveFile = (index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     setProcessedFiles(prev => prev.filter((_, i) => i !== index));
-    
-    // Если удаляем последний файл, сбрасываем HTML
-    if (selectedFiles.length === 1) {
-      setCurrentHtmlForTable('');
-      setFormData(prev => ({ ...prev, invoice_html: '' }));
-      setTableHasChanges(false);
-    }
   };
 
   const handleHtmlChangeFromTable = (newHtml: string) => {
@@ -402,10 +593,44 @@ useEffect(() => {
     });
   };
 
+  // Статистика по обработанным файлам
   const processedFilesWithHtml = processedFiles.filter(item => item.html && !item.isProcessing);
+  const processingFiles = processedFiles.filter(item => item.isProcessing);
+  
   const hasNewProcessedFiles = processedFilesWithHtml.length > 0;
   const hasPreviewContent = hasNewProcessedFiles || hasExistingHtml || currentHtmlForTable.length > 0;
-  const isProcessingFiles = processedFiles.some(item => item.isProcessing) || isProcessingAnyFile;
+  const isProcessingFiles = isProcessingAnyFile || processingFiles.length > 0;
+
+  // Функция для принудительного разделения таблиц
+  const handleForceSeparateTables = () => {
+    if (tableGroups.length > 0) {
+      let separatedHtml = '';
+      tableGroups.forEach((group, index) => {
+        if (index > 0) separatedHtml += '\n<br/><br/>\n';
+        separatedHtml += group.combinedHtml;
+      });
+      
+      setCurrentHtmlForTable(separatedHtml);
+      setFormData(prev => ({ ...prev, invoice_html: separatedHtml }));
+      setTableHasChanges(true);
+      setProcessingStrategy('separate');
+    }
+  };
+
+  // Функция для принудительного объединения таблиц
+  const handleForceCombineTables = () => {
+    if (tableGroups.length > 1) {
+      let combinedHtml = tableGroups[0].combinedHtml;
+      for (let i = 1; i < tableGroups.length; i++) {
+        combinedHtml = combineTablesHtml(combinedHtml, tableGroups[i].combinedHtml);
+      }
+      
+      setCurrentHtmlForTable(combinedHtml);
+      setFormData(prev => ({ ...prev, invoice_html: combinedHtml }));
+      setTableHasChanges(true);
+      setProcessingStrategy('auto');
+    }
+  };
 
   return (
     <>
@@ -547,28 +772,65 @@ useEffect(() => {
                     size="sm" 
                     onClick={() => setIsPreviewModalOpen(true)}
                     disabled={!hasPreviewContent || isProcessingFiles}
+                    className="gap-1.5"
                   >
-                    <Eye className="w-4 h-4 mr-2" />
+                    <Eye className="w-4 h-4" />
                     Редактировать таблицу
-                    {hasNewProcessedFiles && ` (${processedFilesWithHtml.length})`}
-                    {tableHasChanges && <span className="ml-1 text-green-600">*</span>}
+                    {hasNewProcessedFiles && (
+                      <span className="text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
+                        {processedFilesWithHtml.length}
+                      </span>
+                    )}
+                    {tableHasChanges && <span className="ml-1 text-green-600 font-bold">*</span>}
                   </Button>
                 </div>
 
-                {hasNewProcessedFiles && (
+                {/* Статистика обработки */}
+                {processedFilesWithHtml.length > 0 && (
                   <div className="mt-4 p-3 border rounded-lg bg-green-50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium text-green-800">
-                          Обработанные файлы: {processedFilesWithHtml.length}
-                        </h4>
-                        <p className="text-sm text-green-600 mt-1">
-                          {supply ? 'Новые файлы заменят существующий HTML документ' : 'Все файлы будут объединены в один HTML документ'}
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium text-green-800 flex items-center gap-2">
+                        <Table className="w-4 h-4" />
+                        Обработанные таблицы: {tableGroups.length}
+                      </h4>
+                      <div className="flex gap-2">
+                        {tableGroups.length > 1 && (
+                          <>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleForceCombineTables}
+                              className="h-7 gap-1.5 text-xs"
+                              disabled={processingStrategy === 'auto'}
+                            >
+                              <Merge className="w-3 h-3" />
+                              Объединить все
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleForceSeparateTables}
+                              className="h-7 gap-1.5 text-xs"
+                              disabled={processingStrategy === 'separate'}
+                            >
+                              <Split className="w-3 h-3" />
+                              Разделить
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="text-sm text-green-600 space-y-1">
+                      <p>• Файлов обработано: {processedFilesWithHtml.length}</p>
+                      <p>• Сгруппировано по структуре: {tableGroups.length} таблиц</p>
+                      {tableGroups.length > 1 && (
+                        <p className="text-amber-600">
+                          ⓘ Обнаружены разные структуры таблиц
                         </p>
-                      </div>
-                      <div className="text-sm text-green-700 font-medium">
-                        ✓ Готово
-                      </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -633,8 +895,9 @@ useEffect(() => {
                     variant="outline" 
                     onClick={() => fileInputRef.current?.click()} 
                     disabled={!isToday || isProcessingFiles}
+                    className="gap-1.5"
                   >
-                    <Upload className="w-4 h-4 mr-2" />
+                    <Upload className="w-4 h-4" />
                     {isMobile ? 'Выбрать файлы' : 'Выберите файлы'}
                   </Button>
                   
@@ -644,8 +907,9 @@ useEffect(() => {
                       variant="outline" 
                       onClick={() => cameraInputRef.current?.click()} 
                       disabled={!isToday || isProcessingFiles}
+                      className="gap-1.5"
                     >
-                      <Camera className="w-4 h-4 mr-2" />
+                      <Camera className="w-4 h-4" />
                       Сфотографировать
                     </Button>
                   )}
@@ -674,30 +938,33 @@ useEffect(() => {
                   <div className="space-y-2 mt-3">
                     <Label className="text-sm">Выбранные файлы:</Label>
                     <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {selectedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 border rounded-md bg-muted/20">
-                          <div className="flex items-center space-x-2 flex-1">
-                            <FileText className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm truncate">{file.name}</span>
-                            {processedFiles[index]?.isProcessing && (
-                              <Loader2 className="w-3 h-3 animate-spin text-blue-600" />
-                            )}
-                            {processedFiles[index]?.html && !processedFiles[index]?.isProcessing && (
-                              <span className="text-xs text-green-600">✓ Обработан</span>
-                            )}
+                      {selectedFiles.map((file, index) => {
+                        const processedFile = processedFiles[index];
+                        return (
+                          <div key={index} className="flex items-center justify-between p-2 border rounded-md bg-muted/20">
+                            <div className="flex items-center space-x-2 flex-1">
+                              <FileText className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm truncate">{file.name}</span>
+                              {processedFile?.isProcessing && (
+                                <Loader2 className="w-3 h-3 animate-spin text-blue-600" />
+                              )}
+                              {processedFile?.html && !processedFile?.isProcessing && (
+                                <span className="text-xs text-green-600">✓ Обработан</span>
+                              )}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveFile(index)}
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                              disabled={isProcessingFiles}
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveFile(index)}
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                            disabled={isProcessingFiles}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -706,6 +973,9 @@ useEffect(() => {
                   <div className="flex items-center text-sm text-blue-600 mt-2">
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Обработка файлов с помощью AI...
+                    <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+                      {processingFiles.length} из {selectedFiles.length}
+                    </span>
                   </div>
                 )}
               </div>
@@ -774,14 +1044,9 @@ useEffect(() => {
             <DialogTitle className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span>Редактирование таблицы</span>
-                {hasNewProcessedFiles && (
+                {tableGroups.length > 0 && (
                   <span className="text-sm font-normal text-muted-foreground">
-                    ({processedFilesWithHtml.length} файл{processedFilesWithHtml.length > 1 ? 'а' : ''})
-                  </span>
-                )}
-                {!hasNewProcessedFiles && hasExistingHtml && (
-                  <span className="text-sm font-normal text-muted-foreground">
-                    (существующий документ)
+                    ({tableGroups.length} таблиц{tableGroups.length > 1 ? 'ы' : 'а'})
                   </span>
                 )}
                 {tableHasChanges && (
