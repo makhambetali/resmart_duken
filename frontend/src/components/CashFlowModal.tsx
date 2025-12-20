@@ -7,17 +7,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { formatPrice, getNumericValue } from '@/lib/utils';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cashFlowApi } from '@/lib/api';
 import { CashFlowOperation } from '@/types/supply';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Plus, Minus, ArrowUpRight, ArrowDownLeft, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface CashFlowModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
   operationToEdit?: CashFlowOperation | null;
-  // 🔧 ИСПРАВЛЕНО: Добавлен пропс для блокировки редактирования прошлых дат
   isReadOnly?: boolean;
 }
 
@@ -32,11 +31,13 @@ export const CashFlowModal: React.FC<CashFlowModalProps> = ({
   const queryClient = useQueryClient();
   
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>('income');
-  const [formData, setFormData] = useState({ amount: '', description: '' });
+  const [formData, setFormData] = useState({ 
+    amount: '', 
+    description: '' 
+  });
   
   const isEditMode = !!operationToEdit;
 
-  // 🔧 ИСПРАВЛЕНО: Более надежная инициализация формы
   useEffect(() => {
     if (open) {
       if (isEditMode && operationToEdit) {
@@ -52,13 +53,16 @@ export const CashFlowModal: React.FC<CashFlowModalProps> = ({
     }
   }, [open, operationToEdit, isEditMode]);
 
-  // 🔧 ИСПРАВЛЕНО: Мутация для сохранения операции
   const { mutate: saveOperation, isPending: isSaving } = useMutation({
     mutationFn: async () => {
       const numericAmount = Number(getNumericValue(formData.amount));
       
       if (isNaN(numericAmount) || numericAmount <= 0) {
         throw new Error('Введите корректную сумму');
+      }
+      
+      if (formData.description.length > 500) {
+        throw new Error('Описание не должно превышать 500 символов');
       }
       
       const finalAmount = transactionType === 'expense' ? -numericAmount : numericAmount;
@@ -82,11 +86,14 @@ export const CashFlowModal: React.FC<CashFlowModalProps> = ({
         className: 'bg-green-500 text-white',
       });
       
-      // 🔧 ИСПРАВЛЕНО: Инвалидируем только нужные запросы
       queryClient.invalidateQueries({ queryKey: ['cashFlows'] });
       
       if (onSuccess) {
         onSuccess();
+      }
+      
+      if (!isEditMode) {
+        setFormData({ amount: '', description: '' });
       }
     },
     onError: (error: any) => {
@@ -98,7 +105,6 @@ export const CashFlowModal: React.FC<CashFlowModalProps> = ({
     },
   });
 
-  // 🔧 ИСПРАВЛЕНО: Мутация для удаления операции
   const { mutate: deleteOperation, isPending: isDeleting } = useMutation({
     mutationFn: () => {
       if (!operationToEdit) {
@@ -129,11 +135,12 @@ export const CashFlowModal: React.FC<CashFlowModalProps> = ({
 
   const isLoading = isSaving || isDeleting;
 
-  const handlePriceChange = (value: string) => {
+  const handleAmountChange = (value: string) => {
     let numericValue = value.replace(/\D/g, '');
     
-    if (numericValue.length > 6) {
-      numericValue = numericValue.slice(0, 6);
+    // Ограничение на максимальную сумму (999,999,999)
+    if (numericValue.length > 9) {
+      numericValue = numericValue.slice(0, 9);
     }
 
     setFormData(prev => ({ ...prev, amount: formatPrice(numericValue) }));
@@ -151,6 +158,15 @@ export const CashFlowModal: React.FC<CashFlowModalProps> = ({
       return;
     }
     
+    if (formData.description.length > 500) {
+      toast({
+        title: 'Ошибка',
+        description: 'Описание не должно превышать 500 символов',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     saveOperation();
   };
   
@@ -160,109 +176,184 @@ export const CashFlowModal: React.FC<CashFlowModalProps> = ({
     }
   };
 
-  // 🔧 ИСПРАВЛЕНО: Проверяем, можно ли редактировать операцию
   const canEdit = !isReadOnly || isEditMode;
   const isDisabled = isLoading || !canEdit;
 
+  const handleClose = () => {
+    if (!isLoading) {
+      onOpenChange(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(open) => {
-      if (!isLoading) {
-        onOpenChange(open);
-      }
-    }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {isReadOnly && !isEditMode ? 'Просмотр операции' : 
-             isEditMode ? 'Редактировать операцию' : 'Новая операция'}
-          </DialogTitle>
-        </DialogHeader>
-        
-        {isReadOnly && !isEditMode && (
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
-            <p className="text-sm text-yellow-700">
-              Редактирование операций прошлых дат недоступно. Вы можете только просматривать.
-            </p>
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="amount">Сумма</Label>
-            <div className="flex items-center">
-              <Select
-                value={transactionType}
-                onValueChange={(value: 'income' | 'expense') => { 
-                  if (value && !isDisabled) setTransactionType(value); 
-                }}
-                disabled={isDisabled || isReadOnly}
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-border/50 shadow-2xl">
+        <div className="p-6 space-y-6">
+          <DialogHeader className="space-y-2">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg font-semibold">
+                {isReadOnly && !isEditMode ? 'Просмотр операции' : 
+                 isEditMode ? 'Редактировать операцию' : 'Новая операция'}
+              </DialogTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleClose}
+                className="h-8 w-8 -mr-2"
               >
-                <SelectTrigger
-                  className={`w-auto rounded-r-none border-r-0 focus:ring-1 focus:ring-offset-0 text-lg font-bold ${
-                    transactionType === 'income' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  aria-label="Тип транзакции"
-                >
-                  <SelectValue placeholder={transactionType === 'income' ? '+' : '-'} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="income">+</SelectItem>
-                  <SelectItem value="expense">-</SelectItem>
-                </SelectContent>
-              </Select>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {isReadOnly && !isEditMode && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-2">
+                <p className="text-sm text-yellow-800">
+                  Редактирование операций прошлых дат недоступно.
+                </p>
+              </div>
+            )}
+          </DialogHeader>
+
+          {/* Type Toggle */}
+          <div className="flex gap-2 p-1 bg-muted rounded-xl">
+            <button
+              type="button"
+              onClick={() => !isDisabled && setTransactionType('income')}
+              disabled={isDisabled}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200",
+                transactionType === 'income'
+                  ? "bg-green-500 text-white shadow-md"
+                  : "text-muted-foreground hover:text-foreground",
+                isDisabled && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              <ArrowDownLeft className="w-4 h-4" />
+              Доход
+            </button>
+            <button
+              type="button"
+              onClick={() => !isDisabled && setTransactionType('expense')}
+              disabled={isDisabled}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200",
+                transactionType === 'expense'
+                  ? "bg-red-500 text-white shadow-md"
+                  : "text-muted-foreground hover:text-foreground",
+                isDisabled && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              <ArrowUpRight className="w-4 h-4" />
+              Расход
+            </button>
+          </div>
+
+          {/* Amount Input */}
+          <div className="space-y-3">
+            <Label htmlFor="amount" className="text-sm font-medium">Сумма</Label>
+            <div className="relative">
+              <div className={cn(
+                "absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200",
+                transactionType === 'income' ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+              )}>
+                {transactionType === 'income' ? 
+                  <Plus className="w-4 h-4" /> : 
+                  <Minus className="w-4 h-4" />
+                }
+              </div>
               <Input
-                id="amount" 
-                type="text" 
-                inputMode="decimal" 
+                id="amount"
+                type="text"
+                inputMode="decimal"
+                placeholder="0"
                 value={formData.amount}
-                onChange={(e) => !isDisabled && handlePriceChange(e.target.value)}
-                placeholder="Например: 50 000" 
-                required 
-                disabled={isDisabled || isReadOnly}
-                className="rounded-l-none focus-visible:ring-offset-0 focus-visible:ring-1"
+                onChange={(e) => !isDisabled && handleAmountChange(e.target.value)}
+                disabled={isDisabled}
+                className={cn(
+                  "h-14 pl-14 pr-16 text-xl font-semibold bg-muted/50 border-transparent focus:border-primary transition-all duration-200",
+                  "placeholder:text-muted-foreground/50",
+                  isDisabled && "opacity-50 cursor-not-allowed"
+                )}
               />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                ₸
+              </span>
             </div>
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="description">Описание</Label>
+
+          {/* Description Input */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <Label htmlFor="description" className="text-sm font-medium">Описание</Label>
+              <span className={cn(
+                "text-xs",
+                formData.description.length > 450 ? "text-red-500" : "text-muted-foreground"
+              )}>
+                {formData.description.length}/500
+              </span>
+            </div>
             <Textarea
-              id="description" 
+              id="description"
               value={formData.description}
-              onChange={(e) => !isDisabled && setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Описание операции (например, 'Закупка материалов')"
-              rows={3} 
-              disabled={isDisabled || isReadOnly}
+              onChange={(e) => !isDisabled && setFormData(prev => ({ 
+                ...prev, 
+                description: e.target.value.slice(0, 500) 
+              }))}
+              placeholder="Введите описание операции..."
+              rows={3}
+              disabled={isDisabled}
+              className={cn(
+                "resize-none bg-muted/50 border-transparent focus:border-primary transition-all duration-200",
+                isDisabled && "opacity-50 cursor-not-allowed"
+              )}
             />
           </div>
-          
-          <DialogFooter className="flex-col sm:flex-row sm:justify-between sm:space-x-2 pt-4">
-            {isEditMode && canEdit ? (
-              <Button 
-                type="button" 
-                variant="destructive" 
-                onClick={handleDelete} 
-                disabled={isLoading || isReadOnly}
+
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            {!isReadOnly && (
+              <Button
+                onClick={handleSubmit}
+                disabled={isLoading || !formData.amount || Number(getNumericValue(formData.amount)) <= 0}
+                className={cn(
+                  "w-full h-12 text-base font-medium transition-all duration-200",
+                  transactionType === 'income' 
+                    ? "bg-green-500 hover:bg-green-600 text-white" 
+                    : "bg-red-500 hover:bg-red-600 text-white"
+                )}
+              >
+                {isLoading ? 'Сохранение...' : 
+                 isEditMode ? 'Сохранить изменения' : 
+                 transactionType === 'income' ? 'Добавить доход' : 'Добавить расход'}
+                {formData.amount && Number(getNumericValue(formData.amount)) > 0 && (
+                  <span className="ml-1 font-semibold">
+                    {formatPrice(getNumericValue(formData.amount))} ₸
+                  </span>
+                )}
+              </Button>
+            )}
+
+            {isEditMode && canEdit && !isReadOnly && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDelete}
+                disabled={isLoading}
+                className="w-full h-10 text-red-500 border-red-200 hover:bg-red-50 hover:border-red-300"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Удалить
+                Удалить операцию
               </Button>
-            ) : <div />}
-            
-            <div className="flex justify-end space-x-2">
-             
-              
-              {!isReadOnly && (
-                <Button 
-                  type="submit" 
-                  disabled={isDisabled || !formData.amount}
-                >
-                  {isLoading ? 'Сохранение...' : isEditMode ? 'Сохранить изменения' : 'Добавить'}
-                </Button>
-              )}
+            )}
+          </div>
+
+          {/* Read-only message */}
+          {isReadOnly && !isEditMode && (
+            <div className="text-center text-sm text-muted-foreground pt-2">
+              Операция доступна только для просмотра
             </div>
-          </DialogFooter>
-        </form>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
