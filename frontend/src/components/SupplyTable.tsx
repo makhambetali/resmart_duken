@@ -157,7 +157,7 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
                           <div className="flex items-center gap-2">
                             {supply.supplier}
                             {/* --- Начало изменений: Добавлен символ переноса --- */}
-                            {(supply as any).is_rescheduled && (
+                            {(supply as any).rescheduled_cnt > 0 && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <svg 
@@ -178,7 +178,7 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
                                   </svg>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Перенесенная поставка</p>
+                                  <p>Поставка была перенесена: {supply.rescheduled_cnt} </p>
                                 </TooltipContent>
                               </Tooltip>
                             )}

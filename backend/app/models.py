@@ -40,7 +40,7 @@ class Supply(models.Model):
     arrival_date = models.DateTimeField(null=True, blank=True)
     date_added = models.DateTimeField(auto_now_add=True)
     invoice_html = models.TextField(blank=True)
-    is_rescheduled = models.BooleanField(default=False)
+    rescheduled_cnt = models.PositiveSmallIntegerField(default=0)
     def __str__(self):
         return f"{self.supplier}: {self.price_bank + self.price_cash}"
     

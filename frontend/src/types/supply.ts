@@ -10,7 +10,7 @@ export interface Supply {
   delivery_date: string;
   comment?: string;
   is_confirmed: boolean;
-  is_rescheduled?: boolean; // <-- Добавлено
+  rescheduled_cnt?: number
   date_added?: string;
   updated_at?: string;
   invoice_html: string;
@@ -27,7 +27,7 @@ export interface AddSupplyForm {
   delivery_date: string;
   comment: string;
   is_confirmed: boolean;
-  is_rescheduled?: boolean; // <-- Добавлено
+  rescheduled_cnt?: number
   invoice_html: string;
 }
 export interface Supplier {

@@ -406,7 +406,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
         else if (supply.price_bank > 0) paymentType = 'bank';
 
         setCreatedAt(supply.date_added || '');
-        setIsRescheduled((supply as any).is_rescheduled || false);
+        setIsRescheduled((supply as any).rescheduled_cnt || 0);
 
         const existingHtml = supply.invoice_html || '';
         setHasExistingHtml(!!existingHtml && existingHtml.length > 0);
