@@ -12,7 +12,7 @@ from .serializers import *
 from .pagination import SupplierResultsPaginationPage
 from .models import *
 from .services.supply import SupplyService
-from .services.supplier import SupplierService
+from .services.supplier import SupplierService, SupplierStats
 from .services.client import ClientService
 from .services.cashflow import CashFlowService
 
@@ -44,6 +44,13 @@ class SupplierViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         cache.delete('suppliers')
         return super().perform_create(serializer)
+    
+    @action(detail = True, methods = ['get'])
+    def get_stats(self, request, pk = None):
+        supplier_obj = self.get_object()
+        anal = SupplierStats(supplier_obj)
+        return JsonResponse(anal.execute())
+
     
     
 class TestViewSet(viewsets.ModelViewSet):

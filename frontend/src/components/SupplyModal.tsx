@@ -22,10 +22,12 @@ import {
   RefreshCw,
   Table,
   Merge,
-  Split
+  Split,
+  Info
 } from "lucide-react";
 import { formatPrice, getNumericValue } from '@/lib/utils';
 import { EditableInvoiceTable } from '@/components/EditableInvoiceTable';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SupplyModalProps {
   open: boolean;
@@ -44,6 +46,102 @@ interface ProcessedFile {
   isProcessing: boolean;
   structureSignature?: string; // сигнатура структуры таблицы
 }
+
+// Функция для форматирования байтов в читаемый вид
+const formatBytes = (bytes: number, decimals = 2): string => {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+};
+
+// Функция сжатия изображения
+const compressImage = async (file: File, maxSizeKB = 300): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      resolve(file);
+      return;
+    }
+    
+    // Проверяем, нужно ли сжимать
+    if (file.size <= maxSizeKB * 1024) {
+      resolve(file);
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    
+    reader.onload = (e) => {
+      const img = new Image();
+      img.src = e.target?.result as string;
+      
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Canvas context not available'));
+          return;
+        }
+        
+        // Рассчитываем новые размеры
+        let width = img.width;
+        let height = img.height;
+        const maxDimension = 1200;
+        
+        if (width > maxDimension || height > maxDimension) {
+          const ratio = Math.min(maxDimension / width, maxDimension / height);
+          width = Math.floor(width * ratio);
+          height = Math.floor(height * ratio);
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Рисуем сжатое изображение
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Качество в зависимости от максимального размера
+        const quality = maxSizeKB < 200 ? 0.8 : 0.85;
+        
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Blob creation failed'));
+              return;
+            }
+            
+            const compressedFile = new File(
+              [blob],
+              file.name.replace(/\.[^/.]+$/, '') + '.jpg',
+              { 
+                type: 'image/jpeg', 
+                lastModified: Date.now() 
+              }
+            );
+            
+            resolve(compressedFile);
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      
+      img.onerror = () => {
+        reject(new Error('Image loading failed'));
+      };
+    };
+    
+    reader.onerror = () => {
+      reject(new Error('File reading failed'));
+    };
+  });
+};
 
 export const SupplyModal: React.FC<SupplyModalProps> = ({
   open,
@@ -437,7 +535,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
@@ -458,9 +556,32 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
       return;
     }
     
-    setSelectedFiles(prev => [...prev, ...uniqueNewFiles]);
+    // Сжимаем изображения перед добавлением
+    const processedNewFiles: File[] = [];
     
-    const newProcessedFiles: ProcessedFile[] = uniqueNewFiles.map(file => ({
+    for (const file of uniqueNewFiles) {
+      if (file.type.startsWith('image/')) {
+        try {
+          const compressedFile = await compressImage(file, 300); // Сжимаем до 300KB
+          processedNewFiles.push(compressedFile);
+          
+          // Логируем сжатие в консоль (для разработчика)
+          if (compressedFile.size < file.size) {
+            const savingsPercent = ((file.size - compressedFile.size) / file.size * 100).toFixed(1);
+            console.log(`[Сжатие] ${file.name}: ${formatBytes(file.size)} → ${formatBytes(compressedFile.size)} (${savingsPercent}% экономии)`);
+          }
+        } catch (error) {
+          console.error('Ошибка сжатия файла:', file.name, error);
+          processedNewFiles.push(file); // Используем оригинал в случае ошибки
+        }
+      } else {
+        processedNewFiles.push(file); // PDF не сжимаем
+      }
+    }
+    
+    setSelectedFiles(prev => [...prev, ...processedNewFiles]);
+    
+    const newProcessedFiles: ProcessedFile[] = processedNewFiles.map(file => ({
       file,
       html: '',
       isProcessing: true
@@ -633,484 +754,507 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   };
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-screen h-screen max-w-2xl max-h-[650px] rounded-none border-none overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex justify-between items-center">
-              <span>{supply ? 'Редактировать поставку' : 'Добавить поставку'}</span>
-              
-              {isRescheduled && supply && (
-                <div className="flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Перенесена</span>
-                </div>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
-              <div className="space-y-2">
-                <Label htmlFor="supplier">Поставщик</Label>
-                <SupplierSearchCombobox 
-                  value={formData.supplier} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, supplier: value }))} 
-                  placeholder="Выберите поставщика..." 
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="paymentType">Тип оплаты</Label>
-                <Select value={formData.paymentType} onValueChange={handlePaymentTypeChange}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">Наличные</SelectItem>
-                    <SelectItem value="bank">Банк</SelectItem>
-                    <SelectItem value="mixed">Смешанная</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="cashAmount">Сумма наличными (₸)</Label>
-                <Input 
-                  id="cashAmount" 
-                  type="text"
-                  inputMode="numeric" 
-                  placeholder="0" 
-                  value={formData.price_cash} 
-                  onChange={(e) => handlePriceChange('price_cash', e.target.value)} 
-                  disabled={formData.paymentType === 'bank'} 
-                  onFocus={() => handleFocus('price_cash')} 
-                  onBlur={() => handleBlur('price_cash')} 
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="bankAmount">Сумма банком (₸)</Label>
-                <Input 
-                  id="bankAmount" 
-                  type="text"
-                  inputMode="numeric" 
-                  placeholder="0" 
-                  value={formData.price_bank} 
-                  onChange={(e) => handlePriceChange('price_bank', e.target.value)} 
-                  disabled={formData.paymentType === 'cash'} 
-                  onFocus={() => handleFocus('price_bank')} 
-                  onBlur={() => handleBlur('price_bank')} 
-                />
-              </div>
-              
-              <div className="md:col-span-2">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="bonus">Бонус</Label>
-                    <Input 
-                      id="bonus" 
-                      type="number" 
-                      max="999"
-                      inputMode="numeric" 
-                      value={formData.bonus} 
-                      onChange={(e) => handleNumericInputChange('bonus', e.target.value)} 
-                      onFocus={() => handleFocus('bonus')} 
-                      onBlur={() => handleBlur('bonus')} 
-                    />
+    <TooltipProvider>
+      <>
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="w-screen h-screen max-w-2xl max-h-[650px] rounded-none border-none overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex justify-between items-center">
+                <span>{supply ? 'Редактировать поставку' : 'Добавить поставку'}</span>
+                
+                {isRescheduled && supply && (
+                  <div className="flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Перенесена</span>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="exchange">Обмен</Label>
-                    <Input 
-                      id="exchange" 
-                      type="number" 
-                      max="999" 
-                      inputMode="numeric"
-                      value={formData.exchange} 
-                      onChange={(e) => handleNumericInputChange('exchange', e.target.value)} 
-                      onFocus={() => handleFocus('exchange')} 
-                      onBlur={() => handleBlur('exchange')} 
-                    />
-                  </div>
-                  
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="deliveryDate">Дата поставки</Label>
-                    <Input 
-                      id="deliveryDate" 
-                      type="date" 
-                      min={today} 
-                      max={plus7} 
-                      value={formData.delivery_date} 
-                      onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))} 
-                    />
-                  </div>
-                </div>
-                {!isToday && (
-                  <p className="text-sm text-amber-600 mt-2">
-                    ⚠️ Подтверждение и загрузка документов доступны только для сегодняшней даты.
-                  </p>
                 )}
-              </div>
-              
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="comment">Комментарий</Label>
-                <Textarea 
-                  id="comment" 
-                  value={formData.comment} 
-                  onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))} 
-                  rows={3} 
-                />
-              </div>
+              </DialogTitle>
+            </DialogHeader>
 
-              {/* Блок загрузки файлов */}
-              <div className="space-y-2 md:col-span-2">
-                <div className="flex justify-between items-center">
-                  <Label>Документы (PDF или Фото)</Label>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setIsPreviewModalOpen(true)}
-                    disabled={!hasPreviewContent || isProcessingFiles}
-                    className="gap-1.5"
-                  >
-                    <Eye className="w-4 h-4" />
-                    Редактировать таблицу
-                    {hasNewProcessedFiles && (
-                      <span className="text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
-                        {processedFilesWithHtml.length}
-                      </span>
-                    )}
-                    {tableHasChanges && <span className="ml-1 text-green-600 font-bold">*</span>}
-                  </Button>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <div className="space-y-2">
+                  <Label htmlFor="supplier">Поставщик</Label>
+                  <SupplierSearchCombobox 
+                    value={formData.supplier} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, supplier: value }))} 
+                    placeholder="Выберите поставщика..." 
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="paymentType">Тип оплаты</Label>
+                  <Select value={formData.paymentType} onValueChange={handlePaymentTypeChange}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Наличные</SelectItem>
+                      <SelectItem value="bank">Банк</SelectItem>
+                      <SelectItem value="mixed">Смешанная</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="cashAmount">Сумма наличными (₸)</Label>
+                  <Input 
+                    id="cashAmount" 
+                    type="text"
+                    inputMode="numeric" 
+                    placeholder="0" 
+                    value={formData.price_cash} 
+                    onChange={(e) => handlePriceChange('price_cash', e.target.value)} 
+                    disabled={formData.paymentType === 'bank'} 
+                    onFocus={() => handleFocus('price_cash')} 
+                    onBlur={() => handleBlur('price_cash')} 
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="bankAmount">Сумма банком (₸)</Label>
+                  <Input 
+                    id="bankAmount" 
+                    type="text"
+                    inputMode="numeric" 
+                    placeholder="0" 
+                    value={formData.price_bank} 
+                    onChange={(e) => handlePriceChange('price_bank', e.target.value)} 
+                    disabled={formData.paymentType === 'cash'} 
+                    onFocus={() => handleFocus('price_bank')} 
+                    onBlur={() => handleBlur('price_bank')} 
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="bonus">Бонус</Label>
+                      <Input 
+                        id="bonus" 
+                        type="number" 
+                        max="999"
+                        inputMode="numeric" 
+                        value={formData.bonus} 
+                        onChange={(e) => handleNumericInputChange('bonus', e.target.value)} 
+                        onFocus={() => handleFocus('bonus')} 
+                        onBlur={() => handleBlur('bonus')} 
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="exchange">Обмен</Label>
+                      <Input 
+                        id="exchange" 
+                        type="number" 
+                        max="999" 
+                        inputMode="numeric"
+                        value={formData.exchange} 
+                        onChange={(e) => handleNumericInputChange('exchange', e.target.value)} 
+                        onFocus={() => handleFocus('exchange')} 
+                        onBlur={() => handleBlur('exchange')} 
+                      />
+                    </div>
+                    
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="deliveryDate">Дата поставки</Label>
+                      <Input 
+                        id="deliveryDate" 
+                        type="date" 
+                        min={today} 
+                        max={plus7} 
+                        value={formData.delivery_date} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))} 
+                      />
+                    </div>
+                  </div>
+                  {!isToday && (
+                    <p className="text-sm text-amber-600 mt-2">
+                      ⚠️ Подтверждение и загрузка документов доступны только для сегодняшней даты.
+                    </p>
+                  )}
+                </div>
+                
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="comment">Комментарий</Label>
+                  <Textarea 
+                    id="comment" 
+                    value={formData.comment} 
+                    onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))} 
+                    rows={3} 
+                  />
                 </div>
 
-                {/* Статистика обработки */}
-                {processedFilesWithHtml.length > 0 && (
-                  <div className="mt-4 p-3 border rounded-lg bg-green-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-green-800 flex items-center gap-2">
-                        <Table className="w-4 h-4" />
-                        Обработанные таблицы: {tableGroups.length}
-                      </h4>
-                      <div className="flex gap-2">
+                {/* Блок загрузки файлов */}
+                <div className="space-y-2 md:col-span-2">
+                  <div className="flex justify-between items-center">
+                    <Label>Документы (PDF или Фото)</Label>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setIsPreviewModalOpen(true)}
+                      disabled={!hasPreviewContent || isProcessingFiles}
+                      className="gap-1.5"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Редактировать таблицу
+                      {hasNewProcessedFiles && (
+                        <span className="text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
+                          {processedFilesWithHtml.length}
+                        </span>
+                      )}
+                      {tableHasChanges && <span className="ml-1 text-green-600 font-bold">*</span>}
+                    </Button>
+                  </div>
+
+                  {/* Статистика обработки */}
+                  {processedFilesWithHtml.length > 0 && (
+                    <div className="mt-4 p-3 border rounded-lg bg-green-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium text-green-800 flex items-center gap-2">
+                          <Table className="w-4 h-4" />
+                          Обработанные таблицы: {tableGroups.length}
+                        </h4>
+                        <div className="flex gap-2">
+                          {tableGroups.length > 1 && (
+                            <>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleForceCombineTables}
+                                className="h-7 gap-1.5 text-xs"
+                                disabled={processingStrategy === 'auto'}
+                              >
+                                <Merge className="w-3 h-3" />
+                                Объединить все
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleForceSeparateTables}
+                                className="h-7 gap-1.5 text-xs"
+                                disabled={processingStrategy === 'separate'}
+                              >
+                                <Split className="w-3 h-3" />
+                                Разделить
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="text-sm text-green-600 space-y-1">
+                        <p>• Файлов обработано: {processedFilesWithHtml.length}</p>
+                        <p>• Сгруппировано по структуре: {tableGroups.length} таблиц</p>
                         {tableGroups.length > 1 && (
-                          <>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={handleForceCombineTables}
-                              className="h-7 gap-1.5 text-xs"
-                              disabled={processingStrategy === 'auto'}
-                            >
-                              <Merge className="w-3 h-3" />
-                              Объединить все
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={handleForceSeparateTables}
-                              className="h-7 gap-1.5 text-xs"
-                              disabled={processingStrategy === 'separate'}
-                            >
-                              <Split className="w-3 h-3" />
-                              Разделить
-                            </Button>
-                          </>
+                          <p className="text-amber-600">
+                            ⓘ Обнаружены разные структуры таблиц
+                          </p>
                         )}
                       </div>
                     </div>
-                    
-                    <div className="text-sm text-green-600 space-y-1">
-                      <p>• Файлов обработано: {processedFilesWithHtml.length}</p>
-                      <p>• Сгруппировано по структуре: {tableGroups.length} таблиц</p>
-                      {tableGroups.length > 1 && (
-                        <p className="text-amber-600">
-                          ⓘ Обнаружены разные структуры таблиц
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {hasExistingHtml && !hasNewProcessedFiles && (
-                  <div className="mt-4 p-3 border rounded-lg bg-blue-50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium text-blue-800">
-                          Существующий HTML документ
-                        </h4>
-                        <p className="text-sm text-blue-600 mt-1">
-                          {supply ? 'Загрузите новые файлы чтобы заменить текущий документ' : 'Используется существующий HTML'}
-                        </p>
-                      </div>
-                      <div className="text-sm text-blue-700 font-medium">
-                        ✓ Загружен
+                  {hasExistingHtml && !hasNewProcessedFiles && (
+                    <div className="mt-4 p-3 border rounded-lg bg-blue-50">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-blue-800">
+                            Существующий HTML документ
+                          </h4>
+                          <p className="text-sm text-blue-600 mt-1">
+                            {supply ? 'Загрузите новые файлы чтобы заменить текущий документ' : 'Используется существующий HTML'}
+                          </p>
+                        </div>
+                        <div className="text-sm text-blue-700 font-medium">
+                          ✓ Загружен
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {!hasExistingHtml && !hasNewProcessedFiles && currentHtmlForTable.length > 0 && (
-                  <div className="mt-4 p-3 border rounded-lg bg-amber-50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium text-amber-800">
-                          Таблица загружена
-                        </h4>
-                        <p className="text-sm text-amber-600 mt-1">
-                          Нажмите "Редактировать таблицу" для просмотра и изменения
-                        </p>
-                      </div>
-                      <div className="text-sm text-amber-700 font-medium">
-                        ⓘ Загружено
+                  {!hasExistingHtml && !hasNewProcessedFiles && currentHtmlForTable.length > 0 && (
+                    <div className="mt-4 p-3 border rounded-lg bg-amber-50">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-amber-800">
+                            Таблица загружена
+                          </h4>
+                          <p className="text-sm text-amber-600 mt-1">
+                            Нажмите "Редактировать таблицу" для просмотра и изменения
+                          </p>
+                        </div>
+                        <div className="text-sm text-amber-700 font-medium">
+                          ⓘ Загружено
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {!hasExistingHtml && !hasNewProcessedFiles && currentHtmlForTable.length === 0 && (
-                  <div className="mt-4 p-3 border rounded-lg bg-gray-50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium text-gray-800">
-                          Нет таблицы
-                        </h4>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Загрузите файлы чтобы создать таблицу или создайте пустую таблицу в редакторе
-                        </p>
-                      </div>
-                      <div className="text-sm text-gray-700 font-medium">
-                        ⓘ Нет данных
+                  {!hasExistingHtml && !hasNewProcessedFiles && currentHtmlForTable.length === 0 && (
+                    <div className="mt-4 p-3 border rounded-lg bg-gray-50">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-gray-800">
+                            Нет таблицы
+                          </h4>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Загрузите файлы чтобы создать таблицу или создайте пустую таблицу в редакторе
+                          </p>
+                        </div>
+                        <div className="text-sm text-gray-700 font-medium">
+                          ⓘ Нет данных
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                <div className="flex flex-wrap gap-2 mt-4">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => fileInputRef.current?.click()} 
-                    disabled={!isToday || isProcessingFiles}
-                    className="gap-1.5"
-                  >
-                    <Upload className="w-4 h-4" />
-                    {isMobile ? 'Выбрать файлы' : 'Выберите файлы'}
-                  </Button>
-                  
-                  {isMobile && (
+                  <div className="flex flex-wrap gap-2 mt-4">
                     <Button 
                       type="button" 
                       variant="outline" 
-                      onClick={() => cameraInputRef.current?.click()} 
+                      onClick={() => fileInputRef.current?.click()} 
                       disabled={!isToday || isProcessingFiles}
                       className="gap-1.5"
                     >
-                      <Camera className="w-4 h-4" />
-                      Сфотографировать
+                      <Upload className="w-4 h-4" />
+                      {isMobile ? 'Выбрать файлы' : 'Выберите файлы'}
                     </Button>
+                    
+                    {isMobile && (
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => cameraInputRef.current?.click()} 
+                        disabled={!isToday || isProcessingFiles}
+                        className="gap-1.5"
+                      >
+                        <Camera className="w-4 h-4" />
+                        Сфотографировать
+                      </Button>
+                    )}
+                  </div>
+
+                  <input 
+                    ref={cameraInputRef} 
+                    type="file" 
+                    accept="image/*" 
+                    capture="environment" 
+                    onChange={handleFileSelect} 
+                    className="hidden" 
+                    disabled={isProcessingFiles}
+                  />
+                  <input 
+                    ref={fileInputRef} 
+                    type="file" 
+                    accept="image/*,.pdf" 
+                    multiple
+                    onChange={handleFileSelect} 
+                    className="hidden" 
+                    disabled={isProcessingFiles}
+                  />
+                  
+                  {selectedFiles.length > 0 && (
+                    <div className="space-y-2 mt-3">
+                      <Label className="text-sm">Выбранные файлы:</Label>
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {selectedFiles.map((file, index) => {
+                          const processedFile = processedFiles[index];
+                          return (
+                            <div key={index} className="flex items-center justify-between p-2 border rounded-md bg-muted/20">
+                              <div className="flex items-center space-x-2 flex-1">
+                                <FileText className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-sm truncate">{file.name}</span>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                    >
+                                      <Info className="w-3 h-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="text-xs space-y-1">
+                                      <div className="font-medium">Информация о файле:</div>
+                                      <div>Размер: {formatBytes(file.size)}</div>
+                                      <div>Тип: {file.type}</div>
+                                      <div className="text-muted-foreground">
+                                        Изображения автоматически сжимаются до 300KB
+                                      </div>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                                {processedFile?.isProcessing && (
+                                  <Loader2 className="w-3 h-3 animate-spin text-blue-600" />
+                                )}
+                                {processedFile?.html && !processedFile?.isProcessing && (
+                                  <span className="text-xs text-green-600">✓ Обработан</span>
+                                )}
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveFile(index)}
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                disabled={isProcessingFiles}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {isProcessingFiles && (
+                    <div className="flex items-center text-sm text-blue-600 mt-2">
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Обработка файлов с помощью AI...
+                      <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+                        {processingFiles.length} из {selectedFiles.length}
+                      </span>
+                    </div>
                   )}
                 </div>
 
-                <input 
-                  ref={cameraInputRef} 
-                  type="file" 
-                  accept="image/*" 
-                  capture="environment" 
-                  onChange={handleFileSelect} 
-                  className="hidden" 
-                  disabled={isProcessingFiles}
-                />
-                <input 
-                  ref={fileInputRef} 
-                  type="file" 
-                  accept="image/*,.pdf" 
-                  multiple
-                  onChange={handleFileSelect} 
-                  className="hidden" 
-                  disabled={isProcessingFiles}
-                />
-                 
-                {selectedFiles.length > 0 && (
-                  <div className="space-y-2 mt-3">
-                    <Label className="text-sm">Выбранные файлы:</Label>
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {selectedFiles.map((file, index) => {
-                        const processedFile = processedFiles[index];
-                        return (
-                          <div key={index} className="flex items-center justify-between p-2 border rounded-md bg-muted/20">
-                            <div className="flex items-center space-x-2 flex-1">
-                              <FileText className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-sm truncate">{file.name}</span>
-                              {processedFile?.isProcessing && (
-                                <Loader2 className="w-3 h-3 animate-spin text-blue-600" />
-                              )}
-                              {processedFile?.html && !processedFile?.isProcessing && (
-                                <span className="text-xs text-green-600">✓ Обработан</span>
-                              )}
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveFile(index)}
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                              disabled={isProcessingFiles}
-                            >
-                              <X className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {isProcessingFiles && (
-                  <div className="flex items-center text-sm text-blue-600 mt-2">
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Обработка файлов с помощью AI...
-                    <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
-                      {processingFiles.length} из {selectedFiles.length}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center space-x-2 md:col-span-2">
-                <Checkbox 
-                  id="isConfirmed" 
-                  checked={formData.is_confirmed} 
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_confirmed: Boolean(checked) }))} 
-                  disabled={!isToday} 
-                />
-                <Label htmlFor="isConfirmed" className={!isToday ? 'text-muted-foreground' : ''}>
-                  Подтверждена
-                </Label>
-              </div>
-            </div>
-            
-            {supply && createdAt && (
-              <div className="md:col-span-2 p-3 border rounded-lg bg-gray-50">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <CalendarClock className="w-4 h-4" />
-                  <span>Создано: {formatCreatedAt(createdAt)}</span>
+                <div className="flex items-center space-x-2 md:col-span-2">
+                  <Checkbox 
+                    id="isConfirmed" 
+                    checked={formData.is_confirmed} 
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_confirmed: Boolean(checked) }))} 
+                    disabled={!isToday} 
+                  />
+                  <Label htmlFor="isConfirmed" className={!isToday ? 'text-muted-foreground' : ''}>
+                    Подтверждена
+                  </Label>
                 </div>
               </div>
-            )}
+              
+              {supply && createdAt && (
+                <div className="md:col-span-2 p-3 border rounded-lg bg-gray-50">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <CalendarClock className="w-4 h-4" />
+                    <span>Создано: {formatCreatedAt(createdAt)}</span>
+                  </div>
+                </div>
+              )}
 
-            <div className="flex justify-between items-center pt-4">
-              <div>
-                {supply && (
+              <div className="flex justify-between items-center pt-4">
+                <div>
+                  {supply && (
+                    <Button 
+                      type="button" 
+                      variant="destructive" 
+                      onClick={() => handleDeleteSupply(supply.id)} 
+                      disabled={isLoading || isProcessingFiles}
+                    >
+                      <Trash className="w-4 h-4 mr-2" />
+                      Удалить
+                    </Button>
+                  )}
+                </div>
+                <div className="flex space-x-2">
                   <Button 
                     type="button" 
-                    variant="destructive" 
-                    onClick={() => handleDeleteSupply(supply.id)} 
-                    disabled={isLoading || isProcessingFiles}
+                    variant="ghost" 
+                    onClick={() => onOpenChange(false)}
+                    disabled={isProcessingFiles}
                   >
-                    <Trash className="w-4 h-4 mr-2" />
-                    Удалить
+                    Отмена
                   </Button>
-                )}
+                  <Button 
+                    type="submit" 
+                    disabled={isLoading || isProcessingFiles || !formData.supplier}
+                  >
+                    {isLoading ? 'Сохранение...' : (supply ? 'Обновить' : 'Добавить')}
+                  </Button>
+                </div>
               </div>
-              <div className="flex space-x-2">
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  onClick={() => onOpenChange(false)}
-                  disabled={isProcessingFiles}
-                >
-                  Отмена
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={isLoading || isProcessingFiles || !formData.supplier}
-                >
-                  {isLoading ? 'Сохранение...' : (supply ? 'Обновить' : 'Добавить')}
-                </Button>
-              </div>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+            </form>
+          </DialogContent>
+        </Dialog>
 
-      {/* Модальное окно для редактирования таблицы */}
-      <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
-        <DialogContent className="w-screen h-screen max-w-none max-h-none rounded-none border-none p-0 flex flex-col">
-          <DialogHeader className="flex-shrink-0 px-6 py-4 border-b bg-white">
-            <DialogTitle className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span>Редактирование таблицы</span>
-                {tableGroups.length > 0 && (
-                  <span className="text-sm font-normal text-muted-foreground">
-                    ({tableGroups.length} таблиц{tableGroups.length > 1 ? 'ы' : 'а'})
-                  </span>
-                )}
-                {tableHasChanges && (
-                  <span className="text-sm font-normal text-green-600">
-                    (есть изменения)
-                  </span>
-                )}
-              </div>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-grow overflow-auto bg-gray-50 p-4 print:p-0">
-            <style>{`
-              @media print {
-                body * {
-                  visibility: hidden;
+        {/* Модальное окно для редактирования таблицы */}
+        <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
+          <DialogContent className="w-screen h-screen max-w-none max-h-none rounded-none border-none p-0 flex flex-col">
+            <DialogHeader className="flex-shrink-0 px-6 py-4 border-b bg-white">
+              <DialogTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span>Редактирование таблицы</span>
+                  {tableGroups.length > 0 && (
+                    <span className="text-sm font-normal text-muted-foreground">
+                      ({tableGroups.length} таблиц{tableGroups.length > 1 ? 'ы' : 'а'})
+                    </span>
+                  )}
+                  {tableHasChanges && (
+                    <span className="text-sm font-normal text-green-600">
+                      (есть изменения)
+                    </span>
+                  )}
+                </div>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-grow overflow-auto bg-gray-50 p-4 print:p-0">
+              <style>{`
+                @media print {
+                  body * {
+                    visibility: hidden;
+                  }
+                  .invoice-print-container,
+                  .invoice-print-container * {
+                    visibility: visible;
+                  }
+                  .invoice-print-container {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    padding: 0;
+                    margin: 0;
+                  }
+                  .no-print {
+                    display: none !important;
+                  }
                 }
-                .invoice-print-container,
-                .invoice-print-container * {
-                  visibility: visible;
-                }
-                .invoice-print-container {
-                  position: absolute;
-                  left: 0;
-                  top: 0;
-                  width: 100%;
-                  padding: 0;
-                  margin: 0;
-                }
-                .no-print {
-                  display: none !important;
-                }
-              }
-            `}</style>
-            
-            <div className="invoice-print-container bg-white rounded-lg shadow-lg p-6 print:shadow-none print:rounded-none">
-              <EditableInvoiceTable
-                html={currentHtmlForTable}
-                onHtmlChange={handleHtmlChangeFromTable}
-              />
-            </div>
-          </div>
-          <DialogFooter className="flex-shrink-0 px-6 py-4 border-t bg-white no-print">
-            <div className="flex justify-between items-center w-full">
-              <div className="text-sm text-muted-foreground">
-                Используйте Ctrl+P для печати документа
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsPreviewModalOpen(false)}
-                >
-                  Закрыть
-                </Button>
-                <Button 
-                  onClick={handleSaveAndCloseTableModal}
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                >
-                  Сохранить
-                </Button>
+              `}</style>
+              
+              <div className="invoice-print-container bg-white rounded-lg shadow-lg p-6 print:shadow-none print:rounded-none">
+                <EditableInvoiceTable
+                  html={currentHtmlForTable}
+                  onHtmlChange={handleHtmlChangeFromTable}
+                />
               </div>
             </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+            <DialogFooter className="flex-shrink-0 px-6 py-4 border-t bg-white no-print">
+              <div className="flex justify-between items-center w-full">
+                <div className="text-sm text-muted-foreground">
+                  Используйте Ctrl+P для печати документа
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsPreviewModalOpen(false)}
+                  >
+                    Закрыть
+                  </Button>
+                  <Button 
+                    onClick={handleSaveAndCloseTableModal}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    Сохранить
+                  </Button>
+                </div>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
+    </TooltipProvider>
   );
 };

@@ -46,7 +46,8 @@ class Supply(models.Model):
     
     def save(self, *args, **kwargs):
         if self.is_confirmed and not self.arrival_date:
-            self.arrival_date = timezone.now()
+            self.arrival_date = timezone.localtime()
+
         elif not self.is_confirmed:
             self.arrival_date = None
         
