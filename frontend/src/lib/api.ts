@@ -142,6 +142,8 @@ export const suppliersApi = {
     apiRequest(`/suppliers/${id}/`, {
       method: 'DELETE',
     }),
+  getSupplierStats: (id: string) => 
+    apiRequest<SupplierStats>(`/suppliers/${id}/get_stats/`),
 };
 
 export const cashFlowApi = {

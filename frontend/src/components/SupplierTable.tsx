@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Supplier } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, History } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,9 +17,15 @@ interface SupplierTableProps {
   suppliers: Supplier[];
   onEdit: (supplier: Supplier) => void;
   onDelete: (id: string) => void;
+  onView: (supplier: Supplier) => void;
 }
 
-export const SupplierTable: React.FC<SupplierTableProps> = ({ suppliers, onEdit, onDelete }) => {
+export const SupplierTable: React.FC<SupplierTableProps> = ({ 
+  suppliers, 
+  onEdit, 
+  onDelete, 
+  onView 
+}) => {
   const [historyModal, setHistoryModal] = useState<{ open: boolean; supplierName: string }>({
     open: false,
     supplierName: '',
@@ -48,29 +54,41 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({ suppliers, onEdit,
         <TableBody>
           {suppliers.length > 0 ? (
             suppliers.map(supplier => (
-              <TableRow key={supplier.id}>
+              <TableRow 
+                key={supplier.id} 
+                className="cursor-pointer hover:bg-gray-50"
+                onClick={() => onView(supplier)}
+              >
                 <TableCell className="font-medium">{supplier.name}</TableCell>
                 <TableCell>{supplier.supervisor || '-'}</TableCell>
                 <TableCell>{supplier.supervisor_pn || '-'}</TableCell>
                 <TableCell>{format(new Date(supplier.date_added), 'dd.MM.yyyy')}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" className="h-8 w-8 p-0">
                         <span className="sr-only">Открыть меню</span>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => onView(supplier)}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        Просмотр
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => openHistory(supplier.name)}>
-                        <History className="h-4 w-4 mr-2" />
-                        История
+                        История поставок
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => onEdit(supplier)}>
+                        <Edit className="h-4 w-4 mr-2" />
                         Редактировать
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onDelete(supplier.id)} className="text-red-600">
+                      <DropdownMenuItem 
+                        onClick={() => onDelete(supplier.id)}
+                        className="text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
                         Удалить
                       </DropdownMenuItem>
                     </DropdownMenuContent>

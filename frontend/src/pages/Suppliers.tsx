@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '@/components/Layout';
 import { SupplierTable } from '@/components/SupplierTable';
 import { SupplierModal } from '@/components/SupplierModal';
+import { SupplierViewModal } from '@/components/SupplierViewModal'; // Новый компонент
 import { Supplier, CreateSupplierData, SupplierFilters, IsEverydaySupplyFilter } from '@/types/supplier';
 import { suppliersApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +19,9 @@ const SuppliersPage = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
 
   const [filters, setFilters] = useState<SupplierFilters>({
@@ -28,7 +31,6 @@ const SuppliersPage = () => {
     is_everyday_supply: 'all',
   });
 
-  // 🔧 ИСПРАВЛЕНО: Добавлены параметры кэширования и отключено обновление при фокусе окна
   const { 
     data: suppliersData, 
     isLoading: suppliersLoading, 
@@ -44,11 +46,11 @@ const SuppliersPage = () => {
         ? undefined 
         : filters.is_everyday_supply,
     }),
-    staleTime: 1000 * 60 * 2, // 2 минуты кэша
-    gcTime: 1000 * 60 * 10, // 10 минут хранения в кэше
-    refetchOnWindowFocus: false, // Не обновлять при переключении вкладок
-    keepPreviousData: true, // Сохранять предыдущие данные при загрузке
-    refetchOnMount: false, // Не обновлять при монтировании
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
+    keepPreviousData: true,
+    refetchOnMount: false,
   });
 
   const createMutation = useMutation({
@@ -60,7 +62,7 @@ const SuppliersPage = () => {
         className: "bg-green-500 text-white"   
       });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      setIsModalOpen(false);
+      setIsEditModalOpen(false);
     },
     onError: (error: any) => {
       toast({ 
@@ -81,7 +83,8 @@ const SuppliersPage = () => {
         className: "bg-green-500 text-white" 
       });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      setIsModalOpen(false);
+      setIsEditModalOpen(false);
+      setEditingSupplier(null);
     },
     onError: (error: any) => {
       toast({ 
@@ -113,12 +116,17 @@ const SuppliersPage = () => {
 
   const handleAdd = () => {
     setEditingSupplier(null);
-    setIsModalOpen(true);
+    setIsEditModalOpen(true);
+  };
+
+  const handleView = (supplier: Supplier) => {
+    setSelectedSupplier(supplier);
+    setIsViewModalOpen(true);
   };
 
   const handleEdit = (supplier: Supplier) => {
     setEditingSupplier(supplier);
-    setIsModalOpen(true);
+    setIsEditModalOpen(true);
   };
 
   const handleDelete = (id: string) => {
@@ -246,6 +254,7 @@ const SuppliersPage = () => {
                 suppliers={suppliersData?.results || []}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onView={handleView}
               />
             )}
           </CardContent>
@@ -303,9 +312,24 @@ const SuppliersPage = () => {
         )}
       </div>
 
+      {/* Модалка для просмотра (со статистикой) */}
+      <SupplierViewModal
+        open={isViewModalOpen}
+        onOpenChange={setIsViewModalOpen}
+        supplier={selectedSupplier}
+        onEdit={() => {
+          if (selectedSupplier) {
+            setIsViewModalOpen(false);
+            setEditingSupplier(selectedSupplier);
+            setIsEditModalOpen(true);
+          }
+        }}
+      />
+
+      {/* Модалка для редактирования (без статистики) */}
       <SupplierModal
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
         supplier={editingSupplier}
         onSubmit={handleSubmit}
         isLoading={createMutation.isPending || updateMutation.isPending}

@@ -31,3 +31,19 @@ export interface SuppliersResponse {
   previous: string | null;
   results: Supplier[];
 }
+export interface SupplierStats {
+  price: {
+    min: number;
+    max: number;
+    avg: number;
+    med: number;
+  };
+  count: number;
+  rescheduled_coef: number;
+  arrival_date: {
+    min: string;
+    max: string;
+    avg: string;
+    med: string;
+  };
+}

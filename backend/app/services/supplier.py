@@ -27,9 +27,9 @@ def ms_to_time(ms: int) -> time:
     seconds = ms // 1000
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
-    secs = seconds % 60
 
-    return time(hour=hours, minute=minutes, second=secs)
+
+    return time(hour=hours, minute=minutes).strftime("%H:%M")
 
 # from app.services.cache import CacheService
 class SupplierService:
@@ -73,7 +73,6 @@ class SupplierStats:
         self.supplier = supplier
 
     def execute(self) -> Dict:
-        # -------- TOTAL PRICE --------
         total_price = (
             Coalesce(F("price_bank"), 0)
             + Coalesce(F("price_cash"), 0)
@@ -83,21 +82,18 @@ class SupplierStats:
             supplier=self.supplier,
             is_confirmed=True,
         )
-
-        # -------- PRICE STATS --------
         price_stats = qs.aggregate(
             min=Min(total_price),
             max=Max(total_price),
             avg=Avg(total_price),
             med=Median(total_price),
             count=Count("id"),
+            rescheduled_cnt = Max("rescheduled_cnt")
         )
 
-        # -------- TIME (ms from start of day) --------
         arrival_time_ms = (
             Extract("arrival_date", "hour") * 3600000 +
-            Extract("arrival_date", "minute") * 60000 +
-            Extract("arrival_date", "second") * 1000
+            Extract("arrival_date", "minute") * 60000 
         )
 
         arrival_stats = qs.aggregate(
@@ -107,15 +103,15 @@ class SupplierStats:
             med=Median(arrival_time_ms),
         )
 
-        # -------- RESULT --------
         return {
             "price": {
                 "min": float(price_stats["min"]) if price_stats["min"] is not None else 0.0,
                 "max": float(price_stats["max"]) if price_stats["max"] is not None else 0.0,
-                "avg": float(price_stats["avg"]) if price_stats["avg"] is not None else 0.0,
+                "avg": round(price_stats["avg"], 2) if price_stats["avg"] is not None else 0.0,
                 "med": float(price_stats["med"]) if price_stats["med"] is not None else 0.0,
             },
             "count": price_stats["count"],
+            "rescheduled_coef": round((price_stats['rescheduled_cnt'] / price_stats['count']), 2),
             "arrival_date": {
                 # milliseconds from start of day
                 "min": ms_to_time(int(arrival_stats["min"])) if arrival_stats["min"] is not None else None,
