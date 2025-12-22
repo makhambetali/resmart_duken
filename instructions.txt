@@ -2,3 +2,28 @@ celery -A config worker --loglevel=info
 celery -A config beat --loglevel=info
 npm run dev -- --host 0.0.0.0
 python3 manage.py runserver 0.0.0.0:8000
+
+
+docker-compose up
+docker-compose up -d
+docker-compose up --build
+
+docker-compose down
+docker-compose down -v
+
+docker-compose restart
+
+docker-compose build
+
+docker-compose exec
+
+docker-compose logs -f backend
+
+SUMUP:
+up                → docker-compose up -d
+down              → docker-compose down
+restart backend   → docker-compose restart backend
+rebuild backend   → docker-compose build backend
+django shell      → docker-compose exec backend python manage.py shell
+migrate           → docker-compose exec backend python manage.py migrate
+logs              → docker-compose logs -f
