@@ -1,61 +1,55 @@
-version: '3.8'
+version: "3.9"
 
 services:
-  web:
-    build: .
-    command: python backend/manage.py runserver 0.0.0.0:8000
-    volumes:
-      - .:/app
-      - static_volume:/app/backend/staticfiles
-      - media_volume:/app/backend/media
-    ports:
-      - "8000:8000"
+  postgres:
+    image: postgres:15
+    container_name: postgres
     env_file:
       - .env
-    depends_on:
-      - redis
-      - db
-
-  db:
-    image: postgres:15
     volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
   redis:
     image: redis:7
+    container_name: redis
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
+
+  backend:
+    build: ./backend
+    container_name: backend
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8000:8000"
 
   celery:
-    build: .
-    command: celery -A config worker --loglevel=info
-    volumes:
-      - .:/app
+    build: ./backend
+    container_name: celery
+    command: celery -A config worker -l info
     env_file:
       - .env
     depends_on:
+      - backend
       - redis
-      - db
-  celery_beat:
-    build: .
-    command: celery -A config beat --loglevel=info
-    volumes:
-      - .:/app
-    env_file:
-      - .env
+      - postgres
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_GEMINI_API_KEY: ${VITE_GEMINI_API_KEY}
+    container_name: frontend
+    ports:
+      - "4173:4173"
     depends_on:
-      - redis
-      - db
+      - backend
+
 volumes:
   postgres_data:
-  redis_data:
-  static_volume:
-  media_volume:

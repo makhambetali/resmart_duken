@@ -8,9 +8,9 @@ from django.db.models import Q, F
 @shared_task
 def create_everyday_supply():
     suppliers = Supplier.objects.filter(is_everyday_supply = True)
-    # print(f'Найдено {len(suppliers)}: {', '.join([supplier.name for supplier in suppliers])}')
+    today = timezone.localdate()
     for supplier in suppliers:
-        supply = Supply.objects.create(supplier = supplier, delivery_date = timezone.now().date()+timedelta(days=1))
+        supply = Supply.objects.create(supplier = supplier, delivery_date = today)
         print(f'{supply} успешно создан')
     print("Периодическая задача выполняется!")
     return "Задача успешно выполнена."
@@ -18,9 +18,9 @@ def create_everyday_supply():
 @shared_task 
 def shift_supply_to_the_next_day():
     today = timezone.localdate()
-    supplies = Supply.objects.filter(delivery_date = today, is_confirmed=False)
+    supplies = Supply.objects.filter(delivery_date = today - timedelta(days=1), is_confirmed=False)
     supplies.update(
-        delivery_date = today + timedelta(days=1),
+        delivery_date = today,
         rescheduled_cnt=F("rescheduled_cnt") + 1,
     )
     
