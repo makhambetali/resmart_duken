@@ -26,6 +26,7 @@ class ClientDAO:
         # instance.delete()
         instance.is_valid = False
         instance.repaid_at = timezone.localtime()
+        instance.description = "Долг полностью погашен вручную."
         print(timezone.localtime())
         instance.save()
         logger.info(f'Удаление долга в размере {instance.debt_value} у клиента #{client.id}({client.name})')
@@ -103,7 +104,82 @@ class ClientDAO:
                         "responsible_employee",
                     ]
                 )
+            if remaining_amount > 0:
+                self.create_debt(
+                    client=client,
+                    debt_value= -remaining_amount,  # отрицательный долг
+                    responsible_employee_id=responsible_employee_id,
+                )
 
+    def apply_purchase_with_credit(self, client, purchase_amount, responsible_employee_id):
+        """
+        purchase_amount > 0
+        client.debt < 0
+        """
+        now = timezone.localtime()
+        timestamp = now.strftime("%d.%m.%Y %H:%M")
+
+        with transaction.atomic():
+            credit_debt = (
+                client.debts
+                .filter(is_valid=True, debt_value__lt=0)
+                .select_for_update()
+                .first()
+            )
+
+            if not credit_debt:
+                # На всякий случай
+                self.create_debt(client, purchase_amount, responsible_employee_id)
+                return
+
+            credit_amount = abs(credit_debt.debt_value)
+
+            if purchase_amount < credit_amount:
+                # 🔹 Кредит частично использован
+                new_credit = credit_amount - purchase_amount
+                credit_debt.debt_value = -new_credit
+
+                log = (
+                    f"[{timestamp}] Использована переплата клиента: "
+                    f"{purchase_amount:,} ₸. "
+                    f"Остаток переплаты — {new_credit:,} ₸."
+                )
+
+                credit_debt.description = (
+                    credit_debt.description + "\n" + log
+                    if credit_debt.description else log
+                )
+
+                credit_debt.save(update_fields=["debt_value", "description"])
+
+            else:
+                # 🔹 Кредит полностью использован
+                credit_debt.debt_value = 0
+                credit_debt.is_valid = False
+                credit_debt.repaid_at = now
+
+                log = (
+                    f"[{timestamp}] Переплата клиента полностью использована "
+                    f"при покупке на {purchase_amount:,} ₸."
+                )
+
+                credit_debt.description = (
+                    credit_debt.description + "\n" + log
+                    if credit_debt.description else log
+                )
+
+                credit_debt.save(
+                    update_fields=["debt_value", "is_valid", "repaid_at", "description"]
+                )
+
+                remaining = purchase_amount - credit_amount
+                if remaining > 0:
+                    # создаём обычный долг
+                    self.create_debt(
+                        client,
+                        remaining,
+                        responsible_employee_id
+                    )
 
 
     def get_debts(self, client: Client, is_valid = True):

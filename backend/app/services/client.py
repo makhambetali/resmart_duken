@@ -18,11 +18,26 @@ class ClientService:
         
         if not responsible_employee_id:
             raise ValidationError("Не указано ответственное лицо")
-        if debt_value > 0:
-            self.dao.create_debt(client, debt_value, responsible_employee_id)
+        if client.debt >= 0:
+            if debt_value > 0:
+                self.dao.create_debt(client, debt_value, responsible_employee_id)
+            else:
+                remaining_amount = abs(debt_value)
+                self.dao.allocate_payment(client, remaining_amount, responsible_employee_id)
+
         else:
-            remaining_amount = debt_value * -1
-            self.dao.allocate_payment(client, remaining_amount, responsible_employee_id)
+            # client.debt < 0 — у клиента есть кредит
+            if debt_value > 0:
+                self.dao.apply_purchase_with_credit(
+                    client,
+                    debt_value,
+                    responsible_employee_id
+                )
+            else:
+                # клиент возвращает ещё деньги — увеличиваем кредит
+                remaining_amount = abs(debt_value)
+                self.dao.allocate_payment(client, remaining_amount, responsible_employee_id)
+
         client.debt += debt_value
         logger.info(f'Создание долга в размере {debt_value} клиенту #{client.id}({client.name})')
         if client.debt == 0:
