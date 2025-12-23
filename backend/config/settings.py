@@ -75,7 +75,11 @@ TEMPLATES = [
         },
     },
 ]
-
+LANGUAGE_CODE = 'ru'
+TIME_ZONE = 'Asia/Qyzylorda'
+USE_I18N = True
+USE_L10N = True
+USE_TZ = True
 # =========================
 # DATABASE (PostgreSQL)
 # =========================
@@ -113,7 +117,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # =========================
 LANGUAGE_CODE = os.getenv("DJANGO_LANGUAGE_CODE", "ru")
 
-TIME_ZONE = os.getenv("DJANGO_TIMEZONE", "UTC")
+TIME_ZONE = os.getenv("DJANGO_TIMEZONE", "Asia/Qyzylorda")
 
 USE_I18N = True
 USE_TZ = True

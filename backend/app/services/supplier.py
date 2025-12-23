@@ -82,18 +82,12 @@ class SupplierStats:
     def __init__(self, supplier):
         self.supplier = supplier
 
-    # -------------------------
-    # Base queryset
-    # -------------------------
     def get_queryset(self):
         return Supply.objects.filter(
             supplier=self.supplier,
             is_confirmed=True,
         )
 
-    # -------------------------
-    # Price statistics
-    # -------------------------
     def get_price_stats(self, qs) -> Dict:
         total_price = (
             Coalesce(F("price_bank"), 0) +
@@ -109,7 +103,7 @@ class SupplierStats:
             rescheduled_cnt=Max("rescheduled_cnt"),
         )
 
-        count = stats["count"] or 1  # защита от деления на 0
+        count = stats["count"] or 1
 
         return {
             "min": float(stats["min"] or 0),
@@ -120,9 +114,6 @@ class SupplierStats:
             "count": stats["count"],
         }
 
-    # -------------------------
-    # Arrival time statistics
-    # -------------------------
     def get_arrival_time_stats(self, qs) -> Dict:
         arrival_time_ms = (
             Extract("arrival_date", "hour") * 3600000 +
@@ -142,10 +133,7 @@ class SupplierStats:
             "avg": ms_to_time(int(stats["avg"])) if stats["avg"] else None,
             "med": ms_to_time(int(stats["med"])) if stats["med"] else None,
         }
-
-    # -------------------------
-    # Arrival time prediction (TOP-3)
-    # -------------------------
+    #top3
     def get_arrival_prediction(self, qs) -> List[Dict]:
         arrivals = qs.values_list("arrival_date", flat=True)
 
@@ -184,9 +172,7 @@ class SupplierStats:
             for interval, probability in top_3
         ]
 
-    # -------------------------
-    # Public API
-    # -------------------------
+    # enter point
     def execute(self) -> Dict:
         qs = self.get_queryset()
 

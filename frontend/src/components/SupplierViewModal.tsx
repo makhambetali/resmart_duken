@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Supplier, SupplierStats } from '@/types/suppliers';
+import { Supplier, SupplierStats, ArrivalPrediction } from '@/types/suppliers'; // 🔧 Импортируем правильные типы
 import { 
   Dialog, 
   DialogContent, 
@@ -28,7 +28,10 @@ import {
   Info,
   ShieldCheck,
   CalendarDays,
-  Hash
+  Hash,
+  Target,
+  Zap,
+  Timer
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -43,10 +46,45 @@ interface SupplierViewModalProps {
   onEdit: () => void;
 }
 
+// 🔧 УДАЛЕНО: Больше не нужен ExtendedSupplierStats
+// interface ExtendedSupplierStats extends SupplierStats {
+//   arrival_prediction?: ArrivalPrediction[];
+// }
+
 const COEFFICIENT_CONFIG = {
   green: { min: 0, max: 0.4, color: 'bg-green-500', textColor: 'text-green-700', label: 'Хорошо' },
   yellow: { min: 0.5, max: 1, color: 'bg-yellow-500', textColor: 'text-yellow-700', label: 'Средне' },
   red: { min: 1.1, max: Infinity, color: 'bg-red-500', textColor: 'text-red-700', label: 'Плохо' },
+};
+
+const PREDICTION_COLORS = {
+  high: { 
+    bg: 'bg-emerald-500', 
+    text: 'text-emerald-700', 
+    bgLight: 'bg-emerald-50',
+    border: 'border-emerald-200',
+    label: 'Высокая'
+  },
+  medium: { 
+    bg: 'bg-amber-500', 
+    text: 'text-amber-700', 
+    bgLight: 'bg-amber-50',
+    border: 'border-amber-200',
+    label: 'Средняя'
+  },
+  low: { 
+    bg: 'bg-rose-500', 
+    text: 'text-rose-700', 
+    bgLight: 'bg-rose-50',
+    border: 'border-rose-200',
+    label: 'Низкая'
+  }
+};
+
+const getPredictionColor = (probability: number) => {
+  if (probability >= 70) return PREDICTION_COLORS.high;
+  if (probability >= 30) return PREDICTION_COLORS.medium;
+  return PREDICTION_COLORS.low;
 };
 
 const InfoRow = ({ icon: Icon, label, value, className = '' }: {
@@ -67,6 +105,80 @@ const InfoRow = ({ icon: Icon, label, value, className = '' }: {
     </div>
   </div>
 );
+
+const PredictionDisplay = ({ prediction }: { prediction: ArrivalPrediction[] }) => {
+  const sortedPrediction = [...prediction].sort((a, b) => b.probability - a.probability);
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-1.5 rounded-md bg-indigo-100">
+            <Target className="h-3.5 w-3.5 text-indigo-600" />
+          </div>
+          <h4 className="font-medium text-sm">Прогноз времени прибытия</h4>
+        </div>
+
+        <div className="space-y-3">
+          {sortedPrediction.map((item, index) => {
+            const color = getPredictionColor(item.probability);
+            const width = `${Math.min(item.probability, 100)}%`;
+            
+            return (
+              <div key={index} className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <div className={`h-2 w-2 rounded-full ${color.bg}`} />
+                    <span className="text-sm font-medium">{item.interval}</span>
+                  </div>
+                  <span className={cn("font-bold text-sm", color.text)}>
+                    {item.probability.toFixed(1)}%
+                  </span>
+                </div>
+                
+                <div className="relative h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                  <div 
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500",
+                      color.bg
+                    )}
+                    style={{ width }}
+                  />
+                </div>
+                
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>0%</span>
+                  <Badge 
+                    variant="outline" 
+                    className={cn("px-2 py-0.5 text-xs", color.border)}
+                  >
+                    {color.label} вероятность
+                  </Badge>
+                  <span>100%</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {sortedPrediction.length > 0 && (
+          <div className="mt-4 pt-3 border-t">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="h-3.5 w-3.5 text-amber-600" />
+              <h5 className="text-xs font-medium text-gray-700">Рекомендация:</h5>
+            </div>
+            <p className="text-xs text-gray-600">
+              {sortedPrediction[0].probability >= 70 
+                ? `Наиболее вероятное время прибытия: ${sortedPrediction[0].interval}. Можно планировать точно.`
+                : `Рекомендуется учитывать несколько временных интервалов. Основное время: ${sortedPrediction[0].interval}`
+              }
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const SupplierStatsDisplay = ({ stats, isLoading }: { stats: SupplierStats | null; isLoading: boolean }) => {
   if (isLoading) {
@@ -98,12 +210,19 @@ const SupplierStatsDisplay = ({ stats, isLoading }: { stats: SupplierStats | nul
     }
   };
 
-  const coeffColor = getCoefficientColor(stats.rescheduled_coef);
-  const coeffPercentage = Math.min(stats.rescheduled_coef * 50, 100);
+  // 🔧 ИСПРАВЛЕНО: Коэффициент теперь в stats.price.rescheduled_coef
+  const coeffColor = getCoefficientColor(stats.price.rescheduled_coef);
+  const coeffPercentage = Math.min(stats.price.rescheduled_coef * 50, 100);
+
+  // Проверяем наличие данных для отображения
+  const hasPriceData = stats.price && stats.price.count > 0;
+  // 🔧 ИСПРАВЛЕНО: Используем arrival_time вместо arrival_date
+  const hasArrivalTimeData = stats.arrival_time && stats.arrival_time.avg !== '00:00';
+  const hasPrediction = stats.arrival_prediction && stats.arrival_prediction.length > 0;
 
   return (
     <div className="space-y-6">
-      {/* Общая информация */}
+      {/* Основные метрики */}
       <div className="grid grid-cols-2 gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
           <CardContent className="p-4">
@@ -113,7 +232,8 @@ const SupplierStatsDisplay = ({ stats, isLoading }: { stats: SupplierStats | nul
               </div>
               <div>
                 <div className="text-xs text-gray-600 font-medium">Всего поставок</div>
-                <div className="text-2xl font-bold text-gray-900">{stats.count}</div>
+                {/* 🔧 ИСПРАВЛЕНО: Количество теперь в stats.price.count */}
+                <div className="text-2xl font-bold text-gray-900">{stats.price.count}</div>
               </div>
             </div>
           </CardContent>
@@ -127,8 +247,9 @@ const SupplierStatsDisplay = ({ stats, isLoading }: { stats: SupplierStats | nul
               </div>
               <div>
                 <div className="text-xs text-gray-600 font-medium">Коэффициент переносов</div>
+                {/* 🔧 ИСПРАВЛЕНО: Коэффициент теперь в stats.price.rescheduled_coef */}
                 <div className="text-2xl font-bold mt-1" style={{ color: coeffColor.textColor }}>
-                  {stats.rescheduled_coef.toFixed(2)}
+                  {stats.price.rescheduled_coef.toFixed(2)}
                 </div>
               </div>
             </div>
@@ -136,99 +257,122 @@ const SupplierStatsDisplay = ({ stats, isLoading }: { stats: SupplierStats | nul
         </Card>
       </div>
 
+      {/* Прогноз времени прибытия */}
+      {hasPrediction && (
+        <PredictionDisplay prediction={stats.arrival_prediction} />
+      )}
+
       {/* Прогресс-бар коэффициента */}
-      <div className="space-y-3">
-        <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-gray-700">Стабильность поставок</span>
-          <Badge 
-            variant="outline" 
-            className={`font-semibold ${coeffColor.textColor}`}
-            style={{ 
-              borderColor: coeffColor.textColor.replace('text-', ''),
-              color: coeffColor.textColor 
-            }}
-          >
-            {coeffColor.label}
-          </Badge>
-        </div>
-        <Progress value={coeffPercentage} className="h-2" />
-        <div className="flex justify-between text-xs text-gray-500">
-          <span>0 (идеально)</span>
-          <span>2+ (критично)</span>
-        </div>
-      </div>
+      <Card>
+        <CardContent className="p-4">
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Timer className="h-4 w-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">Стабильность поставок</span>
+              </div>
+              <Badge 
+                variant="outline" 
+                className={`font-semibold ${coeffColor.textColor}`}
+                style={{ 
+                  borderColor: coeffColor.textColor.replace('text-', ''),
+                  color: coeffColor.textColor 
+                }}
+              >
+                {coeffColor.label}
+              </Badge>
+            </div>
+            <Progress value={coeffPercentage} className="h-2" />
+            <div className="flex justify-between text-xs text-gray-500">
+              <div className="flex items-center gap-1">
+                <CheckCircle className="h-3 w-3 text-green-500" />
+                <span>0 (идеально)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3 text-red-500" />
+                <span>2+ (критично)</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Статистика цен */}
-      <Card>
-        <CardContent className="p-4">
-          <h4 className="font-medium text-sm flex items-center gap-2 mb-4">
-            <div className="p-1.5 rounded-md bg-green-100">
-              <DollarSign className="h-3.5 w-3.5 text-green-600" />
+      {hasPriceData && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-1.5 rounded-md bg-green-100">
+                <DollarSign className="h-3.5 w-3.5 text-green-600" />
+              </div>
+              <h4 className="font-medium text-sm">Статистика по ценам</h4>
             </div>
-            <span>Статистика по ценам</span>
-          </h4>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1 p-2 rounded-lg bg-gray-50">
-              <div className="text-xs text-gray-500 font-medium">Средняя цена</div>
-              <div className="font-bold text-gray-900">{stats.price.avg.toFixed(2)} ₸</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1 p-2 rounded-lg bg-gray-50">
+                <div className="text-xs text-gray-500 font-medium">Средняя цена</div>
+                <div className="font-bold text-gray-900">{stats.price.avg.toFixed(2)} ₸</div>
+              </div>
+              <div className="space-y-1 p-2 rounded-lg bg-gray-50">
+                <div className="text-xs text-gray-500 font-medium">Медиана</div>
+                <div className="font-bold text-gray-900">{stats.price.med.toFixed(2)} ₸</div>
+              </div>
+              <div className="space-y-1 p-2 rounded-lg bg-gray-50">
+                <div className="text-xs text-gray-500 font-medium">Минимальная</div>
+                <div className="font-bold text-gray-900">{stats.price.min.toFixed(2)} ₸</div>
+              </div>
+              <div className="space-y-1 p-2 rounded-lg bg-gray-50">
+                <div className="text-xs text-gray-500 font-medium">Максимальная</div>
+                <div className="font-bold text-gray-900">{stats.price.max.toFixed(2)} ₸</div>
+              </div>
             </div>
-            <div className="space-y-1 p-2 rounded-lg bg-gray-50">
-              <div className="text-xs text-gray-500 font-medium">Медиана</div>
-              <div className="font-bold text-gray-900">{stats.price.med.toFixed(2)} ₸</div>
-            </div>
-            <div className="space-y-1 p-2 rounded-lg bg-gray-50">
-              <div className="text-xs text-gray-500 font-medium">Минимальная</div>
-              <div className="font-bold text-gray-900">{stats.price.min.toFixed(2)} ₸</div>
-            </div>
-            <div className="space-y-1 p-2 rounded-lg bg-gray-50">
-              <div className="text-xs text-gray-500 font-medium">Максимальная</div>
-              <div className="font-bold text-gray-900">{stats.price.max.toFixed(2)} ₸</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Время прибытия */}
-      <Card>
-        <CardContent className="p-4">
-          <h4 className="font-medium text-sm flex items-center gap-2 mb-4">
-            <div className="p-1.5 rounded-md bg-blue-100">
-              <Clock className="h-3.5 w-3.5 text-blue-600" />
+      {hasArrivalTimeData && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-1.5 rounded-md bg-blue-100">
+                <Clock className="h-3.5 w-3.5 text-blue-600" />
+              </div>
+              <h4 className="font-medium text-sm">Историческое время прибытия</h4>
             </div>
-            <span>Время прибытия</span>
-          </h4>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1 p-2 rounded-lg bg-blue-50/50">
-              <div className="text-xs text-gray-500 font-medium">Среднее время</div>
-              <div className="font-bold text-gray-900 flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {stats.arrival_date.avg}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1 p-2 rounded-lg bg-blue-50/50">
+                <div className="text-xs text-gray-500 font-medium">Среднее время</div>
+                <div className="font-bold text-gray-900 flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {/* 🔧 ИСПРАВЛЕНО: Используем arrival_time вместо arrival_date */}
+                  {stats.arrival_time.avg}
+                </div>
+              </div>
+              <div className="space-y-1 p-2 rounded-lg bg-blue-50/50">
+                <div className="text-xs text-gray-500 font-medium">Медиана</div>
+                <div className="font-bold text-gray-900 flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {stats.arrival_time.med}
+                </div>
+              </div>
+              <div className="space-y-1 p-2 rounded-lg bg-blue-50/50">
+                <div className="text-xs text-gray-500 font-medium">Самое раннее</div>
+                <div className="font-bold text-gray-900 flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {stats.arrival_time.min}
+                </div>
+              </div>
+              <div className="space-y-1 p-2 rounded-lg bg-blue-50/50">
+                <div className="text-xs text-gray-500 font-medium">Самое позднее</div>
+                <div className="font-bold text-gray-900 flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {stats.arrival_time.max}
+                </div>
               </div>
             </div>
-            <div className="space-y-1 p-2 rounded-lg bg-blue-50/50">
-              <div className="text-xs text-gray-500 font-medium">Медиана</div>
-              <div className="font-bold text-gray-900 flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {stats.arrival_date.med}
-              </div>
-            </div>
-            <div className="space-y-1 p-2 rounded-lg bg-blue-50/50">
-              <div className="text-xs text-gray-500 font-medium">Самое раннее</div>
-              <div className="font-bold text-gray-900 flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {stats.arrival_date.min}
-              </div>
-            </div>
-            <div className="space-y-1 p-2 rounded-lg bg-blue-50/50">
-              <div className="text-xs text-gray-500 font-medium">Самое позднее</div>
-              <div className="font-bold text-gray-900 flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {stats.arrival_date.max}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
@@ -239,7 +383,7 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
   supplier, 
   onEdit 
 }) => {
-  const [stats, setStats] = useState<SupplierStats | null>(null);
+  const [stats, setStats] = useState<SupplierStats | null>(null); // 🔧 Используем правильный тип
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [activeTab, setActiveTab] = useState('info');
 
@@ -253,18 +397,16 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
   }, [supplier, open]);
 
   const fetchSupplierStats = async (supplierId: string | number) => {
-  setIsLoadingStats(true);
-  try {
-    const data = await suppliersApi.getSupplierStats(String(supplierId));
-    setStats(data);
-  } catch (error) {
-    console.error('Error fetching supplier stats:', error);
-    // Можно добавить обработку ошибок, например:
-    // toast.error('Не удалось загрузить статистику');
-  } finally {
-    setIsLoadingStats(false);
-  }
-};
+    setIsLoadingStats(true);
+    try {
+      const data = await suppliersApi.getSupplierStats(String(supplierId));
+      setStats(data);
+    } catch (error) {
+      console.error('Error fetching supplier stats:', error);
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
 
   if (!supplier) return null;
 
@@ -282,10 +424,13 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
     return idStr.length > 8 ? idStr.substring(0, 8) + '...' : idStr;
   };
 
+  // 🔧 ИСПРАВЛЕНО: Коэффициент теперь в stats.price.rescheduled_coef
   const coeffColor = stats ? 
-    stats.rescheduled_coef <= COEFFICIENT_CONFIG.green.max ? COEFFICIENT_CONFIG.green :
-    stats.rescheduled_coef <= COEFFICIENT_CONFIG.yellow.max ? COEFFICIENT_CONFIG.yellow :
+    stats.price.rescheduled_coef <= COEFFICIENT_CONFIG.green.max ? COEFFICIENT_CONFIG.green :
+    stats.price.rescheduled_coef <= COEFFICIENT_CONFIG.yellow.max ? COEFFICIENT_CONFIG.yellow :
     COEFFICIENT_CONFIG.red : null;
+
+  const hasPrediction = stats?.arrival_prediction && stats.arrival_prediction.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -309,6 +454,12 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                     <Hash className="h-3 w-3" />
                     ID: {getShortId(supplier.id)}
                   </div>
+                  {hasPrediction && (
+                    <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-700">
+                      <Target className="h-3 w-3 mr-1" />
+                      Прогноз доступен
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
@@ -462,7 +613,8 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                     <div className="grid grid-cols-3 gap-4">
                       <div className="text-center p-3 bg-blue-50 rounded-lg">
                         <div className="text-xs text-gray-600 font-medium">Поставок</div>
-                        <div className="text-2xl font-bold text-gray-900">{stats.count}</div>
+                        {/* 🔧 ИСПРАВЛЕНО: stats.price.count вместо stats.count */}
+                        <div className="text-2xl font-bold text-gray-900">{stats.price.count}</div>
                       </div>
                       <div className="text-center p-3 bg-purple-50 rounded-lg">
                         <div className="text-xs text-gray-600 font-medium">Коэффициент</div>
@@ -470,7 +622,8 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                           className="text-2xl font-bold" 
                           style={{ color: coeffColor?.textColor }}
                         >
-                          {stats.rescheduled_coef.toFixed(2)}
+                          {/* 🔧 ИСПРАВЛЕНО: stats.price.rescheduled_coef вместо stats.rescheduled_coef */}
+                          {stats.price.rescheduled_coef.toFixed(2)}
                         </div>
                       </div>
                       <div className="text-center p-3 bg-green-50 rounded-lg">
@@ -480,6 +633,21 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                         </div>
                       </div>
                     </div>
+                    {hasPrediction && (
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-2 mb-2">
+                            <Target className="h-4 w-4 text-indigo-600" />
+                            <span className="text-sm font-medium text-gray-700">
+                              Наиболее вероятное время прибытия
+                            </span>
+                          </div>
+                          <Badge className="text-base px-4 py-1 bg-indigo-100 text-indigo-700 border-indigo-200">
+                            {stats.arrival_prediction[0].interval}
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )}
@@ -498,14 +666,18 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                     </h3>
                     
                     <div className="space-y-4">
-                      {stats.rescheduled_coef >= 1 && (
+                      {/* 🔧 ИСПРАВЛЕНО: stats.price.rescheduled_coef */}
+                      {stats.price.rescheduled_coef >= 1 && (
                         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                           <div className="flex items-center gap-3">
                             <AlertTriangle className="h-5 w-5 text-red-600" />
                             <div>
                               <div className="font-medium text-red-800">Внимание: Высокий риск</div>
                               <p className="text-sm text-red-700 mt-1">
-                                Коэффициент переносов {stats.rescheduled_coef.toFixed(2)} превышает допустимый порог. 
+                                Коэффициент переносов {stats.price.rescheduled_coef.toFixed(2)} превышает допустимый порог. 
+                                {hasPrediction && (
+                                  <> Используйте прогноз времени ({stats.arrival_prediction[0].interval}) для точного планирования.</>
+                                )}
                                 Рекомендуется рассмотреть альтернативных поставщиков.
                               </p>
                             </div>
@@ -513,14 +685,17 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                         </div>
                       )}
                       
-                      {stats.rescheduled_coef <= 0.4 && (
+                      {stats.price.rescheduled_coef <= 0.4 && (
                         <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                           <div className="flex items-center gap-3">
                             <CheckCircle className="h-5 w-5 text-green-600" />
                             <div>
                               <div className="font-medium text-green-800">Надежный поставщик</div>
                               <p className="text-sm text-green-700 mt-1">
-                                Низкий коэффициент переносов ({stats.rescheduled_coef.toFixed(2)}). 
+                                Низкий коэффициент переносов ({stats.price.rescheduled_coef.toFixed(2)}). 
+                                {hasPrediction && (
+                                  <> Прогноз прибытия: {stats.arrival_prediction[0].interval} (вероятность {stats.arrival_prediction[0].probability}%). </>
+                                )}
                                 Отличная стабильность поставок. Рекомендуется к приоритетному сотрудничеству.
                               </p>
                             </div>
@@ -528,14 +703,17 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                         </div>
                       )}
 
-                      {stats.rescheduled_coef > 0.4 && stats.rescheduled_coef < 1 && (
+                      {stats.price.rescheduled_coef > 0.4 && stats.price.rescheduled_coef < 1 && (
                         <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                           <div className="flex items-center gap-3">
                             <Info className="h-5 w-5 text-yellow-600" />
                             <div>
                               <div className="font-medium text-yellow-800">Средняя стабильность</div>
                               <p className="text-sm text-yellow-700 mt-1">
-                                Коэффициент {stats.rescheduled_coef.toFixed(2)}. 
+                                Коэффициент {stats.price.rescheduled_coef.toFixed(2)}. 
+                                {hasPrediction && (
+                                  <> Ориентируйтесь на прогноз: {stats.arrival_prediction.map(p => p.interval).join(', ')}.</>
+                                )}
                                 Требуется мониторинг поставок. Рекомендуется договориться о строгих сроках.
                               </p>
                             </div>
@@ -554,7 +732,17 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
         <DialogFooter className="px-6 py-4 border-t bg-gray-50 shrink-0">
           <div className="flex items-center justify-between w-full">
             <div className="text-sm text-gray-500">
-              Показано {stats ? stats.count : 0} поставок
+              {stats ? (
+                <>
+                  {/* 🔧 ИСПРАВЛЕНО: stats.price.count */}
+                  Показано {stats.price.count} поставок
+                  {hasPrediction && (
+                    <span className="ml-2 text-indigo-600">
+                      • Прогноз доступен
+                    </span>
+                  )}
+                </>
+              ) : 'Нет данных'}
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -570,4 +758,9 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
       </DialogContent>
     </Dialog>
   );
+};
+
+// Вспомогательная функция для работы с классами
+const cn = (...classes: string[]) => {
+  return classes.filter(Boolean).join(' ');
 };
