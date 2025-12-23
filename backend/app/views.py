@@ -114,10 +114,12 @@ class ClientViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def add_debt(self, request, pk=None):
         client = self.get_object()
-        debt_value = request.data.get('debt_value')
+        debt_value = request.data.get('debt_value', None)
         ruid = request.data.get('responsible_employee_id', None)
+        if not debt_value:
+             raise ValidationError("Сумма не указана")
         try:
-            client_object = self.service_layer.add_debt(client, debt_value, ruid)
+            client_object = self.service_layer.apply_debt_change(client, debt_value, ruid)
             return Response(vars(client_object))
         except ValidationError as e:
             logger.error(e)
@@ -132,7 +134,7 @@ class ClientViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
                 
-            updated_client = self.service_layer.delete_one_debt(debt_id)
+            updated_client = self.service_layer.delete_debt_by_id(debt_id)
             return Response(
                 ClientSerializer(updated_client).data,
                 status=status.HTTP_200_OK

@@ -95,7 +95,7 @@ class ClientDebt(models.Model):
     responsible_employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     is_valid = models.BooleanField(default=True)
     repaid_at = models.DateTimeField(null=True, blank=True)
-
+    description = models.TextField(blank=True)
     class Meta:
         verbose_name = "Долг"
         verbose_name_plural = "Долги"

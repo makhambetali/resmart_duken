@@ -12,14 +12,16 @@ class ClientService:
     def __init__(self, dao: Optional[ClientDAO] = None):
         self.dao = dao or ClientDAO()
 
-    def add_debt(self, client, debt_value, responsible_employee_id):
+    def apply_debt_change(self, client, debt_value, responsible_employee_id):
         if debt_value == 0:
             raise ValidationError("Сумма не должна быть равна нулю")
         
         if not responsible_employee_id:
             raise ValidationError("Не указано ответственное лицо")
-        
-        self.dao.create_debt(client, debt_value, responsible_employee_id)
+        if debt_value > 0:
+            self.dao.create_debt(client, debt_value, responsible_employee_id)
+        else:
+            self.dao.allocate_payment()
         client.debt += debt_value
         logger.info(f'Создание долга в размере {debt_value} клиенту #{client.id}({client.name})')
         if client.debt == 0:
@@ -38,9 +40,9 @@ class ClientService:
         search_results = self.dao.search(query, show_zeros)
         return [self._to_client_dto(result) for result in search_results]
     
-    def delete_one_debt(self, debt_id: int) -> ClientDTO:
+    def delete_debt_by_id(self, debt_id: int) -> ClientDTO:
         try:
-            client = self.dao.delete_one_debt(debt_id)
+            client = self.dao.delete_debt_by_id(debt_id)
             
             return self._to_client_dto(client)   # Получаем и удаляем долг, обновляем клиента
                 
@@ -57,7 +59,7 @@ class ClientService:
             debt = client.debt,
             description=client.description,
             is_chosen=client.is_chosen,
-            last_accessed=client.last_accessed
+            last_accessed=client.last_accessed,
         )
 
     def _to_debt_dto(self, debt: ClientDebt) -> DebtDTO:
@@ -66,6 +68,7 @@ class ClientService:
             debt_value=debt.debt_value,
             responsible_employee_id= debt.responsible_employee_id,
             # client = debt.client.name,
-            date_added = debt.date_added
+            date_added = debt.date_added,
+            is_valid = debt.is_valid
         )
 

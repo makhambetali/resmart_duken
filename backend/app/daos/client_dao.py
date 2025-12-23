@@ -2,15 +2,15 @@ from app.models import ClientDebt, Client
 from django.core.cache import cache
 from rest_framework.serializers import ValidationError
 import logging
-
+from django.utils import timezone
 logger = logging.getLogger('app')
 
 class ClientDAO:
     def delete_all_debts(self, client: Client):
-        client.debts.all().delete()
+        client.debts.all().update(is_valid = False)
         cache.delete(f'clients_{client.id}_debts')
 
-    def delete_one_debt(self, debt_id: int) -> Client:
+    def delete_debt_by_id(self, debt_id: int) -> Client:
         """
         Удаляет долг и обновляет баланс клиента
         Возвращает обновленного клиента
@@ -20,7 +20,11 @@ class ClientDAO:
         client.debt -= instance.debt_value
         
         client.save()
-        instance.delete()
+        # instance.delete()
+        instance.is_valid = False
+        instance.repaid_at = timezone.localtime()
+        print(timezone.localtime())
+        instance.save()
         logger.info(f'Удаление долга в размере {instance.debt_value} у клиента #{client.id}({client.name})')
         cache.delete(f'clients_{client.id}_debts')
         return client
@@ -29,11 +33,11 @@ class ClientDAO:
         ClientDebt.objects.create(client=client, debt_value=debt_value, responsible_employee_id = responsible_employee_id)
         cache.delete(f'clients_{client.id}_debts')
 
-    def get_debts(self, client):
+    def get_debts(self, client: Client, is_valid = False):
         # queryset = client.debts.all().order_by('-date_added')
         queryset = cache.get_or_set(
                 f'clients_{client.id}_debts',
-                lambda: client.debts.all().order_by('-date_added'),
+                lambda: client.debts.filter(is_valid = is_valid).order_by('-date_added'),
                 timeout=10
             )
         return queryset

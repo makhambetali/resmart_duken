@@ -16,3 +16,4 @@ class DebtDTO:
     debt_value: int
     responsible_employee_id: int
     date_added: Optional[str]
+    is_valid: bool
