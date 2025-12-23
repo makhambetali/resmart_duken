@@ -93,6 +93,9 @@ class ClientDebt(models.Model):
     debt_value = models.IntegerField()
     date_added = models.DateTimeField(auto_now_add=True)
     responsible_employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    is_valid = models.BooleanField(default=True)
+    repaid_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         verbose_name = "Долг"
         verbose_name_plural = "Долги"
