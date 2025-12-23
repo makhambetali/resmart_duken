@@ -3,6 +3,9 @@ from django.core.cache import cache
 from rest_framework.serializers import ValidationError
 import logging
 from django.utils import timezone
+from django.db import transaction
+from django.db.models import Sum
+
 logger = logging.getLogger('app')
 
 class ClientDAO:
@@ -33,7 +36,77 @@ class ClientDAO:
         ClientDebt.objects.create(client=client, debt_value=debt_value, responsible_employee_id = responsible_employee_id)
         cache.delete(f'clients_{client.id}_debts')
 
-    def get_debts(self, client: Client, is_valid = False):
+    def allocate_payment(self, client, payment_amount, responsible_employee_id):
+        remaining_amount = payment_amount
+        now = timezone.localtime()
+        timestamp = now.strftime("%d.%m.%Y %H:%M")
+
+        print(client.name, remaining_amount, responsible_employee_id)
+
+        with transaction.atomic():
+            debts = (
+                client.debts
+                .filter(is_valid=True)
+                .order_by("date_added")
+                .select_for_update()
+            )
+
+            if not debts.exists():
+
+                return client
+            
+            for debt in debts:
+                print(debt.debt_value)
+                if remaining_amount <= 0:
+                    break
+
+                original_debt = debt.debt_value
+
+                if debt.debt_value <= remaining_amount:
+                    # Полное погашение
+                    remaining_amount -= debt.debt_value
+                    debt.debt_value = 0
+                    debt.repaid_at = now
+                    debt.is_valid = False
+
+                    log = (
+                        f"[{timestamp}] Долг полностью погашен "
+                        f"при общем платеже {payment_amount:,} ₸."
+                    )
+
+                else:
+                    # Частичное погашение
+                    debt.debt_value -= remaining_amount
+
+                    log = (
+                        f"[{timestamp}] Частичное погашение: "
+                        f"было {original_debt:,} ₸, "
+                        f"стало {debt.debt_value:,} ₸. "
+                        f"Общий платёж — {payment_amount:,} ₸."
+                    )
+
+                    remaining_amount = 0
+
+                # дописываем историю, а не затираем
+                if debt.description:
+                    debt.description += "\n" + log
+                else:
+                    debt.description = log
+
+                debt.responsible_employee_id = responsible_employee_id
+                debt.save(
+                    update_fields=[
+                        "debt_value",
+                        "repaid_at",
+                        "is_valid",
+                        "description",
+                        "responsible_employee",
+                    ]
+                )
+
+
+
+    def get_debts(self, client: Client, is_valid = True):
         # queryset = client.debts.all().order_by('-date_added')
         queryset = cache.get_or_set(
                 f'clients_{client.id}_debts',

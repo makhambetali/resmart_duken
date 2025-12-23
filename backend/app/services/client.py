@@ -21,7 +21,8 @@ class ClientService:
         if debt_value > 0:
             self.dao.create_debt(client, debt_value, responsible_employee_id)
         else:
-            self.dao.allocate_payment()
+            remaining_amount = debt_value * -1
+            self.dao.allocate_payment(client, remaining_amount, responsible_employee_id)
         client.debt += debt_value
         logger.info(f'Создание долга в размере {debt_value} клиенту #{client.id}({client.name})')
         if client.debt == 0:
@@ -69,6 +70,7 @@ class ClientService:
             responsible_employee_id= debt.responsible_employee_id,
             # client = debt.client.name,
             date_added = debt.date_added,
-            is_valid = debt.is_valid
+            is_valid = debt.is_valid,
+            description=debt.description
         )
 
