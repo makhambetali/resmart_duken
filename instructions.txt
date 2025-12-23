@@ -27,3 +27,6 @@ rebuild backend   → docker-compose build backend
 django shell      → docker-compose exec backend python manage.py shell
 migrate           → docker-compose exec backend python manage.py migrate
 logs              → docker-compose logs -f
+
+
+git reset --hard HEAD

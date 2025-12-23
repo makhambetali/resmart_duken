@@ -253,19 +253,18 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
   }, [supplier, open]);
 
   const fetchSupplierStats = async (supplierId: string | number) => {
-    setIsLoadingStats(true);
-    try {
-      const response = await fetch(`http://127.0.0.1:8000/api/v1/suppliers/${supplierId}/get_stats/`);
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
-    } catch (error) {
-      console.error('Error fetching supplier stats:', error);
-    } finally {
-      setIsLoadingStats(false);
-    }
-  };
+  setIsLoadingStats(true);
+  try {
+    const data = await suppliersApi.getSupplierStats(String(supplierId));
+    setStats(data);
+  } catch (error) {
+    console.error('Error fetching supplier stats:', error);
+    // Можно добавить обработку ошибок, например:
+    // toast.error('Не удалось загрузить статистику');
+  } finally {
+    setIsLoadingStats(false);
+  }
+};
 
   if (!supplier) return null;
 
