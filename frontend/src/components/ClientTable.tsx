@@ -70,20 +70,12 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                 <TableHead>Телефон</TableHead>
                 <TableHead>Долг</TableHead>
                 <TableHead>Последняя активность</TableHead>
-                {/* --- Начало изменений: Новый заголовок --- */}
                 <TableHead className="text-right">Действия</TableHead>
-                {/* --- Конец изменений --- */}
               </TableRow>
             </TableHeader>
             <TableBody>
               {clients.map((client) => (
-                <TableRow 
-                  key={client.id} 
-                  // --- Начало изменений: Удалены onClick и стили ховера ---
-                  // className="cursor-pointer hover:bg-muted/50"
-                  // onClick={() => onEditClient(client)}
-                  // --- Конец изменений ---
-                >
+                <TableRow key={client.id}>
                   <TableCell className="font-medium">{client.name}</TableCell>
                   <TableCell>{client.phone_number || '-'}</TableCell>
                   <TableCell>
@@ -94,7 +86,6 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                   <TableCell className="text-muted-foreground">
                     {formatDateTime(client.last_accessed)}
                   </TableCell>
-                  {/* --- Начало изменений: Новая ячейка с DropdownMenu --- */}
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -108,11 +99,9 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                           <Edit className="mr-2 h-4 w-4" />
                           <span>Редактировать</span>
                         </DropdownMenuItem>
-                       
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
-                  {/* --- Конец изменений --- */}
                 </TableRow>
               ))}
             </TableBody>
@@ -132,7 +121,6 @@ export const ClientTable: React.FC<ClientTableProps> = ({
           </Button>
           
           <div className="flex items-center space-x-1">
-            {/* Логика для отображения номеров страниц осталась без изменений */}
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               let page = currentPage - 2 + i;
               if (totalPages - currentPage < 2) {

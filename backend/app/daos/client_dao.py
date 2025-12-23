@@ -186,7 +186,7 @@ class ClientDAO:
         # queryset = client.debts.all().order_by('-date_added')
         queryset = cache.get_or_set(
                 f'clients_{client.id}_debts',
-                lambda: client.debts.filter(is_valid = is_valid).order_by('-date_added'),
+                lambda: client.debts.all().order_by('-date_added'),
                 timeout=10
             )
         return queryset
