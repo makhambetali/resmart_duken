@@ -1,11 +1,11 @@
 import os
 from pathlib import Path
-
+from dotenv import load_dotenv
 # =========================
 # BASE
 # =========================
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+load_dotenv(BASE_DIR / ".env.local")
 # =========================
 # SECURITY
 # =========================
@@ -32,7 +32,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'corsheaders',
-    'django_celery_beat'
+    'django_celery_beat',
+    'storages'
 ]
 
 # =========================
@@ -93,7 +94,6 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
-
 # =========================
 # AUTH PASSWORD VALIDATORS
 # =========================
@@ -176,3 +176,14 @@ LOGGING = {
         "level": "INFO",
     },
 }
+
+
+#AMAZON
+# settings.py
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME")
+
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/"
