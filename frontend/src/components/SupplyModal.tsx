@@ -1,4 +1,4 @@
-// @/components/SupplyModal.tsx
+// @/components/SupplyModal.tsx - добавьте эти изменения
 import React, { useState, useEffect, useRef } from 'react';
 import { Supply, AddSupplyForm } from '@/types/supply';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -18,13 +18,19 @@ import {
   CalendarClock,
   RefreshCw,
   Table,
-  Info
+  Info,
+  Image as ImageIcon,
+  X,
+  ChevronRight,
+  ChevronLeft,
+  Download
 } from "lucide-react";
 import { formatPrice, getNumericValue } from '@/lib/utils';
 import { EditableInvoiceTable } from '@/components/EditableInvoiceTable';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ImageUpload } from '@/components/ImageUpload';
 import { AITableExtractor } from '@/components/AITableExtractor';
+import { ImageViewer } from '@/components/ImageViewer';
 
 interface SupplyModalProps {
   open: boolean;
@@ -33,6 +39,11 @@ interface SupplyModalProps {
   supply?: Supply | null;
   onSubmit: (data: Omit<AddSupplyForm, 'images'> & { images?: File[] }) => Promise<void>;
   suppliers: Array<{ id: string; name: string }>;
+}
+
+interface SupplyImage {
+  id: number;
+  image: string;
 }
 
 export const SupplyModal: React.FC<SupplyModalProps> = ({
@@ -46,6 +57,8 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [imageViewerIndex, setImageViewerIndex] = useState(0);
   const [formData, setFormData] = useState<Omit<AddSupplyForm, 'images'>>({
     supplier: '',
     paymentType: 'cash',
@@ -60,6 +73,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   });
 
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [supplyImages, setSupplyImages] = useState<SupplyImage[]>([]);
   const [currentHtmlForTable, setCurrentHtmlForTable] = useState<string>('');
   const [tableHasChanges, setTableHasChanges] = useState<boolean>(false);
   const [createdAt, setCreatedAt] = useState<string>('');
@@ -69,8 +83,13 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   const plus7 = new Date(Date.now() + 7 * 864e5).toLocaleDateString('en-CA');
   const isToday = formData.delivery_date === today;
 
+  // Загрузка существующих изображений при открытии
   useEffect(() => {
     if (open && supply) {
+      // Типизируем images из supply
+      const images = (supply as any).images || [];
+      setSupplyImages(images);
+      
       let paymentType: 'cash' | 'bank' | 'mixed' = 'cash';
       if (supply.price_cash > 0 && supply.price_bank > 0) paymentType = 'mixed';
       else if (supply.price_bank > 0) paymentType = 'bank';
@@ -105,17 +124,74 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
         comment: '', is_confirmed: false, invoice_html: '',
       });
       setSelectedImages([]);
+      setSupplyImages([]);
       setCurrentHtmlForTable('');
       setCreatedAt('');
       setIsRescheduled(false);
     }
   }, [supply, open, today]);
 
+  // Функция для открытия просмотра изображения
+  const handleOpenImageViewer = (index: number) => {
+    setImageViewerIndex(index);
+    setIsImageViewerOpen(true);
+  };
+
+  // Функция для удаления существующего изображения
+  const handleDeleteImage = async (imageId: number) => {
+    if (confirm('Вы уверены, что хотите удалить это изображение?')) {
+      try {
+        // Отправляем запрос на удаление
+        const response = await fetch(`/api/v1/supply-images/${imageId}/`, {
+          method: 'DELETE',
+        });
+        
+        if (response.ok) {
+          // Удаляем из локального состояния
+          setSupplyImages(prev => prev.filter(img => img.id !== imageId));
+          toast({
+            title: 'Изображение удалено',
+            variant: 'default',
+          });
+        } else {
+          throw new Error('Не удалось удалить изображение');
+        }
+      } catch (error) {
+        toast({
+          title: 'Ошибка',
+          description: 'Не удалось удалить изображение',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
+  // Функция для скачивания изображения
+  const handleDownloadImage = async (imageUrl: string, imageId: number) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `supply-image-${imageId}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({
+        title: 'Ошибка скачивания',
+        description: 'Не удалось скачать изображение',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Обработка результатов AI
   const handleAIProcessingComplete = (results: Array<{ file: File; html: string }>) => {
     const validResults = results.filter(r => r.html.trim().length > 0);
     if (validResults.length > 0) {
-      // Объединяем все HTML таблицы
       const combinedHtml = validResults.map(r => r.html).join('\n<br/>\n');
       setCurrentHtmlForTable(combinedHtml);
       setFormData(prev => ({ ...prev, invoice_html: combinedHtml }));
@@ -134,7 +210,6 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     setIsLoading(true);
 
     try {
-      // Подготавливаем данные для отправки
       const submitData = {
         ...formData,
         price_cash: getNumericValue(formData.price_cash),
@@ -142,7 +217,8 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
         invoice_html: formData.invoice_html,
         images: selectedImages.length > 0 ? selectedImages : undefined,
       };
-      console.log(selectedImages)
+      
+      console.log(selectedImages);
       await onSubmit(submitData);
       
       toast({
@@ -177,6 +253,10 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   };
 
   const hasPreviewContent = currentHtmlForTable.length > 0 || formData.invoice_html.length > 0;
+  const allImages = [...supplyImages, ...selectedImages.map((file, index) => ({
+    id: -(index + 1), // Отрицательные ID для новых файлов
+    image: URL.createObjectURL(file),
+  }))];
 
   return (
     <TooltipProvider>
@@ -312,7 +392,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                 />
               </div>
 
-              {/* Блок загрузки изображений */}
+              {/* Блок загрузки и просмотра изображений */}
               <div className="space-y-4 md:col-span-2">
                 <div className="flex justify-between items-center">
                   <Label>Изображения документов</Label>
@@ -330,7 +410,91 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                   </Button>
                 </div>
 
-                {/* Компонент загрузки изображений */}
+                {/* Существующие изображения */}
+                {supplyImages.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-gray-700">
+                        Загруженные изображения ({supplyImages.length})
+                      </h4>
+                      <span className="text-xs text-gray-500">
+                        Кликните для просмотра
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {supplyImages.map((image, index) => (
+                        <div
+                          key={image.id}
+                          className="relative group border rounded-lg overflow-hidden hover:border-primary transition-all duration-200"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleOpenImageViewer(index)}
+                            className="w-full h-full aspect-square overflow-hidden"
+                          >
+                            <img
+                              src={image.image}
+                              alt={`Изображение ${index + 1}`}
+                              className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />
+                          </button>
+                          
+                          {/* Кнопки управления */}
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-1">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="icon"
+                                  className="h-7 w-7 bg-white/90 hover:bg-white"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDownloadImage(image.image, image.id);
+                                  }}
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Скачать</TooltipContent>
+                            </Tooltip>
+                            
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="icon"
+                                  className="h-7 w-7 bg-white/90 hover:bg-white"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteImage(image.id);
+                                  }}
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Удалить</TooltipContent>
+                            </Tooltip>
+                          </div>
+                          
+                          {/* Номер изображения */}
+                          <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                            {index + 1}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Разделитель если есть и старые и новые изображения */}
+                {supplyImages.length > 0 && selectedImages.length > 0 && (
+                  <div className="border-t pt-4" />
+                )}
+
+                {/* Компонент загрузки новых изображений */}
                 <ImageUpload
                   selectedFiles={selectedImages}
                   onFilesChange={setSelectedImages}
@@ -350,7 +514,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                 )}
 
                 {/* Информация о существующей таблице */}
-                {formData.invoice_html.length > 0 && selectedImages.length === 0 && (
+                {formData.invoice_html.length > 0 && allImages.length === 0 && (
                   <div className="p-3 border rounded-lg bg-blue-50">
                     <div className="flex items-center gap-2">
                       <Table className="w-4 h-4 text-blue-600" />
@@ -459,6 +623,19 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Модальное окно для просмотра изображений */}
+      {allImages.length > 0 && (
+        <ImageViewer
+          images={allImages.map(img => ({
+            id: img.id,
+            image: typeof img.image === 'string' ? img.image : URL.createObjectURL(img.image as any)
+          }))}
+          initialIndex={imageViewerIndex}
+          open={isImageViewerOpen}
+          onOpenChange={setIsImageViewerOpen}
+        />
+      )}
     </TooltipProvider>
   );
 };

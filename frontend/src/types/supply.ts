@@ -15,6 +15,7 @@ export interface Supply {
   updated_at?: string;
   invoice_html: string;
   arrival_date?: string | null; // <-- Добавлено, если еще нет
+  images?: SupplyImage[]; // Добавлено
 }
 
 export interface AddSupplyForm {
