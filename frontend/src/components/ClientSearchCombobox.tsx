@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronsUpDown, Plus } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,12 +20,10 @@ import {
 } from '@/components/ui/popover';
 import { clientsApi } from '@/lib/api';
 import { Client } from '@/types/client';
-import { useToast } from '@/hooks/use-toast';
 
 interface ClientSearchComboboxProps {
   value: string;
-  onValueChange: (clientId: string, clientName: string) => void;
-  onAddNewClient?: (clientName: string) => void;
+  onValueChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
 }
@@ -31,7 +31,6 @@ interface ClientSearchComboboxProps {
 export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
   value,
   onValueChange,
-  onAddNewClient,
   placeholder = "Выберите клиента...",
   disabled = false,
 }) => {
@@ -50,29 +49,46 @@ export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const { data: clientsData, isLoading } = useQuery({
-    queryKey: ['clients-search-combobox', debouncedSearch],
-    queryFn: () => clientsApi.getClients({
+  // 🔧 Запрос только при открытом попапе
+  const { data: clientsData = [], isLoading } = useQuery({
+    queryKey: ['clients', 'search', debouncedSearch],
+    queryFn: () => clientsApi.getClients({ 
       q: debouncedSearch,
-      page_size: 50,
-      page: 1,
-      show_zeros: 1,
+      page_size: 50 
     }),
-    enabled: open && debouncedSearch.length >= 1, // Запрос только при открытом попапе и хотя бы 1 символе
+    enabled: open,
     staleTime: 1000 * 60 * 5, // 5 минут кэша
+    gcTime: 1000 * 60 * 10, // 10 минут хранения в кэше
   });
 
-  const clients = clientsData?.results || [];
-  const selectedClient = clients.find((client: Client) => client.id === value);
-
-  const handleAddNewClient = () => {
-    if (!searchQuery.trim()) return;
-    if (onAddNewClient) {
-      onAddNewClient(searchQuery.trim());
+  const { mutate: createClient, isLoading: isCreating } = useMutation({
+    mutationFn: clientsApi.createClient,
+    onSuccess: (newClient) => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      onValueChange(newClient.name);
       setOpen(false);
-      setSearchQuery('');
-    }
+      toast({ 
+        title: `Клиент "${newClient.name}" успешно создан.`,
+        variant: "default",
+        className: "bg-green-500 text-white", 
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось создать клиента.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleCreateClient = () => {
+    if (!searchQuery.trim() || isCreating) return;
+    createClient({ name: searchQuery.trim() });
   };
+
+  const clients = clientsData?.results || clientsData || [];
+  const selectedClient = clients.find((client: Client) => client.name === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -96,7 +112,7 @@ export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
         <Command shouldFilter={false}>
           <div className="flex items-center border-b px-3">
             <CommandInput
-              placeholder="Поиск клиента..."
+              placeholder="Поиск или создание..."
               value={searchQuery}
               onValueChange={setSearchQuery}
               className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
@@ -114,15 +130,14 @@ export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
                     <div className="text-muted-foreground mb-2">
                       Клиент не найден
                     </div>
-                    {searchQuery && onAddNewClient && (
+                    {searchQuery && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleAddNewClient}
-                        className="w-full"
+                        onClick={handleCreateClient}
+                        disabled={isCreating}
                       >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Добавить "{searchQuery}"
+                        {isCreating ? 'Добавление...' : `Добавить "${searchQuery}"`}
                       </Button>
                     )}
                   </div>
@@ -132,25 +147,19 @@ export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
                     <CommandItem
                       key={client.id}
                       value={client.name}
-                      onSelect={() => {
-                        onValueChange(client.id, client.name);
+                      onSelect={(currentValue) => {
+                        onValueChange(currentValue === value ? "" : currentValue);
                         setOpen(false);
-                        setSearchQuery('');
                       }}
                       className="cursor-pointer"
                     >
                       <Check
                         className={cn(
                           "mr-2 h-4 w-4",
-                          value === client.id ? "opacity-100" : "opacity-0"
+                          value === client.name ? "opacity-100" : "opacity-0"
                         )}
                       />
-                      <div className="flex flex-col">
-                        <span className="truncate font-medium">{client.name}</span>
-                        {client.phone_number && (
-                          <span className="text-xs text-muted-foreground">{client.phone_number}</span>
-                        )}
-                      </div>
+                      <span className="truncate">{client.name}</span>
                     </CommandItem>
                   ))}
                 </CommandGroup>
