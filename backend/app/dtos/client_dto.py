@@ -18,3 +18,4 @@ class DebtDTO:
     date_added: Optional[str]
     is_valid: bool
     description: Optional[str]
+    repaid_at: Optional[str]

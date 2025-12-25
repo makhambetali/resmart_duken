@@ -86,7 +86,8 @@ class ClientService:
             # client = debt.client.name,
             date_added = debt.date_added,
             is_valid = debt.is_valid,
-            description=debt.description
+            description=debt.description,
+            repaid_at=debt.repaid_at
         )
 
 class ClientStats:

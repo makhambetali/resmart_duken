@@ -330,7 +330,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-auto max-w-[90vw] min-w-[70vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {client ? `Клиент: ${client.name}` : 'Управление клиентами'}
@@ -458,7 +458,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                   </Badge>
                                 ) : (
                                   <Badge variant="outline" className="border-gray-300 text-gray-500">
-                                    Погашен
+                                    Погашен({formatDateOnly(debt.repaid_at)})
                                   </Badge>
                                 )}
                               </TableCell>
