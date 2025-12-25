@@ -201,7 +201,7 @@ export const CashFlowModal: React.FC<CashFlowModalProps> = ({
                 onClick={handleClose}
                 className="h-8 w-8 -mr-2"
               >
-                <X className="h-4 w-4" />
+
               </Button>
             </div>
             
