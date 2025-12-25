@@ -2,10 +2,10 @@ from app.daos.client_dao import ClientDAO
 from app.dtos.client_dto import ClientDTO, DebtDTO
 from typing import Optional, List
 from app.models import ClientDebt, Client
-from django.db import transaction
 from rest_framework.serializers import ValidationError
 import logging
-
+from datetime import timedelta
+from django.db.models import F, ExpressionWrapper, DurationField
 logger = logging.getLogger('app')
 
 class ClientService:
@@ -89,3 +89,33 @@ class ClientService:
             description=debt.description
         )
 
+class ClientStats:
+    def __init__(self, client):
+        self.client = client
+
+    def get_debts(self):
+        return ClientDebt.objects.filter(client = self.client)
+    
+    def get_time_to_payback_list(self) -> List[timedelta]:
+        qs = (
+            self.get_debts()
+            .filter(repaid_at__isnull=False)
+            .annotate(
+                payback_time=ExpressionWrapper(
+                    F("repaid_at") - F("date_added"),
+                    output_field=DurationField(),
+                )
+            )
+            .values_list("payback_time", flat=True)
+        )
+
+        return list(qs)
+    def get_time_to_payback_days(self) -> List[float]:
+        return [
+            round(td.total_seconds() / 86400, 2)
+            for td in self.get_time_to_payback_list()
+        ]
+
+    def execute(self):
+        lst_of_days = self.get_time_to_payback_days()
+        return {'avg_time_to_payback_in_days' : sum(lst_of_days) / len(lst_of_days)}

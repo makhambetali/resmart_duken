@@ -13,7 +13,7 @@ from .pagination import SupplierResultsPaginationPage
 from .models import *
 from .services.supply import SupplyService
 from .services.supplier import SupplierService, SupplierStats
-from .services.client import ClientService
+from .services.client import ClientService, ClientStats
 from .services.cashflow import CashFlowService
 
 import logging
@@ -156,6 +156,12 @@ class ClientViewSet(viewsets.ModelViewSet):
         client = self.get_object()
         results_dto = self.service_layer.get_debts(client)
         return Response([vars(dto) for dto in results_dto])
+    
+    @action(detail=True, methods=['get'])
+    def get_stats(self, request, pk = None):
+        client_obj = self.get_object()
+        anal = ClientStats(client_obj)
+        return JsonResponse(anal.execute())
 
 class CashFlowViewSet(viewsets.ModelViewSet):
     serializer_class = CashFlowSerializer

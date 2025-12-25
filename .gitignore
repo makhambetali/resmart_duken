@@ -2,3 +2,4 @@ venv
 venv_wsl
 .env
 backend/.env.local
+backend/media/
