@@ -23,7 +23,11 @@ const apiRequest = async <T>(endpoint: string, options: RequestInit = {}): Promi
   const url = `${API_BASE_URL}${endpoint}`;
   const headers: HeadersInit = { ...options.headers };
 
-  if (!(options.body instanceof FormData)) {
+  // if (!(options.body instanceof FormData)) {
+  //   headers['Content-Type'] = 'application/json';
+  // }
+  const isFormData = options.body instanceof FormData;
+  if (!isFormData && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -71,9 +75,12 @@ export const suppliesApi = {
   createSupply: (data: AddSupplyForm) => {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
-      if (key === 'invoice' && value instanceof File) {
-        formData.append(key, value);
-      } else if (key !== 'invoice' && value !== null) {
+      if (key === 'images' && Array.isArray(value)) {
+        // Добавляем файлы под ключом 'images'
+        value.forEach((file, index) => {
+          formData.append('images', file);
+        });
+      } else if (key !== 'images' && value !== undefined && value !== null) {
         formData.append(key, String(value));
       }
     });
@@ -86,12 +93,12 @@ export const suppliesApi = {
   updateSupply: (id: string, data: Partial<AddSupplyForm>) => {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined) {
-        if (key === 'invoice' && value instanceof File) {
-          formData.append(key, value);
-        } else if (key !== 'invoice' && value !== null) {
-          formData.append(key, String(value));
-        }
+      if (key === 'images' && Array.isArray(value)) {
+        value.forEach((file, index) => {
+          formData.append('images', file);
+        });
+      } else if (key !== 'images' && value !== undefined && value !== null) {
+        formData.append(key, String(value));
       }
     });
     return apiRequest<Supply>(`/supplies/${id}/`, {

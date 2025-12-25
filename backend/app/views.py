@@ -60,7 +60,7 @@ class TestViewSet(viewsets.ModelViewSet):
     
 class SupplyViewSet(viewsets.ModelViewSet):
     serializer_class = SupplySerializer
-    queryset = Supply.objects.all().select_related('supplier')
+    queryset = Supply.objects.all().select_related("supplier").prefetch_related("images")
     service_layer = SupplyService()
 
     def get_queryset(self):
@@ -85,8 +85,15 @@ class SupplyViewSet(viewsets.ModelViewSet):
             only_confirmed = self.request.query_params.get('confirmed', 'true').lower() == 'true'
             supplies_dto = self.service_layer.get_supplies_by_date(date_param, only_confirmed, payment_type)
             return self.queryset.filter(id__in=[dto.id for dto in supplies_dto])
-    
 
+    def perform_create(self, serializer):
+        images = self.request.FILES.getlist("images")
+        supply = serializer.save()
+        for image in images:
+            SupplyImage.objects.create(
+                supply=supply,
+                image=image
+            )
 
 class ClientViewSet(viewsets.ModelViewSet):
     serializer_class = ClientSerializer

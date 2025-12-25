@@ -33,6 +33,7 @@ class SupplySerializer(serializers.ModelSerializer):
         queryset=Supplier.objects.all(),
         slug_field='name'
     )
+    images = SupplyImageSerializer(many=True, required=False)
 
     class Meta:
         model = Supply

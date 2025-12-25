@@ -146,19 +146,19 @@ const Index = () => {
     }
   };
 
-  const handleSupplySubmit = async (data: AddSupplyForm) => {
-    try {
-      if (editingSupply) {
-        await updateSupplyMutation.mutateAsync({ id: editingSupply.id, data });
-      } else {
-        await createSupplyMutation.mutateAsync(data);
-      }
-      setIsSupplyModalOpen(false);
-    } catch (error) {
-      console.error('Error submitting supply:', error);
+  // @/components/Index.tsx
+const handleSupplySubmit = async (data: Omit<AddSupplyForm, 'images'> & { images?: File[] }) => {
+  try {
+    if (editingSupply) {
+      await updateSupplyMutation.mutateAsync({ id: editingSupply.id, data });
+    } else {
+      await createSupplyMutation.mutateAsync(data);
     }
-  };
-
+    setIsSupplyModalOpen(false);
+  } catch (error) {
+    console.error('Error submitting supply:', error);
+  }
+};
   const handleClearFilters = () => {
     setSearchTerm('');
     setConfirmationFilter('all');
