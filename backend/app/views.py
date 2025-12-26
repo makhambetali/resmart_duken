@@ -94,6 +94,21 @@ class SupplyViewSet(viewsets.ModelViewSet):
                 supply=supply,
                 image=image
             )
+    
+    def perform_update(self, serializer):
+        images = self.request.FILES.getlist("images")
+        supply = serializer.save()
+
+        if images:
+            supply.images.all().delete()
+
+            for image in images:
+                SupplyImage.objects.create(
+                    supply=supply,
+                    image=image
+                )
+    
+
 
 class ClientViewSet(viewsets.ModelViewSet):
     serializer_class = ClientSerializer
