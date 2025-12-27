@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow, Employee, UserProfile
+from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow, Employee, UserProfile, Store
 
 
 @admin.register(Supplier)
@@ -41,3 +41,4 @@ class CashFlowAdmin(admin.ModelAdmin):
 
 admin.site.register(Employee)
 admin.site.register(UserProfile)
+admin.site.register(Store)

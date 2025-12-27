@@ -87,6 +87,7 @@ class SupplyViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(id__in=[dto.id for dto in supplies_dto])
 
     def perform_create(self, serializer):
+        print(self.request.user.profile.store)
         images = self.request.FILES.getlist("images")
         supply = serializer.save()
         for image in images:

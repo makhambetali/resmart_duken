@@ -10,8 +10,8 @@ def delete_image_from_s3(sender, instance, **kwargs):
         instance.image.delete(save=False)
 
 
-@receiver(post_save, sender=User)
-def create_or_update_user_profile(sender, instance, created, **kwargs):
+# @receiver(post_save, sender=User)
+# def create_or_update_user_profile(sender, instance, created, **kwargs):
     """
     Создает или обновляет профиль пользователя при сохранении User.
     """

@@ -2,11 +2,20 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 
+class Store(models.Model):
+    name = models.CharField(max_length=50, default='Магазин')
+    # owner = models.OneToOneField(settings.AUTH_USER_MODEL,
+    #                              on_delete=models.CASCADE,
+    #                             related_name="owner_store")
+    created_at = models.DateTimeField(auto_now_add=True)
+    def __str__(self):
+        return f"{self.name}"
+
 class UserProfile(models.Model):
     class Role(models.TextChoices):
         ADMIN = "admin", "Admin"
         EMPLOYEE = "employee", "Employee"
-
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='users')
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -29,6 +38,8 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} ({self.role})"
+    
+
 
 class Supplier(models.Model):
     name = models.CharField(max_length=30, db_index=True, unique=True)
