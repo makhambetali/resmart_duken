@@ -1,5 +1,4 @@
-venv
-venv_wsl
+.venv
 .env
 backend/.env.local
 backend/media/
