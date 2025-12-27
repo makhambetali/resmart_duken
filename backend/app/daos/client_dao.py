@@ -191,13 +191,13 @@ class ClientDAO:
             )
         return queryset
     
-    def search(self, query=None, show_zeros = True):
+    def search(self, query=None, show_zeros = True, user = None):
         # queryset = cache.get_or_set(
         #     'clients',
         #     lambda: Client.objects.all(),
         #     timeout=300
         # )
-        queryset = Client.objects.all()
+        queryset = Client.objects.filter(store = user.profile.store)
         # print('dao:', show_zeros)
         if not show_zeros:
             queryset = queryset.exclude(debt = 0)

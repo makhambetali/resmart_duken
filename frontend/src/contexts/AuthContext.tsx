@@ -90,6 +90,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         isAuthenticated: !!user,
         isAdmin: user?.profile?.role === 'admin',
         isEmployee: user?.profile?.role === 'employee',
+        // Добавьте если нужно:
+        userStore: user?.profile?.store || null,
       }}
     >
       {children}

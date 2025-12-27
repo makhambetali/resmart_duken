@@ -32,7 +32,7 @@ class SupplyDAO:
         return queryset
 
     
-    def get_supplies_by_date(self, date, only_confirmed: bool = True, payment_type = 'all'):
+    def get_supplies_by_date(self, date, only_confirmed: bool = True, payment_type = 'all', user = None):
         """Поставки на конкретную дату с опциональным фильтром по confirmed."""
         payment_type_to_logic = {
             'cash': ~Q(price_cash = 0) & Q(price_bank = 0),
@@ -45,7 +45,7 @@ class SupplyDAO:
         
         query &= payment_type_to_logic.get(payment_type, Q())
 
-        queryset =Supply.objects.filter(query).select_related('supplier')
+        queryset =Supply.objects.filter(query, store = user.profile.store).select_related('supplier')
         return queryset
 
    

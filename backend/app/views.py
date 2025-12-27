@@ -114,7 +114,7 @@ class SupplyViewSet(viewsets.ModelViewSet):
                 )
 
             only_confirmed = self.request.query_params.get('confirmed', 'true').lower() == 'true'
-            supplies_dto = self.service_layer.get_supplies_by_date(date_param, only_confirmed, payment_type)
+            supplies_dto = self.service_layer.get_supplies_by_date(date_param, only_confirmed, payment_type, user = self.request.user)
             return self.queryset.filter(id__in=[dto.id for dto in supplies_dto])
 
     def perform_create(self, serializer):
@@ -162,7 +162,7 @@ class ClientViewSet(viewsets.ModelViewSet):
             }
 
             order_field = filter_dict.get(filter_tag)
-            clients_dto = self.service_layer.search(q, bool(show_zeros))
+            clients_dto = self.service_layer.search(q, bool(show_zeros),user=self.request.user)
             return self.queryset.filter(id__in=[dto.id for dto in clients_dto]).order_by(order_field)
         # return super().get_queryset()
 
@@ -262,7 +262,7 @@ class CashFlowViewSet(viewsets.ModelViewSet):
     def by_date(self, request):
         date = request.query_params.get('date', timezone.now().date())
         flow_type = request.query_params.get('flow_type', 'all')
-        cashflows_dto = self.service_layer.get_cashflows_by_date(date, flow_type)
+        cashflows_dto = self.service_layer.get_cashflows_by_date(date, flow_type, user = self.request.user)
         return Response(vars(cashflow) for cashflow in cashflows_dto)
     
     def perform_create(self, serializer):

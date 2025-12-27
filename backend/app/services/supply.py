@@ -26,11 +26,12 @@ class SupplyService:
         self, 
         target_date: date = None, 
         only_confirmed: bool = True,
-        payment_type: str = 'all'
+        payment_type: str = 'all',
+        user = None
     ) -> List[SupplyDTO]:
         """Возвращает поставки на указанную дату."""
         target_date = target_date or date.today()
-        supplies = self.dao.get_supplies_by_date(target_date, only_confirmed, payment_type)
+        supplies = self.dao.get_supplies_by_date(target_date, only_confirmed, payment_type, user = user)
         result = [self._to_dto(supply) for supply in supplies]
         return result
 
