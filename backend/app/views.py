@@ -230,3 +230,115 @@ class LoggingTemplateView(TemplateView):
         return super().dispatch(request, *args, **kwargs)
 
 
+
+
+
+# views.py
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from .models import UserProfile
+from .serializers import UserSerializer, LoginSerializer, UserProfileSerializer
+
+class RegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    permission_classes = [permissions.AllowAny]
+    serializer_class = UserSerializer
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Создаем пользователя
+        user = User.objects.create_user(
+            username=serializer.validated_data['username'],
+            email=serializer.validated_data.get('email', ''),
+            password=serializer.validated_data['password']
+        )
+        
+        # Проверяем, существует ли уже профиль
+        # (должен быть создан сигналом, но проверяем на всякий случай)
+        profile, created = UserProfile.objects.get_or_create(
+            user=user,
+            defaults={'role': UserProfile.Role.EMPLOYEE}
+        )
+        
+        # Если профиль уже существовал, обновляем его роль
+        if not created:
+            profile.role = UserProfile.Role.EMPLOYEE
+            profile.save()
+        
+        # Генерируем токены
+        refresh = RefreshToken.for_user(user)
+        
+        # Получаем данные пользователя с профилем
+        user_serializer = UserSerializer(user)
+        
+        return Response({
+            'user': user_serializer.data,
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }, status=status.HTTP_201_CREATED)
+
+class LoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
+        
+        user = authenticate(username=username, password=password)
+        
+        if user is None:
+            return Response(
+                {'error': 'Неверные учетные данные'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        refresh = RefreshToken.for_user(user)
+        
+        # Получаем данные пользователя с профилем
+        user_serializer = UserSerializer(user)
+        
+        return Response({
+            'user': user_serializer.data,
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        })
+
+class LogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        try:
+            refresh_token = request.data.get('refresh')
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            
+            return Response({'message': 'Успешный выход из системы'})
+        except Exception as e:
+            return Response(
+                {'error': 'Не удалось выйти из системы'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_object(self):
+        return self.request.user.profile
+
+class CurrentUserView(generics.RetrieveAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_object(self):
+        return self.request.user

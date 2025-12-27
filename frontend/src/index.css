@@ -101,3 +101,11 @@
     @apply bg-background text-foreground;
   }
 }
+/* В конец index.css */
+.min-h-screen {
+  min-height: 100vh;
+}
+
+.bg-gray-50 {
+  background-color: #f9fafb;
+}

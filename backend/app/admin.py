@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow, Employee
+from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow, Employee, UserProfile
 
 
 @admin.register(Supplier)
@@ -40,3 +40,4 @@ class CashFlowAdmin(admin.ModelAdmin):
     date_hierarchy = 'date_added'
 
 admin.site.register(Employee)
+admin.site.register(UserProfile)

@@ -1,11 +1,40 @@
+// api.ts
 import { Supply, AddSupplyForm, CashFlowOperation } from '@/types/supply';
 import { Client, ClientDebt, AddClientForm, ClientsResponse } from '@/types/client';
 import { CreateSupplierData, Supplier, SuppliersResponse } from '@/types/suppliers';
 import { Employee } from '@/types/employees';
 
-// Укажите ваш IP-адрес или домен
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// Типы для аутентификации
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  profile: {
+    role: 'admin' | 'employee';
+    created_at: string;
+  };
+}
 
+export interface AuthResponse {
+  user: User;
+  access: string;
+  refresh: string;
+}
+
+export interface LoginData {
+  username: string;
+  password: string;
+}
+
+export interface RegisterData {
+  username: string;
+  email?: string;
+  password: string;
+  password2: string;
+}
+
+// Укажите ваш IP-адрес или домен
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 class ApiError extends Error {
   status: number;
@@ -19,13 +48,61 @@ class ApiError extends Error {
   }
 }
 
-const apiRequest = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
-  const url = `${API_BASE_URL}${endpoint}`;
-  const headers: HeadersInit = { ...options.headers };
+// Функция для обновления токена
+let refreshPromise: Promise<{ access: string }> | null = null;
 
-  // if (!(options.body instanceof FormData)) {
-  //   headers['Content-Type'] = 'application/json';
-  // }
+const refreshAccessToken = async (): Promise<{ access: string }> => {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (!refreshToken) {
+        throw new Error('No refresh token');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/refresh/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refresh: refreshToken }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to refresh token');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('access_token', data.access);
+      return data;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+};
+
+// Общая функция для запросов с обработкой 401 ошибок
+const apiRequest = async <T>(endpoint: string, options: RequestInit = {}, retry = true): Promise<T> => {
+  const url = `${API_BASE_URL}${endpoint}`;
+  
+  // Получаем текущий токен
+  const token = localStorage.getItem('access_token');
+  
+  const headers: HeadersInit = {
+    ...(options.headers || {}),
+  };
+
+  // Добавляем токен, если он есть
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Если это не FormData и не указан Content-Type, добавляем JSON
   const isFormData = options.body instanceof FormData;
   if (!isFormData && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
@@ -37,12 +114,34 @@ const apiRequest = async <T>(endpoint: string, options: RequestInit = {}): Promi
       headers,
     });
 
+    // Если 401 и есть refresh токен, пробуем обновить
+    if (response.status === 401 && retry) {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (refreshToken) {
+        try {
+          await refreshAccessToken();
+          // Повторяем запрос с новым токеном
+          return apiRequest<T>(endpoint, options, false);
+        } catch (refreshError) {
+          // Если обновление не удалось, очищаем токены
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+          throw refreshError;
+        }
+      } else {
+        // Нет refresh токена, редиректим на логин
+        window.location.href = '/login';
+      }
+    }
+
     if (!response.ok) {
       let errorBody = null;
       try {
         errorBody = await response.json();
       } catch (e) {
-        // Ошибка парсинга JSON не критична, если тело ответа пустое или не JSON
+        // Ошибка парсинга JSON не критична
       }
       throw new ApiError(`API Error: ${response.statusText}`, response.status, errorBody);
     }
@@ -58,6 +157,77 @@ const apiRequest = async <T>(endpoint: string, options: RequestInit = {}): Promi
   }
 };
 
+// API для аутентификации
+export const authApi = {
+  register: (data: RegisterData) => 
+    apiRequest<AuthResponse>('/auth/register/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  login: (data: LoginData) => 
+    apiRequest<AuthResponse>('/auth/login/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  logout: (refreshToken: string) => 
+    apiRequest('/auth/logout/', {
+      method: 'POST',
+      body: JSON.stringify({ refresh: refreshToken }),
+    }),
+
+  getCurrentUser: () => 
+    apiRequest<User>('/auth/me/'),
+
+  refreshToken: () => 
+    refreshAccessToken(),
+};
+
+// Утилиты для работы с аутентификацией
+export const authService = {
+  setTokens: (data: { access: string; refresh: string }) => {
+    localStorage.setItem('access_token', data.access);
+    localStorage.setItem('refresh_token', data.refresh);
+  },
+
+  setUser: (user: User) => {
+    localStorage.setItem('user', JSON.stringify(user));
+  },
+
+  getAccessToken: () => localStorage.getItem('access_token'),
+  
+  getRefreshToken: () => localStorage.getItem('refresh_token'),
+  
+  getUser: (): User | null => {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return null;
+    try {
+      return JSON.parse(userStr);
+    } catch {
+      return null;
+    }
+  },
+
+  getUserRole: (): 'admin' | 'employee' | null => {
+    const user = authService.getUser();
+    return user?.profile?.role || null;
+  },
+
+  isAdmin: () => authService.getUserRole() === 'admin',
+  
+  isEmployee: () => authService.getUserRole() === 'employee',
+  
+  isAuthenticated: () => !!authService.getAccessToken(),
+  
+  clearTokens: () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+  },
+};
+
+// Остальные API остаются без изменений, они будут использовать обновленный apiRequest
 export const suppliesApi = {
   getSupplies: () => apiRequest<Supply[]>('/supplies/?type=future'),
   
@@ -68,16 +238,17 @@ export const suppliesApi = {
     }
     return apiRequest<Supply[]>(endpoint);
   },
+  
   getSupplyHistory: (supplierName: string) =>
     apiRequest<Supply[]>(
       `/supplies/?type=past&supplier=${encodeURIComponent(supplierName)}`
     ),
+  
   createSupply: (data: AddSupplyForm) => {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
       if (key === 'images' && Array.isArray(value)) {
-        // Добавляем файлы под ключом 'images'
-        value.forEach((file, index) => {
+        value.forEach((file) => {
           formData.append('images', file);
         });
       } else if (key !== 'images' && value !== undefined && value !== null) {
@@ -94,7 +265,7 @@ export const suppliesApi = {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
       if (key === 'images' && Array.isArray(value)) {
-        value.forEach((file, index) => {
+        value.forEach((file) => {
           formData.append('images', file);
         });
       } else if (key !== 'images' && value !== undefined && value !== null) {
@@ -150,8 +321,6 @@ export const suppliersApi = {
     apiRequest(`/suppliers/${id}/`, {
       method: 'DELETE',
     }),
-  getSupplierStats: (id: string) => 
-    apiRequest<SupplierStats>(`/suppliers/${id}/get_stats/`),
 };
 
 export const cashFlowApi = {

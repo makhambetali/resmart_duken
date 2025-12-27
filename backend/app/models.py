@@ -1,7 +1,34 @@
 from django.db import models
 from django.utils import timezone
+from django.conf import settings
 
+class UserProfile(models.Model):
+    class Role(models.TextChoices):
+        ADMIN = "admin", "Admin"
+        EMPLOYEE = "employee", "Employee"
 
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="profile"
+    )
+
+    role = models.CharField(
+        max_length=20,
+        choices=Role.choices,
+        default=Role.EMPLOYEE
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_admin(self):
+        return self.role == self.Role.ADMIN
+
+    def is_employee(self):
+        return self.role == self.Role.EMPLOYEE
+
+    def __str__(self):
+        return f"{self.user.username} ({self.role})"
 
 class Supplier(models.Model):
     name = models.CharField(max_length=30, db_index=True, unique=True)

@@ -1,9 +1,11 @@
+// App.tsx
 import React, { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from '@/contexts/AuthContext'; // Добавляем провайдер аутентификации
 import Index from "./pages/Index";
 import Clients from "./pages/Clients";
 import Suppliers from "./pages/Suppliers";
@@ -11,26 +13,31 @@ import Finance from "./pages/Finance";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import History from "./pages/History";
+import Login from "./pages/Login"; // Добавляем страницу логина
+import Register from "./pages/Register"; // Добавляем страницу регистрации
+import { ProtectedRoute } from '@/components/ProtectedRoute'; // Добавляем защищенный роут
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 60_000,
+    },
+  },
+});
 
 const App = () => {
-  // ++ НАЧАЛО ИЗМЕНЕНИЙ: Блокировка контекстного меню ++
+  // Блокировка контекстного меню
   useEffect(() => {
-    // Функция-обработчик, которая отменяет действие по умолчанию для события
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
     };
-
-    // Добавляем слушатель события 'contextmenu' на весь документ
     document.addEventListener('contextmenu', handleContextMenu);
-
-    // Функция очистки: удаляем слушатель, когда компонент размонтируется
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu);
     };
-  }, []); // Пустой массив зависимостей означает, что эффект выполнится один раз при монтировании
-  // ++ КОНЕЦ ИЗМЕНЕНИЙ ++
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -38,15 +45,48 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/clients" element={<Clients />} />
-            <Route path="/suppliers" element={<Suppliers />} />
-            <Route path="/finance" element={<Finance />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/history" element={<History/>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AuthProvider>
+            <Routes>
+              {/* Публичные маршруты */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              
+              {/* Защищенные маршруты */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              } />
+              <Route path="/clients" element={
+                <ProtectedRoute>
+                  <Clients />
+                </ProtectedRoute>
+              } />
+              <Route path="/suppliers" element={
+                <ProtectedRoute>
+                  <Suppliers />
+                </ProtectedRoute>
+              } />
+              <Route path="/finance" element={
+                <ProtectedRoute>
+                  <Finance />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute adminOnly>
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              <Route path="/history" element={
+                <ProtectedRoute>
+                  <History />
+                </ProtectedRoute>
+              } />
+              
+              {/* Маршрут по умолчанию */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

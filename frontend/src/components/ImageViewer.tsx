@@ -168,15 +168,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
           </div>
           
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleDownload}
-              className="text-white hover:bg-white/20"
-              title="Скачать (Ctrl+S)"
-            >
-              <Download className="h-5 w-5" />
-            </Button>
+          
             <Button
               variant="ghost"
               size="icon"

@@ -441,43 +441,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                           </button>
                           
                           {/* Кнопки управления */}
-                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-1">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  size="icon"
-                                  className="h-7 w-7 bg-white/90 hover:bg-white"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDownloadImage(image.image, image.id);
-                                  }}
-                                >
-                                  <Download className="w-3.5 h-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Скачать</TooltipContent>
-                            </Tooltip>
-                            
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  size="icon"
-                                  className="h-7 w-7 bg-white/90 hover:bg-white"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteImage(image.id);
-                                  }}
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Удалить</TooltipContent>
-                            </Tooltip>
-                          </div>
+                        
                           
                           {/* Номер изображения */}
                           <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">

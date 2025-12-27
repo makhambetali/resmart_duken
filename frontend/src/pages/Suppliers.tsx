@@ -1,23 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext'; // Добавляем импорт
 import { Layout } from '@/components/Layout';
 import { SupplierTable } from '@/components/SupplierTable';
 import { SupplierModal } from '@/components/SupplierModal';
-import { SupplierViewModal } from '@/components/SupplierViewModal'; // Новый компонент
+import { SupplierViewModal } from '@/components/SupplierViewModal';
 import { Supplier, CreateSupplierData, SupplierFilters, IsEverydaySupplyFilter } from '@/types/supplier';
 import { suppliersApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom'; // Добавляем для редиректа
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Shield } from 'lucide-react';
 
 const SuppliersPage = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user, isLoading: authLoading, isAdmin } = useAuth(); // Получаем данные аутентификации
+  const navigate = useNavigate();
   
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -31,13 +35,21 @@ const SuppliersPage = () => {
     is_everyday_supply: 'all',
   });
 
+  // Проверяем аутентификацию при загрузке
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login');
+    }
+  }, [authLoading, user, navigate]);
+
+  // Используем enable в useQuery для предотвращения запросов без аутентификации
   const { 
     data: suppliersData, 
     isLoading: suppliersLoading, 
     error: suppliersError,
     isFetching: isSuppliersFetching
   } = useQuery({
-    queryKey: ['suppliers', filters],
+    queryKey: ['suppliers', filters, user], // Добавляем user в queryKey для инвалидации
     queryFn: () => suppliersApi.getSuppliers({
       page: filters.currentPage,
       page_size: filters.perPage,
@@ -46,6 +58,7 @@ const SuppliersPage = () => {
         ? undefined 
         : filters.is_everyday_supply,
     }),
+    enabled: !!user, // Запросы только при наличии пользователя
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
@@ -157,6 +170,20 @@ const SuppliersPage = () => {
   
   const totalPages = Math.ceil((suppliersData?.count || 0) / filters.perPage);
 
+  // Если загрузка аутентификации, показываем лоадер
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Если пользователь не аутентифицирован, вернем null (редирект уже произойдет в useEffect)
+  if (!user) {
+    return null;
+  }
+
   if (suppliersError) {
     return (
       <Layout>
@@ -170,8 +197,22 @@ const SuppliersPage = () => {
   return (
     <Layout>
       <div className="space-y-6">
+        {/* Заголовок с информацией о пользователе */}
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-3xl font-bold tracking-tight">Поставщики</h1>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Поставщики</h1>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-sm text-gray-600">
+                Вы вошли как: <span className="font-medium">{user?.username}</span>
+              </span>
+              {isAdmin && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+                  <Shield className="w-3 h-3" />
+                  <span>Администратор</span>
+                </div>
+              )}
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <div className="text-sm text-muted-foreground">
               Найдено: {suppliersData?.count || 0}
@@ -179,9 +220,13 @@ const SuppliersPage = () => {
                 <span className="ml-2 text-blue-500 text-xs">(обновление...)</span>
               )}
             </div>
-            <Button onClick={handleAdd} disabled={createMutation.isPending}>
-              <Plus className="mr-2 h-4 w-4" />
-              Добавить
+            <Button 
+              onClick={handleAdd} 
+              disabled={createMutation.isPending}
+              className="gap-1.5"
+            >
+              <Plus className="h-4 w-4" />
+              Добавить поставщика
             </Button>
           </div>
         </div>
@@ -255,6 +300,8 @@ const SuppliersPage = () => {
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onView={handleView}
+                canDelete={isAdmin} // Передаем права на удаление
+                canEdit={isAdmin || user?.profile?.role === 'admin'} // Права на редактирование
               />
             )}
           </CardContent>
@@ -324,6 +371,7 @@ const SuppliersPage = () => {
             setIsEditModalOpen(true);
           }
         }}
+        canEdit={isAdmin || user?.profile?.role === 'admin'}
       />
 
       {/* Модалка для редактирования (без статистики) */}

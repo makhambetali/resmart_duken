@@ -1,9 +1,12 @@
 from rest_framework import serializers
-from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow, Employee
+from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow, Employee, UserProfile
 from django.utils import timezone
 from django.core.cache import cache
 import logging
 from rest_framework.exceptions import ValidationError
+from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+
 logger = logging.getLogger('app')
 class ClientSerializer(serializers.ModelSerializer):
     class Meta:
@@ -60,3 +63,54 @@ class CashFlowSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Сумма не должна быть равна нулю')
         
         return value
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = ['role', 'created_at']
+
+# serializers.py - обновите UserSerializer.create()
+class UserSerializer(serializers.ModelSerializer):
+    profile = UserProfileSerializer(read_only=True)
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, required=True)
+    
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'password', 'password2', 'profile']
+    
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({"password": "Пароли не совпадают"})
+        return attrs
+    
+    def create(self, validated_data):
+        validated_data.pop('password2')
+        
+        # Создаем пользователя
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data.get('email', ''),
+            password=validated_data['password']
+        )
+        
+        # Используем get_or_create для профиля
+        UserProfile.objects.get_or_create(
+            user=user,
+            defaults={'role': UserProfile.Role.EMPLOYEE}
+        )
+        
+        return user
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+    
+    def validate(self, data):
+        username = data.get('username')
+        password = data.get('password')
+        
+        if not username or not password:
+            raise serializers.ValidationError("Необходимо указать имя пользователя и пароль")
+        
+        return data
