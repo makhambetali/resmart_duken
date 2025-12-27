@@ -63,6 +63,8 @@ class CashFlowSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Сумма не должна быть равна нулю')
         
         return value
+    
+    
 
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:

@@ -43,6 +43,37 @@ class SupplierViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         cache.delete('suppliers')
+        user = self.request.user
+        if not user.is_authenticated:
+            raise serializers.ValidationError(
+                {"detail": "Требуется аутентификация для создания поставщика"}
+            )
+        
+        try:
+            # Получаем профиль пользователя
+            profile = user.profile
+            
+            # Проверяем, что у профиля есть store
+            if not hasattr(profile, 'store') or profile.store is None:
+                raise serializers.ValidationError(
+                    {"detail": "У вашего профиля не назначен магазин"}
+                )
+            
+            # Получаем store из профиля
+            store = profile.store
+            
+            # Добавляем store в данные сериализатора
+            serializer.validated_data['store'] = store
+            
+            # Логирование
+            logger.info(
+                f"User {user.username} создает поставщика для магазина {store.name}"
+            )
+            
+        except UserProfile.DoesNotExist:
+            raise serializers.ValidationError(
+                {"detail": "Профиль пользователя не найден"}
+            )
         return super().perform_create(serializer)
     
     @action(detail = True, methods = ['get'])
@@ -87,7 +118,7 @@ class SupplyViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(id__in=[dto.id for dto in supplies_dto])
 
     def perform_create(self, serializer):
-        print(self.request.user.profile.store)
+
         images = self.request.FILES.getlist("images")
         supply = serializer.save()
         for image in images:
@@ -185,6 +216,41 @@ class ClientViewSet(viewsets.ModelViewSet):
         client_obj = self.get_object()
         anal = ClientStats(client_obj)
         return JsonResponse(anal.execute())
+    
+    def perform_create(self, serializer):
+        user = self.request.user
+        if not user.is_authenticated:
+            raise serializers.ValidationError(
+                {"detail": "Требуется аутентификация для создания клиента"}
+            )
+        
+        try:
+            # Получаем профиль пользователя
+            profile = user.profile
+            
+            # Проверяем, что у профиля есть store
+            if not hasattr(profile, 'store') or profile.store is None:
+                raise serializers.ValidationError(
+                    {"detail": "У вашего профиля не назначен магазин"}
+                )
+            
+            # Получаем store из профиля
+            store = profile.store
+            
+            # Добавляем store в данные сериализатора
+            serializer.validated_data['store'] = store
+            
+            # Логирование
+            logger.info(
+                f"User {user.username} создает клиента для магазина {store.name}"
+            )
+            
+        except UserProfile.DoesNotExist:
+            raise serializers.ValidationError(
+                {"detail": "Профиль пользователя не найден"}
+            )
+        return super().perform_create(serializer)
+    
 
 class CashFlowViewSet(viewsets.ModelViewSet):
     serializer_class = CashFlowSerializer
@@ -198,12 +264,46 @@ class CashFlowViewSet(viewsets.ModelViewSet):
         cashflows_dto = self.service_layer.get_cashflows_by_date(date, flow_type)
         return Response(vars(cashflow) for cashflow in cashflows_dto)
     
-    def perform_create(self, serializer): 
+    def perform_create(self, serializer):
         cache.delete(f'cashflow_{timezone.now().date()}')
         action = 'Вынос' if serializer.validated_data['amount'] < 0 else "Внесение"
         logger.info(f"{action} в размере {serializer.validated_data['amount']}")
 
+        user = self.request.user
+        if not user.is_authenticated:
+            raise serializers.ValidationError(
+                {"detail": "Требуется аутентификация для создания cashflow"}
+            )
+        
+        try:
+            # Получаем профиль пользователя
+            profile = user.profile
+            
+            # Проверяем, что у профиля есть store
+            if not hasattr(profile, 'store') or profile.store is None:
+                raise serializers.ValidationError(
+                    {"detail": "У вашего профиля не назначен магазин"}
+                )
+            
+            # Получаем store из профиля
+            store = profile.store
+            
+            # Добавляем store в данные сериализатора
+            serializer.validated_data['store'] = store
+            
+            # Логирование
+            logger.info(
+                f"User {user.username} создает cashflow для магазина {store.name}"
+            )
+            
+        except UserProfile.DoesNotExist:
+            raise serializers.ValidationError(
+                {"detail": "Профиль пользователя не найден"}
+            )
         return super().perform_create(serializer)
+    
+
+
 
     def perform_destroy(self, instance):
         cache.delete(f'cashflow_{timezone.now().date()}')

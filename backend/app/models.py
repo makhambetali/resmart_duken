@@ -4,9 +4,9 @@ from django.conf import settings
 
 class Store(models.Model):
     name = models.CharField(max_length=50, default='Магазин')
-    # owner = models.OneToOneField(settings.AUTH_USER_MODEL,
-    #                              on_delete=models.CASCADE,
-    #                             related_name="owner_store")
+    owner = models.OneToOneField(settings.AUTH_USER_MODEL,
+                                 on_delete=models.CASCADE,
+                                related_name="owner_store")
     created_at = models.DateTimeField(auto_now_add=True)
     def __str__(self):
         return f"{self.name}"
@@ -54,7 +54,7 @@ class Supplier(models.Model):
     last_accessed = models.DateTimeField(blank=True, null=True)
     date_added = models.DateTimeField(auto_now_add=True)
     valid = models.BooleanField(default=True)
-
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='suppliers', blank=True)
     def __str__(self):
         return self.name
     
@@ -79,6 +79,7 @@ class Supply(models.Model):
     date_added = models.DateTimeField(auto_now_add=True)
     invoice_html = models.TextField(blank=True)
     rescheduled_cnt = models.PositiveSmallIntegerField(default=0)
+    
     def __str__(self):
         return f"{self.supplier}: {self.price_bank + self.price_cash}"
     
@@ -112,7 +113,7 @@ class Client(models.Model):
 
     last_accessed = models.DateTimeField(auto_now=True)
     date_added = models.DateTimeField(auto_now_add=True)
-
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='clients', blank=True)
     def __str__(self):
         return f"{self.name} : {self.debt}"
     
@@ -143,7 +144,7 @@ class CashFlow(models.Model):
     amount = models.IntegerField()
     description = models.TextField(blank=True)
     date_added = models.DateTimeField(auto_now_add=True, db_index=True)
-
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='cashflows', blank=True)
     def __str__(self):
         return f'{self.amount}'
     
