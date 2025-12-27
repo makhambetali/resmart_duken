@@ -79,6 +79,7 @@ class Supply(models.Model):
     date_added = models.DateTimeField(auto_now_add=True)
     invoice_html = models.TextField(blank=True)
     rescheduled_cnt = models.PositiveSmallIntegerField(default=0)
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='supplies', blank=True)
     
     def __str__(self):
         return f"{self.supplier}: {self.price_bank + self.price_cash}"

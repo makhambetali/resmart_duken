@@ -38,7 +38,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         q = self.request.query_params.get('q', None)
         ies = self.front_bool_to_back[self.request.query_params.get('is_everyday_supply', 'all')] #ies - stands for abbreviaton of is_everyday_supply
-        suppliers_dto = self.service_layer.search(q, ies)
+        suppliers_dto = self.service_layer.search(q, ies, self)
         return self.queryset.filter(id__in=[dto.id for dto in suppliers_dto])
     
     def perform_create(self, serializer):
@@ -101,7 +101,7 @@ class SupplyViewSet(viewsets.ModelViewSet):
         supply_time = self.request.query_params.get('type', None)
         supplier_name = self.request.query_params.get('supplier', None)
         if supply_time:
-            supplies_dto = self.service_layer.get_supplies(supply_time, supplier_name)
+            supplies_dto = self.service_layer.get_supplies(supply_time, supplier_name, user=self.request.user)
             return self.queryset.filter(id__in=[dto.id for dto in supplies_dto])
         else:
             try:
@@ -118,8 +118,9 @@ class SupplyViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(id__in=[dto.id for dto in supplies_dto])
 
     def perform_create(self, serializer):
-
+        print("hello")
         images = self.request.FILES.getlist("images")
+        serializer.validated_data['store'] = self.request.user.profile.store
         supply = serializer.save()
         for image in images:
             SupplyImage.objects.create(

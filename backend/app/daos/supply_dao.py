@@ -5,22 +5,26 @@ from django.core.cache import cache
 from app.models import Supply
 
 class SupplyDAO:
-    def get_past_supplies(self, supplier_name=None):
-        """Поставки с delivery_date раньше текущей даты."""
-        queryset = Supply.objects.filter(
-            delivery_date__lte=timezone.localtime().date()
+    def get_related_supplies(self, user):
+        print(user.profile.store)
+        return Supply.objects.filter(
+            store = user.profile.store
         ).select_related('supplier')
+
+    def get_past_supplies(self, supplier_name=None, user = None):
+        """Поставки с delivery_date раньше текущей даты."""
+        queryset = self.get_related_supplies(user).filter(delivery_date__lte=timezone.localtime().date())
 
         if supplier_name:
             queryset = queryset.filter(supplier__name__iexact=supplier_name)
 
         return queryset
 
-    def get_future_supplies(self, supplier_name=None):
+    def get_future_supplies(self, supplier_name=None, user = None):
         """Поставки с delivery_date сегодня или позже."""
-        queryset = Supply.objects.filter(
-            delivery_date__gte=timezone.localtime().date()
-        ).select_related('supplier')
+        queryset = self.get_related_supplies(user).filter(delivery_date__gte=timezone.localtime().date())
+        print(queryset)
+        print('yolo')
 
         if supplier_name:
             queryset = queryset.filter(supplier__name__iexact=supplier_name)

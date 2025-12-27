@@ -12,11 +12,13 @@ class SupplyService:
         self.dao = dao or SupplyDAO()  # Инъекция зависимости для тестирования
         # self.cache_service = CacheService()
 
-    def get_supplies(self, supply_type: str, supplier_name: str) -> List[SupplyDTO]:
+    def get_supplies(self, supply_type: str, supplier_name: str, user) -> List[SupplyDTO]:
         queryset = (
-            self.dao.get_past_supplies(supplier_name=supplier_name) if supply_type == 'past'
-            else self.dao.get_future_supplies(supplier_name=supplier_name)
+            self.dao.get_past_supplies(supplier_name=supplier_name, user=user) if supply_type == 'past'
+            else self.dao.get_future_supplies(supplier_name=supplier_name, user=user)
         )
+        print(queryset)
+        print("qwerty")
         result = [self._to_dto(supply) for supply in queryset]
         return result
 
