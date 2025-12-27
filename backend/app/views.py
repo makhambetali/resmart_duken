@@ -2,6 +2,7 @@ from django.views.generic.base import TemplateView
 from django.utils import timezone
 from django.core.cache import cache
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from datetime import date
 from rest_framework import viewsets, generics, status
 from rest_framework.decorators import action
@@ -316,8 +317,24 @@ class CashFlowViewSet(viewsets.ModelViewSet):
 
 class EmployeeViewSet(viewsets.ModelViewSet):
     serializer_class = EmployeeSerializer
-    queryset = Employee.objects.all()
-
+    
+    def get_queryset(self):
+        # Получаем профиль текущего пользователя
+        user_profile = get_object_or_404(UserProfile, user=self.request.user)
+        
+        # Получаем магазин из профиля
+        user_store = user_profile.store
+        
+        if not user_store:
+            # Если у пользователя нет магазина, возвращаем пустой queryset
+            return User.objects.none()
+        print(User.objects.filter(
+            profile__store=user_store  # ← одна черта!
+        ).select_related('profile') )
+        # Фильтруем пользователей по магазину в их профиле
+        return User.objects.filter(
+            profile__store=user_store  # ← одна черта!
+        ).select_related('profile') 
 class SupplierCustomAPIView(generics.ListAPIView):
     serializer_class = SupplierCustomSerializer
     def get_queryset(self):

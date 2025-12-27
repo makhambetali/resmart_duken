@@ -69,7 +69,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     enabled: open,
     staleTime: 1000 * 60 * 30,
   });
-
+  console.log("employees", employees)
   const { data: debts = [] } = useQuery({
     queryKey: ['client-debts', client?.id, showInactiveDebts],
     queryFn: () => client ? clientsApi.getClientDebts(client.id) : Promise.resolve([]),
@@ -530,9 +530,9 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                     <SelectValue placeholder="Выберите сотрудника" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {employees.map((emp: { id: number; name: string }) => (
+                                    {employees.map((emp: { id: number; username: string }) => (
                                       <SelectItem key={emp.id} value={String(emp.id)}>
-                                        {emp.name}
+                                        {emp.username}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
@@ -662,7 +662,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                       </SelectTrigger>
                       <SelectContent>
                         {employees.map((emp: { id: number; name: string }) => (
-                          <SelectItem key={emp.id} value={String(emp.id)}>{emp.name}</SelectItem>
+                          <SelectItem key={emp.id} value={String(emp.id)}>{emp.username}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

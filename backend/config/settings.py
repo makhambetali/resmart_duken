@@ -95,6 +95,7 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
+print(os.getenv("DB_NAME"))
 # =========================
 # AUTH PASSWORD VALIDATORS
 # =========================
