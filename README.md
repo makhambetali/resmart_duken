@@ -55,7 +55,7 @@ The complete project, configuration files, secrets, and commercial components ar
 ---
 
 ## Author and Copyright Holder
-**Author:** Makhambetal Diyar
+**Author:** Makhambetali Diyar
 **Copyright Holder:** Makhambetali Diyar
 
 ---
