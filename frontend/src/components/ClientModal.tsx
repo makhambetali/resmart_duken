@@ -69,7 +69,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     enabled: open,
     staleTime: 1000 * 60 * 30,
   });
-  console.log("employees", employees)
+
   const { data: debts = [] } = useQuery({
     queryKey: ['client-debts', client?.id, showInactiveDebts],
     queryFn: () => client ? clientsApi.getClientDebts(client.id) : Promise.resolve([]),
@@ -89,6 +89,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
       description?: string;
     }) =>
       clientsApi.addDebt(id, debt_value, responsible_employee_id),
+      
     onSuccess: () => {
       toast({ 
         title: 'Долг добавлен', 
@@ -224,6 +225,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
   };
 
   const handleAddDebt = () => {
+
     const rawValue = newDebtValue.replace(/\s/g, '');
     const debtValue = parseFloat(rawValue);
     if (isNaN(debtValue) || debtValue === 0) {
@@ -234,7 +236,9 @@ export const ClientModal: React.FC<ClientModalProps> = ({
       toast({ title: 'Выберите ответственного сотрудника', variant: 'destructive' });
       return;
     }
+
     if (client) {
+
       addDebtMutation.mutate({ 
         id: client.id, 
         debt_value: debtValue, 
@@ -627,6 +631,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                     <ClientSearchCombobox
                       value={selectedClientId}
                       onValueChange={(clientId, clientName) => {
+
                         setSelectedClientId(clientId);
                         setSelectedClientName(clientName);
                       }}

@@ -132,7 +132,7 @@ class ClientDebt(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='debts')
     debt_value = models.IntegerField()
     date_added = models.DateTimeField(auto_now_add=True)
-    responsible_employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    responsible_employee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     is_valid = models.BooleanField(default=True)
     repaid_at = models.DateTimeField(null=True, blank=True)
     description = models.TextField(blank=True)

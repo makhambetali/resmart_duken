@@ -34,7 +34,7 @@ export interface RegisterData {
 }
 
 // Укажите ваш IP-адрес или домен
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL =  'http://localhost:8000/api/v1';
 
 class ApiError extends Error {
   status: number;
@@ -389,11 +389,15 @@ export const clientsApi = {
   getClientDebts: (id: string) => 
     apiRequest<ClientDebt[]>(`/clients/${id}/get_debts/`),
   
-  addDebt: (id: string, debt_value: number, responsible_employee_id: string) => 
-    apiRequest<ClientDebt>(`/clients/${id}/add_debt/`, {
+  addDebt: (id: string, debt_value: number, responsible_employee_id: string) => {
+
+  
+    return apiRequest<ClientDebt>(`/clients/${id}/add_debt/`, {
       method: 'POST',
       body: JSON.stringify({ debt_value, responsible_employee_id }),
-    }),
+    });
+  },
+  
     
   deleteDebt: (debtId: string) => 
     apiRequest(`/clients/delete_debt/${debtId}/`, {

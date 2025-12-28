@@ -82,16 +82,20 @@ USE_TZ = True
 # =========================
 # DATABASE (PostgreSQL)
 # =========================
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("POSTGRES_DB"),
-        "USER": os.getenv("POSTGRES_USER"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+        "NAME": os.getenv("POSTGRES_DB", "dev_db"),
+        "USER": os.getenv("POSTGRES_USER", 'postgres'),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD", '123'),
         "HOST": os.getenv("POSTGRES_HOST", "localhost"),
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
     }
 }
+
+
+print(DATABASES['default']['NAME'])
 # =========================
 # AUTH PASSWORD VALIDATORS
 # =========================
@@ -119,7 +123,7 @@ TIME_ZONE = os.getenv("DJANGO_TIMEZONE", "Asia/Qyzylorda")
 
 USE_I18N = True
 USE_TZ = True
-print(TIME_ZONE)
+
 # =========================
 # STATIC / MEDIA
 # =========================
@@ -147,7 +151,18 @@ CSRF_TRUSTED_ORIGINS = [
     "https://smart-duken.com",
     "https://www.smart-duken.com",
 ]
-
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+if os.getenv('prod', None) != 'True':
+    CSRF_TRUSTED_ORIGINS.extend(
+        ['http://localhost:8000', 'http://127.0.0.1:8000']
+    )
+    CSRF_COOKIE_SECURE = False
+    SESSION_COOKIE_SECURE = False
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
 # =========================
 # REDIS / CELERY
 # =========================
@@ -209,6 +224,5 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
+
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
