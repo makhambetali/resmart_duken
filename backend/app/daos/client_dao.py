@@ -27,7 +27,6 @@ class ClientDAO:
         instance.is_valid = False
         instance.repaid_at = timezone.localtime()
         instance.description = "Долг полностью погашен вручную."
-        print(timezone.localtime())
         instance.save()
         logger.info(f'Удаление долга в размере {instance.debt_value} у клиента #{client.id}({client.name})')
         cache.delete(f'clients_{client.id}_debts')
@@ -42,7 +41,7 @@ class ClientDAO:
         now = timezone.localtime()
         timestamp = now.strftime("%d.%m.%Y %H:%M")
 
-        print(client.name, remaining_amount, responsible_employee_id)
+
 
         with transaction.atomic():
             debts = (
@@ -57,7 +56,7 @@ class ClientDAO:
                 return client
             
             for debt in debts:
-                print(debt.debt_value)
+
                 if remaining_amount <= 0:
                     break
 

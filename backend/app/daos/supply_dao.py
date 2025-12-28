@@ -23,9 +23,6 @@ class SupplyDAO:
     def get_future_supplies(self, supplier_name=None, user = None):
         """Поставки с delivery_date сегодня или позже."""
         queryset = self.get_related_supplies(user).filter(delivery_date__gte=timezone.localtime().date())
-        print(queryset)
-        print('yolo')
-
         if supplier_name:
             queryset = queryset.filter(supplier__name__iexact=supplier_name)
 

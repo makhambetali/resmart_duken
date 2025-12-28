@@ -17,8 +17,6 @@ class SupplyService:
             self.dao.get_past_supplies(supplier_name=supplier_name, user=user) if supply_type == 'past'
             else self.dao.get_future_supplies(supplier_name=supplier_name, user=user)
         )
-        print(queryset)
-        print("qwerty")
         result = [self._to_dto(supply) for supply in queryset]
         return result
 

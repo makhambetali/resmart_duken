@@ -151,7 +151,7 @@ class ClientViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         q = self.request.query_params.get('q', '')
         show_zeros = int(self.request.query_params.get('show_zeros', 1))
-        # print('views.py: ',type(show_zeros))
+
         filter_tag = self.request.query_params.get('filter_tag', 'latest')
         if q or filter_tag:
             filter_dict = {
@@ -327,9 +327,6 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         if not user_store:
             # Если у пользователя нет магазина, возвращаем пустой queryset
             return User.objects.none()
-        print(User.objects.filter(
-            profile__store=user_store  # ← одна черта!
-        ).select_related('profile') )
         # Фильтруем пользователей по магазину в их профиле
         return User.objects.filter(
             profile__store=user_store  # ← одна черта!
