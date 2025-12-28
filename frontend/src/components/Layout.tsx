@@ -243,11 +243,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddSupplyClick }) =>
                     Вход
                   </Button>
                 </Link>
-                <Link to="/register">
-                  <Button size="sm">
-                    Регистрация
-                  </Button>
-                </Link>
+                
               </div>
             )}
           </div>

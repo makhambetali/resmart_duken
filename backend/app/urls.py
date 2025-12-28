@@ -12,7 +12,7 @@ router.register(r'employees', EmployeeViewSet, basename='employees')
 urlpatterns = [
     path('api/v1/', include(router.urls)),
     path('server-time/', getServerTime),
-    path('api/v1/auth/register/', RegisterView.as_view(), name='register'),
+    # path('api/v1/auth/register/', RegisterView.as_view(), name='register'),
     path('api/v1/auth/login/', LoginView.as_view(), name='login'),
     path('api/v1/auth/logout/', LogoutView.as_view(), name='logout'),
     path('api/v1/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

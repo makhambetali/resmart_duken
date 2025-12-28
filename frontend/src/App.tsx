@@ -14,7 +14,6 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import History from "./pages/History";
 import Login from "./pages/Login"; // Добавляем страницу логина
-import Register from "./pages/Register"; // Добавляем страницу регистрации
 import { ProtectedRoute } from '@/components/ProtectedRoute'; // Добавляем защищенный роут
 
 const queryClient = new QueryClient({
@@ -49,7 +48,6 @@ const App = () => {
             <Routes>
               {/* Публичные маршруты */}
               <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
               
               {/* Защищенные маршруты */}
               <Route path="/" element={

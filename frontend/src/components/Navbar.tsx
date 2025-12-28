@@ -95,11 +95,7 @@ export const Navbar: React.FC = () => {
                     Вход
                   </Button>
                 </Link>
-                <Link to="/register">
-                  <Button size="sm">
-                    Регистрация
-                  </Button>
-                </Link>
+                
               </>
             )}
           </div>

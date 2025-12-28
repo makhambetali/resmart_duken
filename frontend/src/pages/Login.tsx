@@ -104,10 +104,10 @@ const LoginPage: React.FC = () => {
             <p>
               Нет аккаунта?{' '}
               <Link 
-                to="/register" 
+                to="/" 
                 className="text-blue-600 hover:text-blue-800 font-medium"
               >
-                Зарегистрироваться
+                Соси лапу
               </Link>
             </p>
           </div>

@@ -159,11 +159,11 @@ const apiRequest = async <T>(endpoint: string, options: RequestInit = {}, retry 
 
 // API для аутентификации
 export const authApi = {
-  register: (data: RegisterData) => 
-    apiRequest<AuthResponse>('/auth/register/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+  // register: (data: RegisterData) => 
+  //   // apiRequest<AuthResponse>('/auth/register/', {
+  //   //   method: 'POST',
+  //   //   body: JSON.stringify(data),
+  //   // }),
 
   login: (data: LoginData) => 
     apiRequest<AuthResponse>('/auth/login/', {
