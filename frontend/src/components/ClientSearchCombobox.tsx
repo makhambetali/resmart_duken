@@ -1,7 +1,7 @@
-// ClientSearchCombobox.tsx
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -22,9 +22,8 @@ import { clientsApi } from '@/lib/api';
 import { Client } from '@/types/client';
 
 interface ClientSearchComboboxProps {
-  value: string; // Это может быть client.id или client.name, в зависимости от вашего use case
+  value: string; // ID клиента
   onValueChange: (clientId: string, clientName: string) => void;
-  onAddNewClient?: (clientName: string) => void;
   placeholder?: string;
   disabled?: boolean;
 }
@@ -32,7 +31,6 @@ interface ClientSearchComboboxProps {
 export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
   value,
   onValueChange,
-  onAddNewClient,
   placeholder = "Выберите клиента...",
   disabled = false,
 }) => {
@@ -59,16 +57,16 @@ export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
       page_size: 50 
     }),
     enabled: open,
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 10,
+    staleTime: 1000 * 60 * 5, // 5 минут кэша
+    gcTime: 1000 * 60 * 10, // 10 минут хранения в кэше
   });
 
   const { mutate: createClient, isLoading: isCreating } = useMutation({
     mutationFn: clientsApi.createClient,
     onSuccess: (newClient) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      // Передаем ID и имя нового клиента
-      onValueChange(newClient.id.toString(), newClient.name);
+      // Передаем ID и имя нового клиента родителю
+      onValueChange(newClient.id, newClient.name);
       setOpen(false);
       toast({ 
         title: `Клиент "${newClient.name}" успешно создан.`,
@@ -76,10 +74,10 @@ export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
         className: "bg-green-500 text-white", 
       });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: 'Ошибка',
-        description: 'Не удалось создать клиента.',
+        description: error?.body?.error || 'Не удалось создать клиента.',
         variant: 'destructive',
       });
     },
@@ -87,23 +85,13 @@ export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
 
   const handleCreateClient = () => {
     if (!searchQuery.trim() || isCreating) return;
+    
+    // Отправляем POST запрос на создание клиента
     createClient({ name: searchQuery.trim() });
   };
 
-  const handleAddNewClient = () => {
-    if (onAddNewClient) {
-      onAddNewClient(searchQuery.trim());
-    } else {
-      handleCreateClient();
-    }
-  };
-
   const clients = clientsData?.results || clientsData || [];
-  
-  // Находим выбранного клиента по ID или имени (в зависимости от value)
-  const selectedClient = clients.find((client: Client) => 
-    client.id.toString() === value || client.name === value
-  );
+  const selectedClient = clients.find((client: Client) => client.id === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -145,11 +133,11 @@ export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
                     <div className="text-muted-foreground mb-2">
                       Клиент не найден
                     </div>
-                    {searchQuery && (
+                    {searchQuery.trim() && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleAddNewClient}
+                        onClick={handleCreateClient}
                         disabled={isCreating}
                       >
                         {isCreating ? 'Добавление...' : `Добавить "${searchQuery}"`}
@@ -163,27 +151,24 @@ export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
                       key={client.id}
                       value={client.name}
                       onSelect={() => {
-                        // Передаем и ID и имя при выборе
-                        onValueChange(client.id.toString(), client.name);
+                        // При выборе существующего клиента передаем его ID и имя
+                        if (value === client.id) {
+                          // Если клиент уже выбран - сбрасываем
+                          onValueChange("", "");
+                        } else {
+                          onValueChange(client.id, client.name);
+                        }
                         setOpen(false);
-                        setSearchQuery('');
                       }}
                       className="cursor-pointer"
                     >
                       <Check
                         className={cn(
                           "mr-2 h-4 w-4",
-                          selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
+                          value === client.id ? "opacity-100" : "opacity-0"
                         )}
                       />
-                      <div className="flex flex-col">
-                        <span className="truncate font-medium">{client.name}</span>
-                        {client.phone && (
-                          <span className="text-xs text-muted-foreground">
-                            {client.phone}
-                          </span>
-                        )}
-                      </div>
+                      <span className="truncate">{client.name}</span>
                     </CommandItem>
                   ))}
                 </CommandGroup>

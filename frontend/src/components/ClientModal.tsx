@@ -629,15 +629,15 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                     </div>
                   ) : (
                     <ClientSearchCombobox
-                      value={selectedClientId}
-                      onValueChange={(clientId, clientName) => {
+                        value={selectedClientId}
+                        onValueChange={(clientId, clientName) => {
 
-                        setSelectedClientId(clientId);
-                        setSelectedClientName(clientName);
-                      }}
-                      onAddNewClient={handleAddNewClientFromSearch}
-                      placeholder="Найдите клиента..."
-                    />
+                          setSelectedClientId(clientId);
+                          setSelectedClientName(clientName);
+                        }}
+                        onAddNewClient={handleAddNewClientFromSearch}
+                        placeholder="Найдите клиента..."
+                      />
                   )}
                 </div>
 
