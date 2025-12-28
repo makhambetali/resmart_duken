@@ -12,6 +12,7 @@ app = Celery('config')
 # Загружаем конфигурацию из файла settings.py.
 # 'CELERY_' — это префикс для всех настроек Celery.
 app.config_from_object('django.conf:settings', namespace='CELERY')
-
+app.conf.timezone = "Asia/Qyzylorda"
+app.conf.enable_utc = True
 # Автоматически находим файлы tasks.py во всех приложениях Django.
 app.autodiscover_tasks()

@@ -17,8 +17,6 @@ ALLOWED_HOSTS = os.getenv(
     "DJANGO_ALLOWED_HOSTS",
     "localhost,127.0.0.1"
 ).split(",")
-
-# =========================
 # APPLICATIONS
 # =========================
 INSTALLED_APPS = [
@@ -43,7 +41,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
+  #  "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -56,7 +54,6 @@ MIDDLEWARE = [
 # URLS / WSGI
 # =========================
 ROOT_URLCONF = "config.urls"
-
 WSGI_APPLICATION = "config.wsgi.application"
 
 # =========================
@@ -88,14 +85,13 @@ USE_TZ = True
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DB_NAME"),
-        "USER": os.getenv("DB_USER"),
-        "PASSWORD": os.getenv("DB_PASSWORD"),
-        "HOST": os.getenv("DB_HOST", "localhost"),
-        "PORT": os.getenv("DB_PORT", "5432"),
+        "NAME": os.getenv("POSTGRES_DB"),
+        "USER": os.getenv("POSTGRES_USER"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+        "HOST": os.getenv("POSTGRES_HOST", "localhost"),
+        "PORT": os.getenv("POSTGRES_PORT", "5432"),
     }
 }
-print(os.getenv("DB_NAME"))
 # =========================
 # AUTH PASSWORD VALIDATORS
 # =========================
@@ -106,7 +102,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
-    {
+ {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
@@ -123,14 +119,14 @@ TIME_ZONE = os.getenv("DJANGO_TIMEZONE", "Asia/Qyzylorda")
 
 USE_I18N = True
 USE_TZ = True
-
+print(TIME_ZONE)
 # =========================
 # STATIC / MEDIA
 # =========================
 STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT = "/staticfiles"
 
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+#STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 MEDIA_URL = "/media/"
@@ -147,6 +143,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = [
+    "https://smart-duken.com",
+    "https://www.smart-duken.com",
+]
 
 # =========================
 # REDIS / CELERY
@@ -208,3 +208,7 @@ SIMPLE_JWT = {
     'UPDATE_LAST_LOGIN': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
