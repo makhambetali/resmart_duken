@@ -10,7 +10,7 @@ def create_everyday_supply():
     suppliers = Supplier.objects.filter(is_everyday_supply = True)
     today = timezone.localdate()
     for supplier in suppliers:
-        supply = Supply.objects.create(supplier = supplier, delivery_date = today)
+        supply = Supply.objects.create(supplier = supplier, delivery_date = today, store = supplier.store)
         print(f'{supply} успешно создан')
     print("Периодическая задача выполняется!")
     return "Задача успешно выполнена."
