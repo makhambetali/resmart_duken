@@ -1,4 +1,4 @@
-####Smart Duken
+# Smart Duken
 
 ## Description
 **Smart Duken** is a software solution designed to automate supply planning, financial accounting, supplier and customer management, as well as business analytics for small and medium-sized enterprises.
