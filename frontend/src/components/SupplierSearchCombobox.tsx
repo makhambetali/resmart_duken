@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 
@@ -26,6 +26,8 @@ interface SupplierSearchComboboxProps {
   onValueChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  autoFocus?: boolean; // Добавляем пропс autoFocus
+  autoOpen?: boolean; // Добавляем пропс autoOpen
 }
 
 export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
@@ -33,10 +35,13 @@ export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
   onValueChange,
   placeholder = "Выберите поставщика...",
   disabled = false,
+  autoFocus = false,
+  autoOpen = false,
 }) => {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen); // Используем autoOpen для начального состояния
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const commandInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -48,6 +53,25 @@ export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Фокус на инпут при открытии попапа
+  useEffect(() => {
+    if (open && commandInputRef.current && autoFocus) {
+      // Небольшая задержка для гарантии, что компонент полностью отрендерился
+      const timeoutId = setTimeout(() => {
+        commandInputRef.current?.focus();
+      }, 50);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [open, autoFocus]);
+
+  // Автооткрытие при autoOpen
+  useEffect(() => {
+    if (autoOpen && !disabled) {
+      setOpen(true);
+    }
+  }, [autoOpen, disabled]);
 
   // 🔧 ИСПРАВЛЕНО: Добавлен enabled для предотвращения запросов при закрытом попапе
   const { data: suppliersData = [], isLoading } = useQuery({
@@ -112,6 +136,7 @@ export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
         <Command shouldFilter={false}>
           <div className="flex items-center border-b px-3">
             <CommandInput
+              ref={commandInputRef}
               placeholder="Поиск или создание..."
               value={searchQuery}
               onValueChange={setSearchQuery}

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SupplierSearchCombobox } from '@/components/SupplierSearchCombobox';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import { AI_CONFIG } from '@/ai-config';
 import { 
   Trash, 
   FileText, 
@@ -24,7 +25,8 @@ import {
   ChevronRight,
   ChevronLeft,
   Download,
-  Calendar
+  Calendar,
+  CheckCircle
 } from "lucide-react";
 import { formatPrice, getNumericValue } from '@/lib/utils';
 import { EditableInvoiceTable } from '@/components/EditableInvoiceTable';
@@ -87,6 +89,87 @@ const getDateDisplayName = (dateString: string) => {
   return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
 };
 
+// Custom Input компонент для денежных значений
+interface MoneyInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  value: string;
+  onValueChange: (value: string) => void;
+  isPrimary?: boolean;
+  maxDigits?: number;
+}
+
+const MoneyInput: React.FC<MoneyInputProps> = ({ 
+  value, 
+  onValueChange, 
+  disabled, 
+  isPrimary, 
+  maxDigits = 9,
+  ...props 
+}) => {
+  const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    setIsFocused(true);
+    // Если значение "0", очищаем поле при фокусе
+    if (value === '0' || value === '0 ₸') {
+      onValueChange('');
+    }
+    if (props.onFocus) props.onFocus(e);
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    setIsFocused(false);
+    // Если поле пустое после потери фокуса, устанавливаем "0 ₸"
+    if (!value.trim()) {
+      onValueChange('0 ₸');
+    }
+    if (props.onBlur) props.onBlur(e);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    // Удаляем все нецифровые символы, кроме ₸ в конце
+    const numericValue = inputValue.replace(/[^\d]/g, '').slice(0, maxDigits);
+    
+    if (numericValue === '') {
+      onValueChange('');
+    } else {
+      const formattedValue = formatPrice(numericValue);
+      onValueChange(formattedValue);
+    }
+  };
+
+  // Форматируем отображение значения
+  const displayValue = value === '0' || value === '0 ₸' || value === '' 
+    ? (isFocused ? '' : '0 ₸') 
+    : value;
+
+  return (
+    <div className="relative">
+      <Input
+        ref={inputRef}
+        type="text"
+        inputMode="numeric"
+        value={displayValue}
+        onChange={handleChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        disabled={disabled}
+        className={`pr-10 ${isFocused ? 'border-blue-500 ring-1 ring-blue-500' : ''} ${
+          isPrimary ? 'bg-blue-50 border-blue-300' : ''
+        }`}
+        maxLength={maxDigits + 4} // Оставляем место для форматирования
+        {...props}
+      />
+      {!isFocused && value !== '' && value !== '0' && value !== '0 ₸' && (
+        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
+          ₸
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const SupplyModal: React.FC<SupplyModalProps> = ({
   open,
   onOpenChange,
@@ -103,11 +186,11 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   const [formData, setFormData] = useState<Omit<AddSupplyForm, 'images'>>({
     supplier: '',
     paymentType: 'cash',
-    price_cash: '0',
-    price_bank: '0',
+    price_cash: '0 ₸',
+    price_bank: '0 ₸',
     bonus: 0,
     exchange: 0,
-    delivery_date: getTomorrowDate(), // По умолчанию завтра
+    delivery_date: getTomorrowDate(),
     comment: '',
     is_confirmed: false,
     invoice_html: '',
@@ -125,6 +208,61 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   const tomorrow = getTomorrowDate();
   const dayAfterTomorrow = getDayAfterTomorrowDate();
   const isToday = isDateToday(formData.delivery_date);
+
+  // Функция для вычисления суммы двух денежных значений
+  const sumMoneyValues = (val1: string, val2: string): string => {
+    const num1 = getNumericValue(val1);
+    const num2 = getNumericValue(val2);
+    const sum = num1 + num2;
+    return formatPrice(sum.toString());
+  };
+
+  // Обработка изменения типа оплаты
+  const handlePaymentTypeChange = (newPaymentType: 'cash' | 'bank' | 'mixed') => {
+    setFormData(prev => {
+      const newData = { ...prev, paymentType: newPaymentType };
+      
+      // Если меняемся со смешанного типа на cash или bank
+      if (prev.paymentType === 'mixed' && (newPaymentType === 'cash' || newPaymentType === 'bank')) {
+        // const totalSum = sumMoneyValues(prev.price_cash, prev.price_bank);
+        
+        if (newPaymentType === 'cash') {
+          // Суммируем оба значения в cash, bank обнуляем
+          newData.price_cash = '0 ₸';
+          newData.price_bank = '0 ₸';
+        } else if (newPaymentType === 'bank') {
+          // Суммируем оба значения в bank, cash обнуляем
+          newData.price_bank ='0 ₸';
+          newData.price_cash = '0 ₸';
+        }
+      }
+      // Если меняемся с cash на bank
+      else if (newPaymentType === 'bank' && prev.paymentType === 'cash' && prev.price_cash !== '0 ₸') {
+        // Перемещаем сумму из cash в bank
+        newData.price_bank = prev.price_cash;
+        newData.price_cash = '0 ₸';
+      } 
+      // Если меняемся с bank на cash
+      else if (newPaymentType === 'cash' && prev.paymentType === 'bank' && prev.price_bank !== '0 ₸') {
+        // Перемещаем сумму из bank в cash
+        newData.price_cash = prev.price_bank;
+        newData.price_bank = '0 ₸';
+      }
+      // Если меняемся на mixed из cash или bank
+      else if (newPaymentType === 'mixed') {
+        // При смешанном типе оставляем текущее значение в основном поле
+        if (prev.paymentType === 'cash' && prev.price_cash !== '0 ₸') {
+          // Перемещаем сумму из cash в cash (оставляем как есть), bank ставим 0
+          newData.price_bank = '0 ₸';
+        } else if (prev.paymentType === 'bank' && prev.price_bank !== '0 ₸') {
+          // Перемещаем сумму из bank в bank (оставляем как есть), cash ставим 0
+          newData.price_cash = '0 ₸';
+        }
+      }
+      
+      return newData;
+    });
+  };
 
   // Загрузка существующих изображений при открытии
   useEffect(() => {
@@ -153,8 +291,8 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
       setFormData({
         supplier: supply.supplier,
         paymentType,
-        price_cash: formatPrice(supply.price_cash.toString()),
-        price_bank: formatPrice(supply.price_bank.toString()),
+        price_cash: supply.price_cash > 0 ? formatPrice(supply.price_cash.toString()) : '0 ₸',
+        price_bank: supply.price_bank > 0 ? formatPrice(supply.price_bank.toString()) : '0 ₸',
         bonus: supply.bonus,
         exchange: supply.exchange,
         delivery_date: supply.delivery_date,
@@ -169,11 +307,11 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
       setFormData({
         supplier: '', 
         paymentType: 'cash', 
-        price_cash: '0',
-        price_bank: '0', 
+        price_cash: '0 ₸',
+        price_bank: '0 ₸', 
         bonus: 0, 
         exchange: 0,
-        delivery_date: tomorrow, // По умолчанию завтра
+        delivery_date: tomorrow,
         comment: '', 
         is_confirmed: false, 
         invoice_html: '',
@@ -275,7 +413,12 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
       });
     }
   };
-
+const parseMoneyValue = (value: string): number => {
+  if (!value) return 0;
+  // Удаляем всё кроме цифр (₸, пробелы и форматирование)
+  const cleaned = value.replace(/[^\d]/g, '');
+  return cleaned ? parseInt(cleaned, 10) : 0;
+};
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -283,13 +426,12 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     try {
       const submitData = {
         ...formData,
-        price_cash: getNumericValue(formData.price_cash),
-        price_bank: getNumericValue(formData.price_bank),
+        price_cash: (parseMoneyValue(formData.price_cash)).toString(),
+        price_bank: (parseMoneyValue(formData.price_bank)).toString(),
         invoice_html: formData.invoice_html,
         images: selectedImages.length > 0 ? selectedImages : undefined,
       };
       
-      console.log(selectedImages);
       await onSubmit(submitData);
       
       toast({
@@ -325,9 +467,13 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
 
   const hasPreviewContent = currentHtmlForTable.length > 0 || formData.invoice_html.length > 0;
   const allImages = [...supplyImages, ...selectedImages.map((file, index) => ({
-    id: -(index + 1), // Отрицательные ID для новых файлов
+    id: -(index + 1),
     image: URL.createObjectURL(file),
   }))];
+
+  // Определяем, является ли поле основной суммой
+  const isCashPrimary = formData.paymentType === 'cash';
+  const isBankPrimary = formData.paymentType === 'bank';
 
   return (
     <TooltipProvider>
@@ -351,17 +497,46 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
               <div className="space-y-2">
                 <Label htmlFor="supplier">Поставщик</Label>
                 <SupplierSearchCombobox 
-                  value={formData.supplier} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, supplier: value }))} 
-                  placeholder="Выберите поставщика..." 
-                />
+                    value={formData.supplier} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, supplier: value }))} 
+                    placeholder="Выберите поставщика..." 
+                    autoFocus={open && !supply} // Автофокус только при открытии и для новой поставки
+                    autoOpen={open && !supply} // Автооткрытие только при открытии и для новой поставки
+                  />
+              </div>
+              
+              {/* Чекбокс подтверждения - перенесен выше */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  Подтверждение
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                </Label>
+                <div className="flex items-center space-x-2 p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <Checkbox 
+                    id="isConfirmed" 
+                    checked={formData.is_confirmed} 
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_confirmed: Boolean(checked) }))} 
+                    disabled={!isToday} 
+                  />
+                  <Label htmlFor="isConfirmed" className="text-sm font-normal cursor-pointer">
+                    {formData.is_confirmed ? (
+                      <span className="text-green-600 font-medium">Поставка подтверждена</span>
+                    ) : (
+                      <span>Подтвердить поставку</span>
+                    )}
+                  </Label>
+                </div>
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="paymentType">Тип оплаты</Label>
-                <Select value={formData.paymentType} onValueChange={(value: 'cash' | 'bank' | 'mixed') => 
-                  setFormData(prev => ({ ...prev, paymentType: value }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select 
+                  value={formData.paymentType} 
+                  onValueChange={handlePaymentTypeChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="cash">Наличные</SelectItem>
                     <SelectItem value="bank">Банк</SelectItem>
@@ -371,36 +546,40 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="cashAmount">Сумма наличными (₸)</Label>
-                <Input 
-                  id="cashAmount" 
-                  type="text"
-                  inputMode="numeric" 
-                  placeholder="0" 
-                  value={formData.price_cash} 
-                  onChange={(e) => {
-                    const numericValue = e.target.value.replace(/\D/g, '').slice(0, 6);
-                    setFormData(prev => ({ ...prev, price_cash: formatPrice(numericValue) }));
-                  }} 
-                  disabled={formData.paymentType === 'bank'} 
+                <Label htmlFor="cashAmount">
+                  Сумма наличными
+                  {isCashPrimary && (
+                    <span className="ml-1 text-xs text-green-600 font-medium">(основная)</span>
+                  )}
+                </Label>
+                <MoneyInput 
+                  id="cashAmount"
+                  placeholder="0 ₸"
+                  value={formData.price_cash}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, price_cash: value }))}
+                  disabled={formData.paymentType === 'bank'}
+                  isPrimary={isCashPrimary}
+                  maxDigits={9}
                 />
-              </div>
+ </div>
               
               <div className="space-y-2">
-                <Label htmlFor="bankAmount">Сумма банком (₸)</Label>
-                <Input 
-                  id="bankAmount" 
-                  type="text"
-                  inputMode="numeric" 
-                  placeholder="0" 
-                  value={formData.price_bank} 
-                  onChange={(e) => {
-                    const numericValue = e.target.value.replace(/\D/g, '').slice(0, 6);
-                    setFormData(prev => ({ ...prev, price_bank: formatPrice(numericValue) }));
-                  }} 
-                  disabled={formData.paymentType === 'cash'} 
+                <Label htmlFor="bankAmount">
+                  Сумма банком
+                  {isBankPrimary && (
+                    <span className="ml-1 text-xs text-blue-600 font-medium">(основная)</span>
+                  )}
+                </Label>
+                <MoneyInput 
+                  id="bankAmount"
+                  placeholder="0 ₸"
+                  value={formData.price_bank}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, price_bank: value }))}
+                  disabled={formData.paymentType === 'cash'}
+                  isPrimary={isBankPrimary}
+                  maxDigits={9}
                 />
-              </div>
+ </div>
               
               <div className="md:col-span-2">
                 <div className="space-y-2">
@@ -413,16 +592,16 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                       className="w-full"
                     >
                       <TabsList className="grid grid-cols-4 mb-2">
-                        <TabsTrigger value={today}>
+                        <TabsTrigger value={today} className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
                           Сегодня
                         </TabsTrigger>
-                        <TabsTrigger value={tomorrow}>
+                        <TabsTrigger value={tomorrow} className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
                           Завтра
                         </TabsTrigger>
-                        <TabsTrigger value={dayAfterTomorrow}>
+                        <TabsTrigger value={dayAfterTomorrow} className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
                           Послезавтра
                         </TabsTrigger>
-                        <TabsTrigger value="custom">
+                        <TabsTrigger value="custom" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
                           <Calendar className="w-4 h-4 mr-2" />
                           Другая
                         </TabsTrigger>
@@ -437,16 +616,17 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                           min={today}
                           value={formData.delivery_date} 
                           onChange={(e) => handleCustomDateChange(e.target.value)} 
+                          className="border-blue-300 focus:border-blue-500"
                         />
                         <p className="text-xs text-gray-500 mt-1">
-                          Выбрана дата: {getDateDisplayName(formData.delivery_date)}
+                          Выбрана дата: <span className="font-medium">{getDateDisplayName(formData.delivery_date)}</span>
                         </p>
                       </div>
                     )}
 
                     {/* Отображение выбранной даты */}
                     {!showCustomDateInput && (
-                      <div className="p-3 border rounded-lg bg-blue-50">
+                      <div className="p-3 border rounded-lg bg-blue-50 border-blue-200">
                         <div className="flex items-center gap-2 text-sm">
                           <Calendar className="w-4 h-4 text-blue-600" />
                           <span className="text-blue-700 font-medium">
@@ -456,6 +636,12 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                             ({formData.delivery_date})
                           </span>
                         </div>
+                        {isToday && (
+                          <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" />
+                            Сегодня можно загружать изображения и редактировать таблицу
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -464,33 +650,61 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
                 <div className="space-y-2">
-                  <Label htmlFor="bonus">Бонус</Label>
-                  <Input 
-                    id="bonus" 
-                    type="number" 
-                    max="999"
-                    inputMode="numeric" 
-                    value={formData.bonus} 
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      bonus: Number(e.target.value.replace(/\D/g, '').slice(0, 3)) || 0 
-                    }))} 
-                  />
+                  <Label htmlFor="bonus">Бонус (шт.)</Label>
+                  <div className="relative">
+                    <Input 
+                      id="bonus" 
+                      type="number" 
+                      min="0"
+                      max="9999"
+                      inputMode="numeric"
+                      value={formData.bonus || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Ограничиваем ввод только цифрами
+                        const numericValue = value.replace(/[^\d]/g, '').slice(0, 4);
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          bonus: numericValue ? Number(numericValue) : 0 
+                        }));
+                      }}
+                      className="pr-10"
+                      placeholder="0"
+                    />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
+                      шт.
+                    </div>
+                  </div>
+
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="exchange">Обмен</Label>
-                  <Input 
-                    id="exchange" 
-                    type="number" 
-                    max="999" 
-                    inputMode="numeric"
-                    value={formData.exchange} 
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      exchange: Number(e.target.value.replace(/\D/g, '').slice(0, 3)) || 0 
-                    }))} 
-                  />
+                  <Label htmlFor="exchange">Обмен (шт.)</Label>
+                  <div className="relative">
+                    <Input 
+                      id="exchange" 
+                      type="number" 
+                      min="0"
+                      max="9999"
+                      inputMode="numeric"
+                      value={formData.exchange || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Ограничиваем ввод только цифрами
+                        const numericValue = value.replace(/[^\d]/g, '').slice(0, 4);
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          exchange: numericValue ? Number(numericValue) : 0 
+                        }));
+                      }}
+                      className="pr-10"
+                      placeholder="0"
+                    />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
+                      шт.
+                    </div>
+                  </div>
+
                 </div>
               </div>
               
@@ -501,6 +715,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                   value={formData.comment} 
                   onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))} 
                   rows={3} 
+                  placeholder="Введите комментарий к поставке..."
                 />
               </div>
 
@@ -508,19 +723,21 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
               {isToday && (
                 <div className="space-y-4 md:col-span-2">
                   <div className="flex justify-between items-center">
-                    <Label>Изображения документов</Label>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setIsPreviewModalOpen(true)}
-                      disabled={!hasPreviewContent}
-                      className="gap-1.5"
-                    >
-                      <Eye className="w-4 h-4" />
-                      Редактировать таблицу
-                      {tableHasChanges && <span className="ml-1 text-green-600 font-bold">*</span>}
-                    </Button>
+                    <Label className="text-base font-medium">Документы поставки</Label>
+                    {AI_CONFIG.ENABLED && (
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setIsPreviewModalOpen(true)}
+                        disabled={!hasPreviewContent}
+                        className="gap-1.5"
+                      >
+                        <Table className="w-4 h-4" />
+                        Редактировать таблицу
+                        {tableHasChanges && <span className="ml-1 text-green-600 font-bold">*</span>}
+                      </Button>
+                    )}
                   </div>
 
                   {/* Существующие изображения */}
@@ -579,7 +796,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                   />
 
                   {/* AI обработка (опционально) */}
-                  {selectedImages.length > 0 && (
+                  {selectedImages.length > 0 && AI_CONFIG.ENABLED && (
                     <AITableExtractor
                       files={selectedImages}
                       onProcessingComplete={handleAIProcessingComplete}
@@ -598,21 +815,6 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                       </div>
                     </div>
                   )}
-                </div>
-              )}
-
-              {/* Чекбокс подтверждения - показываем только если сегодня */}
-              {isToday && (
-                <div className="flex items-center space-x-2 md:col-span-2">
-                  <Checkbox 
-                    id="isConfirmed" 
-                    checked={formData.is_confirmed} 
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_confirmed: Boolean(checked) }))} 
-                    disabled={!isToday} 
-                  />
-                  <Label htmlFor="isConfirmed">
-                    Подтверждена
-                  </Label>
                 </div>
               )}
             </div>
@@ -634,16 +836,17 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                     variant="destructive" 
                     onClick={() => handleDeleteSupply(supply.id)} 
                     disabled={isLoading}
+                    className="gap-2"
                   >
-                    <Trash className="w-4 h-4 mr-2" />
-                    Удалить
+                    <Trash className="w-4 h-4" />
+                    Удалить поставку
                   </Button>
                 )}
               </div>
               <div className="flex space-x-2">
                 <Button 
                   type="button" 
-                  variant="ghost" 
+                  variant="outline" 
                   onClick={() => onOpenChange(false)}
                   disabled={isLoading}
                 >
@@ -652,8 +855,18 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                 <Button 
                   type="submit" 
                   disabled={isLoading || !formData.supplier}
+                  className="gap-2 bg-blue-600 hover:bg-blue-700"
                 >
-                  {isLoading ? 'Сохранение...' : (supply ? 'Обновить' : 'Добавить')}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Сохранение...
+                    </>
+                  ) : (
+                    <>
+                      {supply ? 'Обновить поставку' : 'Добавить поставку'}
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
