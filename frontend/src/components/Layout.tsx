@@ -51,7 +51,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddSupplyClick }) =>
           {/* Левая часть: Навигация */}
           <div className="flex items-center space-x-6">
             <Link 
-              to="/" 
+              to="/app" 
               className="text-blue-600 hover:text-blue-800 px-3 py-2 rounded-md hover:bg-blue-50 transition-colors font-medium"
             >
               Главная
