@@ -50,7 +50,7 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               
               {/* Защищенные маршруты */}
-              <Route path="/" element={
+              <Route path="/app" element={
                 <ProtectedRoute>
                   <Index />
                 </ProtectedRoute>

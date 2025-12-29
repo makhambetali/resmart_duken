@@ -1,4 +1,4 @@
-// @/components/SupplyModal.tsx - добавьте эти изменения
+// @/components/SupplyModal.tsx - обновленный код
 import React, { useState, useEffect, useRef } from 'react';
 import { Supply, AddSupplyForm } from '@/types/supply';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -23,7 +23,8 @@ import {
   X,
   ChevronRight,
   ChevronLeft,
-  Download
+  Download,
+  Calendar
 } from "lucide-react";
 import { formatPrice, getNumericValue } from '@/lib/utils';
 import { EditableInvoiceTable } from '@/components/EditableInvoiceTable';
@@ -31,6 +32,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ImageUpload } from '@/components/ImageUpload';
 import { AITableExtractor } from '@/components/AITableExtractor';
 import { ImageViewer } from '@/components/ImageViewer';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface SupplyModalProps {
   open: boolean;
@@ -45,6 +47,45 @@ interface SupplyImage {
   id: number;
   image: string;
 }
+
+// Функция для получения даты завтра
+const getTomorrowDate = () => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toLocaleDateString('en-CA');
+};
+
+// Функция для получения даты послезавтра
+const getDayAfterTomorrowDate = () => {
+  const dayAfterTomorrow = new Date();
+  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+  return dayAfterTomorrow.toLocaleDateString('en-CA');
+};
+
+// Функция для получения сегодняшней даты
+const getTodayDate = () => {
+  return new Date().toLocaleDateString('en-CA');
+};
+
+// Функция для проверки, является ли дата сегодняшней
+const isDateToday = (dateString: string) => {
+  return dateString === getTodayDate();
+};
+
+// Функция для получения читаемого названия даты
+const getDateDisplayName = (dateString: string) => {
+  const today = getTodayDate();
+  const tomorrow = getTomorrowDate();
+  const dayAfterTomorrow = getDayAfterTomorrowDate();
+  
+  if (dateString === today) return 'Сегодня';
+  if (dateString === tomorrow) return 'Завтра';
+  if (dateString === dayAfterTomorrow) return 'Послезавтра';
+  
+  // Для других дат показываем в формате ДД.ММ
+  const date = new Date(dateString);
+  return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+};
 
 export const SupplyModal: React.FC<SupplyModalProps> = ({
   open,
@@ -66,7 +107,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     price_bank: '0',
     bonus: 0,
     exchange: 0,
-    delivery_date: new Date().toLocaleDateString('en-CA'),
+    delivery_date: getTomorrowDate(), // По умолчанию завтра
     comment: '',
     is_confirmed: false,
     invoice_html: '',
@@ -78,10 +119,12 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   const [tableHasChanges, setTableHasChanges] = useState<boolean>(false);
   const [createdAt, setCreatedAt] = useState<string>('');
   const [isRescheduled, setIsRescheduled] = useState<boolean>(false);
+  const [showCustomDateInput, setShowCustomDateInput] = useState<boolean>(false);
 
-  const today = new Date().toLocaleDateString('en-CA');
-  const plus7 = new Date(Date.now() + 7 * 864e5).toLocaleDateString('en-CA');
-  const isToday = formData.delivery_date === today;
+  const today = getTodayDate();
+  const tomorrow = getTomorrowDate();
+  const dayAfterTomorrow = getDayAfterTomorrowDate();
+  const isToday = isDateToday(formData.delivery_date);
 
   // Загрузка существующих изображений при открытии
   useEffect(() => {
@@ -101,6 +144,12 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
       setCurrentHtmlForTable(existingHtml);
       setTableHasChanges(false);
 
+      // Проверяем, является ли дата одной из ключевых
+      const supplyDate = supply.delivery_date;
+      if (supplyDate !== today && supplyDate !== tomorrow && supplyDate !== dayAfterTomorrow) {
+        setShowCustomDateInput(true);
+      }
+
       setFormData({
         supplier: supply.supplier,
         paymentType,
@@ -118,18 +167,40 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     } else if (open) {
       // Новая поставка
       setFormData({
-        supplier: '', paymentType: 'cash', price_cash: '0',
-        price_bank: '0', bonus: 0, exchange: 0,
-        delivery_date: today,
-        comment: '', is_confirmed: false, invoice_html: '',
+        supplier: '', 
+        paymentType: 'cash', 
+        price_cash: '0',
+        price_bank: '0', 
+        bonus: 0, 
+        exchange: 0,
+        delivery_date: tomorrow, // По умолчанию завтра
+        comment: '', 
+        is_confirmed: false, 
+        invoice_html: '',
       });
       setSelectedImages([]);
       setSupplyImages([]);
       setCurrentHtmlForTable('');
       setCreatedAt('');
       setIsRescheduled(false);
+      setShowCustomDateInput(false);
     }
-  }, [supply, open, today]);
+  }, [supply, open, today, tomorrow, dayAfterTomorrow]);
+
+  // Функция для обработки выбора даты
+  const handleDateSelect = (date: string) => {
+    setFormData(prev => ({ ...prev, delivery_date: date }));
+    if (date === 'custom') {
+      setShowCustomDateInput(true);
+    } else {
+      setShowCustomDateInput(false);
+    }
+  };
+
+  // Функция для обработки кастомной даты
+  const handleCustomDateChange = (date: string) => {
+    setFormData(prev => ({ ...prev, delivery_date: date }));
+  };
 
   // Функция для открытия просмотра изображения
   const handleOpenImageViewer = (index: number) => {
@@ -332,54 +403,95 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
               </div>
               
               <div className="md:col-span-2">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="bonus">Бонус</Label>
-                    <Input 
-                      id="bonus" 
-                      type="number" 
-                      max="999"
-                      inputMode="numeric" 
-                      value={formData.bonus} 
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        bonus: Number(e.target.value.replace(/\D/g, '').slice(0, 3)) || 0 
-                      }))} 
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="exchange">Обмен</Label>
-                    <Input 
-                      id="exchange" 
-                      type="number" 
-                      max="999" 
-                      inputMode="numeric"
-                      value={formData.exchange} 
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        exchange: Number(e.target.value.replace(/\D/g, '').slice(0, 3)) || 0 
-                      }))} 
-                    />
-                  </div>
-                  
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="deliveryDate">Дата поставки</Label>
-                    <Input 
-                      id="deliveryDate" 
-                      type="date" 
-                      min={today} 
-                      max={plus7} 
+                <div className="space-y-2">
+                  <Label htmlFor="deliveryDate">Дата поставки</Label>
+                  <div className="space-y-3">
+                    {/* Вкладки с ключевыми датами */}
+                    <Tabs 
                       value={formData.delivery_date} 
-                      onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))} 
-                    />
+                      onValueChange={handleDateSelect}
+                      className="w-full"
+                    >
+                      <TabsList className="grid grid-cols-4 mb-2">
+                        <TabsTrigger value={today}>
+                          Сегодня
+                        </TabsTrigger>
+                        <TabsTrigger value={tomorrow}>
+                          Завтра
+                        </TabsTrigger>
+                        <TabsTrigger value={dayAfterTomorrow}>
+                          Послезавтра
+                        </TabsTrigger>
+                        <TabsTrigger value="custom">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          Другая
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+
+                    {/* Поле для ввода кастомной даты */}
+                    {showCustomDateInput && (
+                      <div className="mt-2">
+                        <Input 
+                          type="date" 
+                          min={today}
+                          value={formData.delivery_date} 
+                          onChange={(e) => handleCustomDateChange(e.target.value)} 
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Выбрана дата: {getDateDisplayName(formData.delivery_date)}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Отображение выбранной даты */}
+                    {!showCustomDateInput && (
+                      <div className="p-3 border rounded-lg bg-blue-50">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Calendar className="w-4 h-4 text-blue-600" />
+                          <span className="text-blue-700 font-medium">
+                            {getDateDisplayName(formData.delivery_date)}
+                          </span>
+                          <span className="text-gray-600">
+                            ({formData.delivery_date})
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                {!isToday && (
-                  <p className="text-sm text-amber-600 mt-2">
-                    ⚠️ Подтверждение и загрузка документов доступны только для сегодняшней даты.
-                  </p>
-                )}
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
+                <div className="space-y-2">
+                  <Label htmlFor="bonus">Бонус</Label>
+                  <Input 
+                    id="bonus" 
+                    type="number" 
+                    max="999"
+                    inputMode="numeric" 
+                    value={formData.bonus} 
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      bonus: Number(e.target.value.replace(/\D/g, '').slice(0, 3)) || 0 
+                    }))} 
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="exchange">Обмен</Label>
+                  <Input 
+                    id="exchange" 
+                    type="number" 
+                    max="999" 
+                    inputMode="numeric"
+                    value={formData.exchange} 
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      exchange: Number(e.target.value.replace(/\D/g, '').slice(0, 3)) || 0 
+                    }))} 
+                  />
+                </div>
               </div>
               
               <div className="space-y-2 md:col-span-2">
@@ -392,115 +504,117 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                 />
               </div>
 
-              {/* Блок загрузки и просмотра изображений */}
-              <div className="space-y-4 md:col-span-2">
-                <div className="flex justify-between items-center">
-                  <Label>Изображения документов</Label>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setIsPreviewModalOpen(true)}
-                    disabled={!hasPreviewContent}
-                    className="gap-1.5"
-                  >
-                    <Eye className="w-4 h-4" />
-                    Редактировать таблицу
-                    {tableHasChanges && <span className="ml-1 text-green-600 font-bold">*</span>}
-                  </Button>
-                </div>
+              {/* Блок загрузки и просмотра изображений - показываем только если сегодня */}
+              {isToday && (
+                <div className="space-y-4 md:col-span-2">
+                  <div className="flex justify-between items-center">
+                    <Label>Изображения документов</Label>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setIsPreviewModalOpen(true)}
+                      disabled={!hasPreviewContent}
+                      className="gap-1.5"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Редактировать таблицу
+                      {tableHasChanges && <span className="ml-1 text-green-600 font-bold">*</span>}
+                    </Button>
+                  </div>
 
-                {/* Существующие изображения */}
-                {supplyImages.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium text-gray-700">
-                        Загруженные изображения ({supplyImages.length})
-                      </h4>
-                      <span className="text-xs text-gray-500">
-                        Кликните для просмотра
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {supplyImages.map((image, index) => (
-                        <div
-                          key={image.id}
-                          className="relative group border rounded-lg overflow-hidden hover:border-primary transition-all duration-200"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => handleOpenImageViewer(index)}
-                            className="w-full h-full aspect-square overflow-hidden"
+                  {/* Существующие изображения */}
+                  {supplyImages.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium text-gray-700">
+                          Загруженные изображения ({supplyImages.length})
+                        </h4>
+                        <span className="text-xs text-gray-500">
+                          Кликните для просмотра
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {supplyImages.map((image, index) => (
+                          <div
+                            key={image.id}
+                            className="relative group border rounded-lg overflow-hidden hover:border-primary transition-all duration-200"
                           >
-                            <img
-                              src={image.image}
-                              alt={`Изображение ${index + 1}`}
-                              className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />
-                          </button>
-                          
-                          {/* Кнопки управления */}
-                        
-                          
-                          {/* Номер изображения */}
-                          <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
-                            {index + 1}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenImageViewer(index)}
+                              className="w-full h-full aspect-square overflow-hidden"
+                            >
+                              <img
+                                src={image.image}
+                                alt={`Изображение ${index + 1}`}
+                                className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                              />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />
+                            </button>
+                            
+                            {/* Номер изображения */}
+                            <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                              {index + 1}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Разделитель если есть и старые и новые изображения */}
-                {supplyImages.length > 0 && selectedImages.length > 0 && (
-                  <div className="border-t pt-4" />
-                )}
+                  {/* Разделитель если есть и старые и новые изображения */}
+                  {supplyImages.length > 0 && selectedImages.length > 0 && (
+                    <div className="border-t pt-4" />
+                  )}
 
-                {/* Компонент загрузки новых изображений */}
-                <ImageUpload
-                  selectedFiles={selectedImages}
-                  onFilesChange={setSelectedImages}
-                  disabled={!isToday || isLoading}
-                  isToday={isToday}
-                  maxFiles={10}
-                  maxSizeMB={5}
-                />
-
-                {/* AI обработка (опционально) */}
-                {selectedImages.length > 0 && (
-                  <AITableExtractor
-                    files={selectedImages}
-                    onProcessingComplete={handleAIProcessingComplete}
+                  {/* Компонент загрузки новых изображений */}
+                  <ImageUpload
+                    selectedFiles={selectedImages}
+                    onFilesChange={setSelectedImages}
                     disabled={!isToday || isLoading}
+                    isToday={isToday}
+                    maxFiles={10}
+                    maxSizeMB={5}
                   />
-                )}
 
-                {/* Информация о существующей таблице */}
-                {formData.invoice_html.length > 0 && allImages.length === 0 && (
-                  <div className="p-3 border rounded-lg bg-blue-50">
-                    <div className="flex items-center gap-2">
-                      <Table className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm text-blue-700">
-                        Текущая поставка содержит таблицу из {formData.invoice_html.split('<tr>').length - 1} строк
-                      </span>
+                  {/* AI обработка (опционально) */}
+                  {selectedImages.length > 0 && (
+                    <AITableExtractor
+                      files={selectedImages}
+                      onProcessingComplete={handleAIProcessingComplete}
+                      disabled={!isToday || isLoading}
+                    />
+                  )}
+
+                  {/* Информация о существующей таблице */}
+                  {formData.invoice_html.length > 0 && allImages.length === 0 && (
+                    <div className="p-3 border rounded-lg bg-blue-50">
+                      <div className="flex items-center gap-2">
+                        <Table className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm text-blue-700">
+                          Текущая поставка содержит таблицу из {formData.invoice_html.split('<tr>').length - 1} строк
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
 
-              <div className="flex items-center space-x-2 md:col-span-2">
-                <Checkbox 
-                  id="isConfirmed" 
-                  checked={formData.is_confirmed} 
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_confirmed: Boolean(checked) }))} 
-                  disabled={!isToday} 
-                />
-                <Label htmlFor="isConfirmed" className={!isToday ? 'text-muted-foreground' : ''}>
-                  Подтверждена
-                </Label>
-              </div>
+              {/* Чекбокс подтверждения - показываем только если сегодня */}
+              {isToday && (
+                <div className="flex items-center space-x-2 md:col-span-2">
+                  <Checkbox 
+                    id="isConfirmed" 
+                    checked={formData.is_confirmed} 
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_confirmed: Boolean(checked) }))} 
+                    disabled={!isToday} 
+                  />
+                  <Label htmlFor="isConfirmed">
+                    Подтверждена
+                  </Label>
+                </div>
+              )}
             </div>
             
             {supply && createdAt && (
