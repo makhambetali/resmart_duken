@@ -12,7 +12,7 @@ export const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navLinks = [
-    { path: '/', label: 'Главная' },
+    { path: '/app', label: 'Главная' },
     { path: '/clients', label: 'Клиенты' },
     { path: '/suppliers', label: 'Поставщики' },
     { path: '/finance', label: 'Финансы' },
