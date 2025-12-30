@@ -146,7 +146,7 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
                     <TableHead className="hidden md:table-cell">Обмен</TableHead>
                     <TableHead className="hidden lg:table-cell">Комментарий</TableHead>
                     <TableHead className="w-[180px]">Статус</TableHead>
-                    <TableHead className="text-right">Действия</TableHead>
+
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -271,9 +271,7 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
                             </TooltipContent>
                           </Tooltip>
                         </TableCell>
-                        <TableCell className="text-right">
-                          {/* Кнопка действий удалена */}
-                        </TableCell>
+
                       </TableRow>
                     ))
                   ) : (
