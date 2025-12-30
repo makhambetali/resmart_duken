@@ -152,7 +152,11 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
                 <TableBody>
                   {daySupplies.length > 0 ? (
                     daySupplies.map((supply) => (
-                      <TableRow key={supply.id}>
+                      <TableRow 
+                        key={supply.id}
+                        className="cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => onEditSupply(supply)}
+                      >
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             {supply.supplier}
@@ -268,20 +272,7 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
                           </Tooltip>
                         </TableCell>
                         <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Открыть меню</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => onEditSupply(supply)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Редактировать
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {/* Кнопка действий удалена */}
                         </TableCell>
                       </TableRow>
                     ))

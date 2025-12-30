@@ -478,7 +478,12 @@ const parseMoneyValue = (value: string): number => {
   return (
     <TooltipProvider>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-screen h-screen max-w-2xl max-h-[700px] rounded-none border-none overflow-y-auto">
+        {/* Добавлен onPointerDownOutside и onInteractOutside для предотвращения закрытия */}
+        <DialogContent 
+          className="w-screen h-screen max-w-2xl max-h-[700px] rounded-none border-none overflow-y-auto"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="flex justify-between items-center">
               <span>{supply ? 'Редактировать поставку' : 'Добавить поставку'}</span>
