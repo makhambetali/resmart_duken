@@ -43,6 +43,7 @@ interface SupplyModalProps {
   supply?: Supply | null;
   onSubmit: (data: Omit<AddSupplyForm, 'images'> & { images?: File[] }) => Promise<void>;
   suppliers: Array<{ id: string; name: string }>;
+  initialSupplier?: string; // Новый пропс
 }
 
 interface SupplyImage {

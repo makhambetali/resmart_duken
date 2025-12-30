@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '@/components/Layout';
 import { SupplyTable } from '@/components/SupplyTable';
-import { SupplyFilters } from '@/components/SupplyFilters';
 import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { SupplyModal } from '@/components/SupplyModal';
 import { CashFlowModal } from '@/components/CashFlowModal';
@@ -11,17 +10,23 @@ import { suppliesApi, suppliersApi, cashFlowApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, ListFilter, Archive, FilePlus } from 'lucide-react';
+import { Archive, Search, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const EmptyState = ({ onAddClick }: { onAddClick: () => void }) => (
+const EmptyState = ({ onAddClick, searchTerm }: { onAddClick: () => void; searchTerm: string }) => (
   <Card className="flex flex-col items-center justify-center p-12 border-2 border-dashed">
     <Archive className="mx-auto h-12 w-12 text-gray-400" />
-    <h3 className="mt-4 text-sm font-semibold text-gray-900">Поставок не найдено</h3>
-    <p className="mt-1 text-sm text-gray-500">Попробуйте изменить фильтры или добавить новую поставку.</p>
+    <h3 className="mt-4 text-sm font-semibold text-gray-900">
+      {searchTerm ? `По запросу "${searchTerm}" ничего не найдено` : 'Поставок не найдено'}
+    </h3>
+    <p className="mt-1 text-sm text-gray-500">
+      {searchTerm ? 'Попробуйте другой поисковый запрос или создайте новую поставку' : 'Добавьте новую поставку'}
+    </p>
     <Button onClick={onAddClick} className="mt-6">
-      <Plus className="-ml-0.5 mr-1.5 h-5 w-5" />
-      Добавить поставку
+      {searchTerm ? `Создать поставку для "${searchTerm}"` : 'Добавить поставку'}
     </Button>
   </Card>
 );
@@ -36,7 +41,6 @@ const Index = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [confirmationFilter, setConfirmationFilter] = useState<'all' | 'confirmed' | 'unconfirmed'>('all');
-  const [showFilters, setShowFilters] = useState(false);
 
   // 🔧 ИСПРАВЛЕНО: Добавлены staleTime и gcTime для кэширования
   const { 
@@ -139,6 +143,11 @@ const Index = () => {
     setEditingSupply(null);
     setIsSupplyModalOpen(true);
   };
+
+  const handleAddSupplyWithSearch = () => {
+    setEditingSupply(null);
+    setIsSupplyModalOpen(true);
+  };
   
   const handleDeleteSupply = (id: string) => {
     if (confirm('Вы уверены, что хотите удалить поставку?')) {
@@ -146,22 +155,17 @@ const Index = () => {
     }
   };
 
-  // @/components/Index.tsx
-const handleSupplySubmit = async (data: Omit<AddSupplyForm, 'images'> & { images?: File[] }) => {
-  try {
-    if (editingSupply) {
-      await updateSupplyMutation.mutateAsync({ id: editingSupply.id, data });
-    } else {
-      await createSupplyMutation.mutateAsync(data);
+  const handleSupplySubmit = async (data: Omit<AddSupplyForm, 'images'> & { images?: File[] }) => {
+    try {
+      if (editingSupply) {
+        await updateSupplyMutation.mutateAsync({ id: editingSupply.id, data });
+      } else {
+        await createSupplyMutation.mutateAsync(data);
+      }
+      setIsSupplyModalOpen(false);
+    } catch (error) {
+      console.error('Error submitting supply:', error);
     }
-    setIsSupplyModalOpen(false);
-  } catch (error) {
-    console.error('Error submitting supply:', error);
-  }
-};
-  const handleClearFilters = () => {
-    setSearchTerm('');
-    setConfirmationFilter('all');
   };
 
   if (suppliesError) {
@@ -180,36 +184,54 @@ const handleSupplySubmit = async (data: Omit<AddSupplyForm, 'images'> & { images
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-3xl font-bold tracking-tight">Поставки</h1>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setIsCashFlowModalOpen(true)}>
-              <FilePlus className="mr-2 h-4 w-4" />
-              Взнос/вынос
-            </Button>
-            <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
-              <ListFilter className="mr-2 h-4 w-4" />
-              {showFilters ? 'Скрыть фильтры' : 'Показать'}
-            </Button>
-            <Button onClick={handleAddSupply}>
-              <Plus className="mr-2 h-4 w-4" />
-              Добавить
-            </Button>
-          </div>
+          <Button onClick={handleAddSupply}>
+            Добавить поставку
+          </Button>
         </div>
 
-        {showFilters && (
-          <Card>
-            <CardContent className="pt-6">
-              <SupplyFilters
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                confirmationFilter={confirmationFilter}
-                onConfirmationFilterChange={setConfirmationFilter}
-                onClearFilters={handleClearFilters}
-                isVisible={showFilters}
-              />
-            </CardContent>
-          </Card>
-        )}
+        {/* Фильтры и поиск - в одном ряду, занимают всю ширину */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row md:items-end gap-6">
+              {/* Поиск - занимает большую часть ширины */}
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="search">Поиск поставок</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    id="search"
+                    placeholder="Поиск по поставщику или комментарию..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Фильтр подтверждения */}
+              <div className="space-y-2 min-w-[180px]">
+                <Label className="text-sm">Статус</Label>
+                <Tabs 
+                  value={confirmationFilter} 
+                  onValueChange={(value) => setConfirmationFilter(value as 'all' | 'confirmed' | 'unconfirmed')}
+                  className="w-full"
+                >
+                  <TabsList className="grid grid-cols-3 h-8 w-full">
+                    <TabsTrigger value="all" className="text-xs">
+                      Все
+                    </TabsTrigger>
+                    <TabsTrigger value="confirmed" className="text-xs">
+                      Подтв.
+                    </TabsTrigger>
+                    <TabsTrigger value="unconfirmed" className="text-xs">
+                      Не подтв.
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         
         <Card>
           <CardContent className="p-0">
@@ -226,7 +248,10 @@ const handleSupplySubmit = async (data: Omit<AddSupplyForm, 'images'> & { images
                 onEditSupply={handleEditSupply}
               />
             ) : (
-              <EmptyState onAddClick={handleAddSupply} />
+              <EmptyState 
+                onAddClick={handleAddSupplyWithSearch} 
+                searchTerm={searchTerm} 
+              />
             )}
           </CardContent>
         </Card>
@@ -238,6 +263,14 @@ const handleSupplySubmit = async (data: Omit<AddSupplyForm, 'images'> & { images
           onSubmit={handleSupplySubmit}
           suppliers={suppliers}
           handleDeleteSupply={handleDeleteSupply}
+          // initialSupplier={searchTerm && !editingSupply ? searchTerm : ''}
+        />
+        
+        {/* Floating Action Button для CashFlowModal */}
+        <FloatingActionButton
+          icon={<DollarSign className="h-6 w-6" />}
+          onClick={() => setIsCashFlowModalOpen(true)}
+          tooltip="Взнос/вынос"
         />
         
         <CashFlowModal
