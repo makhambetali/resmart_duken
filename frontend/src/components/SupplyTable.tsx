@@ -29,12 +29,14 @@ import { cn } from '@/lib/utils';
 interface SupplyTableProps {
   supplies: Supply[];
   onEditSupply: (supply: Supply) => void;
+  onSupplierClick: (supplierName: string) => void;
   groupedByDate?: boolean;
 }
 
 export const SupplyTable: React.FC<SupplyTableProps> = ({ 
   supplies, 
   onEditSupply,
+  onSupplierClick,
   groupedByDate = true 
 }) => {
   const formatCurrency = (amount: number) => {
@@ -146,7 +148,6 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
                     <TableHead className="hidden md:table-cell">Обмен</TableHead>
                     <TableHead className="hidden lg:table-cell">Комментарий</TableHead>
                     <TableHead className="w-[180px]">Статус</TableHead>
-
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -159,7 +160,16 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
                       >
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
-                            {supply.supplier}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log(supply.supplier)
+                                onSupplierClick(supply.supplier);
+                              }}
+                              className="text-left hover:text-blue-600 hover:underline focus:outline-none focus:text-blue-700 transition-colors"
+                            >
+                              {supply.supplier}
+                            </button>
                             {/* --- Начало изменений: Добавлен символ переноса --- */}
                             {(supply as any).rescheduled_cnt > 0 && (
                               <Tooltip>
@@ -271,7 +281,6 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
                             </TooltipContent>
                           </Tooltip>
                         </TableCell>
-
                       </TableRow>
                     ))
                   ) : (

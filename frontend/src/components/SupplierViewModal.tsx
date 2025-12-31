@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Supplier, SupplierStats, ArrivalPrediction } from '@/types/suppliers'; // 🔧 Импортируем правильные типы
 import { 
   Dialog, 
   DialogContent, 
@@ -42,14 +41,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 interface SupplierViewModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  supplier: Supplier | null;
+  supplier: any | null;
   onEdit: () => void;
 }
-
-// 🔧 УДАЛЕНО: Больше не нужен ExtendedSupplierStats
-// interface ExtendedSupplierStats extends SupplierStats {
-//   arrival_prediction?: ArrivalPrediction[];
-// }
 
 const COEFFICIENT_CONFIG = {
   green: { min: 0, max: 0.4, color: 'bg-green-500', textColor: 'text-green-700', label: 'Хорошо' },
@@ -106,7 +100,7 @@ const InfoRow = ({ icon: Icon, label, value, className = '' }: {
   </div>
 );
 
-const PredictionDisplay = ({ prediction }: { prediction: ArrivalPrediction[] }) => {
+const PredictionDisplay = ({ prediction }: { prediction: any[] }) => {
   const sortedPrediction = [...prediction].sort((a, b) => b.probability - a.probability);
 
   return (
@@ -180,7 +174,7 @@ const PredictionDisplay = ({ prediction }: { prediction: ArrivalPrediction[] }) 
   );
 };
 
-const SupplierStatsDisplay = ({ stats, isLoading }: { stats: SupplierStats | null; isLoading: boolean }) => {
+const SupplierStatsDisplay = ({ stats, isLoading }: { stats: any | null; isLoading: boolean }) => {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center p-8">
@@ -210,13 +204,10 @@ const SupplierStatsDisplay = ({ stats, isLoading }: { stats: SupplierStats | nul
     }
   };
 
-  // 🔧 ИСПРАВЛЕНО: Коэффициент теперь в stats.price.rescheduled_coef
-  const coeffColor = getCoefficientColor(stats.price.rescheduled_coef);
-  const coeffPercentage = Math.min(stats.price.rescheduled_coef * 50, 100);
+  const coeffColor = getCoefficientColor(stats.price?.rescheduled_coef || 0);
+  const coeffPercentage = Math.min((stats.price?.rescheduled_coef || 0) * 50, 100);
 
-  // Проверяем наличие данных для отображения
   const hasPriceData = stats.price && stats.price.count > 0;
-  // 🔧 ИСПРАВЛЕНО: Используем arrival_time вместо arrival_date
   const hasArrivalTimeData = stats.arrival_time && stats.arrival_time.avg !== '00:00';
   const hasPrediction = stats.arrival_prediction && stats.arrival_prediction.length > 0;
 
@@ -232,8 +223,7 @@ const SupplierStatsDisplay = ({ stats, isLoading }: { stats: SupplierStats | nul
               </div>
               <div>
                 <div className="text-xs text-gray-600 font-medium">Всего поставок</div>
-                {/* 🔧 ИСПРАВЛЕНО: Количество теперь в stats.price.count */}
-                <div className="text-2xl font-bold text-gray-900">{stats.price.count}</div>
+                <div className="text-2xl font-bold text-gray-900">{stats.price?.count || 0}</div>
               </div>
             </div>
           </CardContent>
@@ -247,9 +237,8 @@ const SupplierStatsDisplay = ({ stats, isLoading }: { stats: SupplierStats | nul
               </div>
               <div>
                 <div className="text-xs text-gray-600 font-medium">Коэффициент переносов</div>
-                {/* 🔧 ИСПРАВЛЕНО: Коэффициент теперь в stats.price.rescheduled_coef */}
                 <div className="text-2xl font-bold mt-1" style={{ color: coeffColor.textColor }}>
-                  {stats.price.rescheduled_coef.toFixed(2)}
+                  {(stats.price?.rescheduled_coef || 0).toFixed(2)}
                 </div>
               </div>
             </div>
@@ -310,19 +299,19 @@ const SupplierStatsDisplay = ({ stats, isLoading }: { stats: SupplierStats | nul
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1 p-2 rounded-lg bg-gray-50">
                 <div className="text-xs text-gray-500 font-medium">Средняя цена</div>
-                <div className="font-bold text-gray-900">{stats.price.avg.toFixed(2)} ₸</div>
+                <div className="font-bold text-gray-900">{(stats.price.avg || 0).toFixed(2)} ₸</div>
               </div>
               <div className="space-y-1 p-2 rounded-lg bg-gray-50">
                 <div className="text-xs text-gray-500 font-medium">Медиана</div>
-                <div className="font-bold text-gray-900">{stats.price.med.toFixed(2)} ₸</div>
+                <div className="font-bold text-gray-900">{(stats.price.med || 0).toFixed(2)} ₸</div>
               </div>
               <div className="space-y-1 p-2 rounded-lg bg-gray-50">
                 <div className="text-xs text-gray-500 font-medium">Минимальная</div>
-                <div className="font-bold text-gray-900">{stats.price.min.toFixed(2)} ₸</div>
+                <div className="font-bold text-gray-900">{(stats.price.min || 0).toFixed(2)} ₸</div>
               </div>
               <div className="space-y-1 p-2 rounded-lg bg-gray-50">
                 <div className="text-xs text-gray-500 font-medium">Максимальная</div>
-                <div className="font-bold text-gray-900">{stats.price.max.toFixed(2)} ₸</div>
+                <div className="font-bold text-gray-900">{(stats.price.max || 0).toFixed(2)} ₸</div>
               </div>
             </div>
           </CardContent>
@@ -344,7 +333,6 @@ const SupplierStatsDisplay = ({ stats, isLoading }: { stats: SupplierStats | nul
                 <div className="text-xs text-gray-500 font-medium">Среднее время</div>
                 <div className="font-bold text-gray-900 flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {/* 🔧 ИСПРАВЛЕНО: Используем arrival_time вместо arrival_date */}
                   {stats.arrival_time.avg}
                 </div>
               </div>
@@ -383,7 +371,7 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
   supplier, 
   onEdit 
 }) => {
-  const [stats, setStats] = useState<SupplierStats | null>(null); // 🔧 Используем правильный тип
+  const [stats, setStats] = useState<any | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [activeTab, setActiveTab] = useState('info');
 
@@ -403,6 +391,7 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
       setStats(data);
     } catch (error) {
       console.error('Error fetching supplier stats:', error);
+      setStats(null);
     } finally {
       setIsLoadingStats(false);
     }
@@ -424,10 +413,9 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
     return idStr.length > 8 ? idStr.substring(0, 8) + '...' : idStr;
   };
 
-  // 🔧 ИСПРАВЛЕНО: Коэффициент теперь в stats.price.rescheduled_coef
   const coeffColor = stats ? 
-    stats.price.rescheduled_coef <= COEFFICIENT_CONFIG.green.max ? COEFFICIENT_CONFIG.green :
-    stats.price.rescheduled_coef <= COEFFICIENT_CONFIG.yellow.max ? COEFFICIENT_CONFIG.yellow :
+    (stats.price?.rescheduled_coef || 0) <= COEFFICIENT_CONFIG.green.max ? COEFFICIENT_CONFIG.green :
+    (stats.price?.rescheduled_coef || 0) <= COEFFICIENT_CONFIG.yellow.max ? COEFFICIENT_CONFIG.yellow :
     COEFFICIENT_CONFIG.red : null;
 
   const hasPrediction = stats?.arrival_prediction && stats.arrival_prediction.length > 0;
@@ -613,8 +601,7 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                     <div className="grid grid-cols-3 gap-4">
                       <div className="text-center p-3 bg-blue-50 rounded-lg">
                         <div className="text-xs text-gray-600 font-medium">Поставок</div>
-                        {/* 🔧 ИСПРАВЛЕНО: stats.price.count вместо stats.count */}
-                        <div className="text-2xl font-bold text-gray-900">{stats.price.count}</div>
+                        <div className="text-2xl font-bold text-gray-900">{stats.price?.count || 0}</div>
                       </div>
                       <div className="text-center p-3 bg-purple-50 rounded-lg">
                         <div className="text-xs text-gray-600 font-medium">Коэффициент</div>
@@ -622,14 +609,13 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                           className="text-2xl font-bold" 
                           style={{ color: coeffColor?.textColor }}
                         >
-                          {/* 🔧 ИСПРАВЛЕНО: stats.price.rescheduled_coef вместо stats.rescheduled_coef */}
-                          {stats.price.rescheduled_coef.toFixed(2)}
+                          {(stats.price?.rescheduled_coef || 0).toFixed(2)}
                         </div>
                       </div>
                       <div className="text-center p-3 bg-green-50 rounded-lg">
                         <div className="text-xs text-gray-600 font-medium">Ср. цена</div>
                         <div className="text-2xl font-bold text-gray-900">
-                          {stats.price.avg.toFixed(0)} ₸
+                          {(stats.price?.avg || 0).toFixed(0)} ₸
                         </div>
                       </div>
                     </div>
@@ -666,15 +652,14 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                     </h3>
                     
                     <div className="space-y-4">
-                      {/* 🔧 ИСПРАВЛЕНО: stats.price.rescheduled_coef */}
-                      {stats.price.rescheduled_coef >= 1 && (
+                      {(stats.price?.rescheduled_coef || 0) >= 1 && (
                         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                           <div className="flex items-center gap-3">
                             <AlertTriangle className="h-5 w-5 text-red-600" />
                             <div>
                               <div className="font-medium text-red-800">Внимание: Высокий риск</div>
                               <p className="text-sm text-red-700 mt-1">
-                                Коэффициент переносов {stats.price.rescheduled_coef.toFixed(2)} превышает допустимый порог. 
+                                Коэффициент переносов {(stats.price.rescheduled_coef || 0).toFixed(2)} превышает допустимый порог. 
                                 {hasPrediction && (
                                   <> Используйте прогноз времени ({stats.arrival_prediction[0].interval}) для точного планирования.</>
                                 )}
@@ -685,14 +670,14 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                         </div>
                       )}
                       
-                      {stats.price.rescheduled_coef <= 0.4 && (
+                      {(stats.price?.rescheduled_coef || 0) <= 0.4 && (
                         <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                           <div className="flex items-center gap-3">
                             <CheckCircle className="h-5 w-5 text-green-600" />
                             <div>
                               <div className="font-medium text-green-800">Надежный поставщик</div>
                               <p className="text-sm text-green-700 mt-1">
-                                Низкий коэффициент переносов ({stats.price.rescheduled_coef.toFixed(2)}). 
+                                Низкий коэффициент переносов ({(stats.price.rescheduled_coef || 0).toFixed(2)}). 
                                 {hasPrediction && (
                                   <> Прогноз прибытия: {stats.arrival_prediction[0].interval} (вероятность {stats.arrival_prediction[0].probability}%). </>
                                 )}
@@ -703,16 +688,16 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                         </div>
                       )}
 
-                      {stats.price.rescheduled_coef > 0.4 && stats.price.rescheduled_coef < 1 && (
+                      {(stats.price?.rescheduled_coef || 0) > 0.4 && (stats.price?.rescheduled_coef || 0) < 1 && (
                         <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                           <div className="flex items-center gap-3">
                             <Info className="h-5 w-5 text-yellow-600" />
                             <div>
                               <div className="font-medium text-yellow-800">Средняя стабильность</div>
                               <p className="text-sm text-yellow-700 mt-1">
-                                Коэффициент {stats.price.rescheduled_coef.toFixed(2)}. 
+                                Коэффициент {(stats.price.rescheduled_coef || 0).toFixed(2)}. 
                                 {hasPrediction && (
-                                  <> Ориентируйтесь на прогноз: {stats.arrival_prediction.map(p => p.interval).join(', ')}.</>
+                                  <> Ориентируйтесь на прогноз: {stats.arrival_prediction.map((p: any) => p.interval).join(', ')}.</>
                                 )}
                                 Требуется мониторинг поставок. Рекомендуется договориться о строгих сроках.
                               </p>
@@ -734,8 +719,7 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
             <div className="text-sm text-gray-500">
               {stats ? (
                 <>
-                  {/* 🔧 ИСПРАВЛЕНО: stats.price.count */}
-                  Показано {stats.price.count} поставок
+                  Показано {stats.price?.count || 0} поставок
                   {hasPrediction && (
                     <span className="ml-2 text-indigo-600">
                       • Прогноз доступен

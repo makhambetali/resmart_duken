@@ -5,6 +5,7 @@ import { SupplyTable } from '@/components/SupplyTable';
 import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { SupplyModal } from '@/components/SupplyModal';
 import { CashFlowModal } from '@/components/CashFlowModal';
+import { SupplierViewModal } from '@/components/SupplierViewModal';
 import { Supply, AddSupplyForm } from '@/types/supply';
 import { suppliesApi, suppliersApi, cashFlowApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -37,7 +38,9 @@ const Index = () => {
   
   const [isSupplyModalOpen, setIsSupplyModalOpen] = useState(false);
   const [isCashFlowModalOpen, setIsCashFlowModalOpen] = useState(false);
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [editingSupply, setEditingSupply] = useState<Supply | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<any | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [confirmationFilter, setConfirmationFilter] = useState<'all' | 'confirmed' | 'unconfirmed'>('all');
@@ -62,7 +65,7 @@ const Index = () => {
   } = useQuery({
     queryKey: ['suppliers'],
     queryFn: () => suppliersApi.getSuppliers(),
-    enabled: isSupplyModalOpen, // Запрос только при открытом модальном окне
+    enabled: isSupplyModalOpen || isSupplierModalOpen,
     staleTime: 1000 * 60 * 5, // 5 минут кэша
     gcTime: 1000 * 60 * 10, // 10 минут хранения в кэше
   });
@@ -168,6 +171,31 @@ const Index = () => {
     }
   };
 
+  // Функция для открытия модалки поставщика
+  const handleOpenSupplierModal = (supplierName: string) => {
+    // Находим поставщика по имени
+    console.log(suppliers)
+    const supplier = suppliers.find(s => s.name === supplierName);
+    if (supplier) {
+      setSelectedSupplier(supplier);
+      setIsSupplierModalOpen(true);
+    } else {
+      toast({
+        title: 'Поставщик не найден',
+        description: 'Не удалось найти информацию о поставщике',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSupplierEdit = () => {
+    toast({
+      title: 'Редактирование поставщика',
+      description: 'Функция редактирования поставщика будет доступна в будущем',
+      variant: 'default',
+    });
+  };
+
   if (suppliesError) {
     return (
       <Layout>
@@ -246,6 +274,7 @@ const Index = () => {
               <SupplyTable 
                 supplies={filteredSupplies}
                 onEditSupply={handleEditSupply}
+                onSupplierClick={handleOpenSupplierModal}
               />
             ) : (
               <EmptyState 
@@ -263,7 +292,15 @@ const Index = () => {
           onSubmit={handleSupplySubmit}
           suppliers={suppliers}
           handleDeleteSupply={handleDeleteSupply}
-          // initialSupplier={searchTerm && !editingSupply ? searchTerm : ''}
+
+        />
+        
+        {/* Модалка для просмотра информации о поставщике */}
+        <SupplierViewModal
+          open={isSupplierModalOpen}
+          onOpenChange={setIsSupplierModalOpen}
+          supplier={selectedSupplier}
+          onEdit={handleSupplierEdit}
         />
         
         {/* Floating Action Button для CashFlowModal */}
