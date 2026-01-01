@@ -60,8 +60,8 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                 onClick={() => onView(supplier)}
               >
                 <TableCell className="font-medium">{supplier.name}</TableCell>
-                <TableCell>{supplier.supervisor || '-'}</TableCell>
-                <TableCell>{supplier.supervisor_pn || '-'}</TableCell>
+                <TableCell>{supplier.representative || '-'}</TableCell>
+                <TableCell>{supplier.representative_pn || '-'}</TableCell>
                 <TableCell>{format(new Date(supplier.date_added), 'dd.MM.yyyy')}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
