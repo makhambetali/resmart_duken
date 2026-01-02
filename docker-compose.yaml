@@ -165,6 +165,9 @@ services:
       - "8000"
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
     restart: always
+    volumes:
+      - static_volume:/staticfiles 
+    
 
   celery:
     build: ./backend
