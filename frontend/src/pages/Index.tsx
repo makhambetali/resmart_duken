@@ -58,22 +58,25 @@ const Index = () => {
     refetchOnWindowFocus: false, // Не обновлять при переключении вкладок
   });
 
-  // 🔧 ИСПРАВЛЕНО: Добавлен enabled и кэширование
+  // 🔧 ИЗМЕНЕНО: Загружаем поставщиков при загрузке страницы, а не только при открытии модалки
   const { 
     data: suppliers = [], 
-    isLoading: suppliersLoading 
+    isLoading: suppliersLoading,
+    error: suppliersError
   } = useQuery({
     queryKey: ['suppliers'],
     queryFn: () => suppliersApi.getSuppliers(),
-    enabled: isSupplyModalOpen || isSupplierModalOpen,
     staleTime: 1000 * 60 * 5, // 5 минут кэша
     gcTime: 1000 * 60 * 10, // 10 минут хранения в кэше
+    refetchOnWindowFocus: false,
   });
 
   const createSupplyMutation = useMutation({
     mutationFn: suppliesApi.createSupply,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supplies'] });
+      // 🔧 ДОБАВЛЕНО: Обновляем данные о поставщиках после создания поставки
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       toast({ 
         title: 'Поставка добавлена', 
         variant: "default",
@@ -173,8 +176,7 @@ const Index = () => {
 
   // Функция для открытия модалки поставщика
   const handleOpenSupplierModal = (supplierName: string) => {
-    // Находим поставщика по имени
-    console.log(suppliers)
+    // Находим поставщика по имени в уже загруженных данных
     const supplier = suppliers.find(s => s.name === supplierName);
     if (supplier) {
       setSelectedSupplier(supplier);
@@ -263,7 +265,7 @@ const Index = () => {
         
         <Card>
           <CardContent className="p-0">
-            {suppliesLoading ? (
+            {suppliesLoading || suppliersLoading ? (
               <div className="p-6 space-y-4">
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
@@ -292,7 +294,6 @@ const Index = () => {
           onSubmit={handleSupplySubmit}
           suppliers={suppliers}
           handleDeleteSupply={handleDeleteSupply}
-
         />
         
         {/* Модалка для просмотра информации о поставщике */}
