@@ -229,12 +229,12 @@ const Index = () => {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
-                    id="search"
-                    placeholder="Поиск по поставщику или комментарию..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-full"
-                  />
+  id="search"
+  placeholder="Поиск по поставщику или комментарию..."
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value.replace(/(^|\s)\S/g, char => char.toUpperCase()))}
+  className="pl-10 w-full"
+/>
                 </div>
               </div>
 

@@ -235,12 +235,14 @@ const SuppliersPage = () => {
         <Card>
           <CardContent className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-              <Input
-                placeholder="Поиск по названию..."
-                value={filters.searchTerm}
-                onChange={(e) => handleFilterChange({ searchTerm: e.target.value })}
-                className="md:col-span-2"
-              />
+             <Input
+  placeholder="Поиск по названию..."
+  value={filters.searchTerm}
+  onChange={(e) => handleFilterChange({ 
+    searchTerm: e.target.value.replace(/(^|\s)\S/g, char => char.toUpperCase()) 
+  })}
+  className="md:col-span-2"
+/>
               
               <div>
                 <label className="text-sm font-medium text-muted-foreground mb-2 block">

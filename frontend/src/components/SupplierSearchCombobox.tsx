@@ -180,12 +180,12 @@ export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
         <Command shouldFilter={false}>
           <div className="flex items-center border-b px-3">
             <CommandInput
-              ref={commandInputRef}
-              placeholder="Поиск или создание..."
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-              className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            />
+  ref={commandInputRef}
+  placeholder="Поиск или создание..."
+  value={searchQuery}
+  onValueChange={(value) => setSearchQuery(value.replace(/(^|\s)[а-яa-z]/gi, char => char.toUpperCase()))}
+  className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+/>
           </div>
           <CommandList>
             {isSuppliersLoading || isSearching ? (

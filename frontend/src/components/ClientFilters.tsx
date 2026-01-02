@@ -20,11 +20,13 @@ export const ClientFilters: React.FC<ClientFiltersProps> = ({
       <div className="space-y-2">
         <Label htmlFor="search">Поиск по имени</Label>
         <Input
-          id="search"
-          placeholder="Введите имя..."
-          value={filters.searchTerm}
-          onChange={(e) => onFilterChange({ searchTerm: e.target.value })}
-        />
+  id="search"
+  placeholder="Введите имя..."
+  value={filters.searchTerm}
+  onChange={(e) => onFilterChange({ 
+    searchTerm: e.target.value.replace(/(^|\s)\S/g, char => char.toUpperCase()) 
+  })}
+/>
       </div>
       
       {/* Сортировка */}

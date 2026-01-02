@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2, Eye, EyeOff, Info } from 'lucide-react';
 import { ClientSearchCombobox } from './ClientSearchCombobox';
 import { Badge } from '@/components/ui/badge';
+import { capitalize } from '@/lib/utils';
 
 const phoneMask = '+{7} (000) 000-00-00';
 const inputClassName = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
@@ -365,7 +366,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                     ref={nameInputRef}
                     id="name" 
                     value={formData.name} 
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} 
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: capitalize(e.target.value) }))} 
                     placeholder="Имя клиента" 
                     required 
                   />

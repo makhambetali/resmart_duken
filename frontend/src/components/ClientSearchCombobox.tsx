@@ -115,11 +115,11 @@ export const ClientSearchCombobox: React.FC<ClientSearchComboboxProps> = ({
         <Command shouldFilter={false}>
           <div className="flex items-center border-b px-3">
             <CommandInput
-              placeholder="Поиск или создание..."
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-              className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            />
+  placeholder="Поиск или создание..."
+  value={searchQuery}
+  onValueChange={(value) => setSearchQuery(value.replace(/(^|\s)\S/g, char => char.toUpperCase()))}
+  className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+/>
           </div>
           <CommandList>
             {isLoading ? (
