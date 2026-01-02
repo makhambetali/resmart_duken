@@ -169,12 +169,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddSupplyClick }) =>
                     )}
 
                     {/* Меню */}
-                    {/* <DropdownMenuItem asChild>
+                    <DropdownMenuItem asChild>
                       <Link to="/history" className="flex items-center gap-2 cursor-pointer">
                         <History className="h-4 w-4" />
                         История действий
                       </Link>
-                    </DropdownMenuItem> */}
+                    </DropdownMenuItem>
                     
                     {isAdmin && (
                       <DropdownMenuItem asChild>
