@@ -11,6 +11,7 @@ export interface Supplier {
   is_everyday_supply: boolean;
   last_accessed: string | null;
   date_added: string;
+  last_updated: string;
 }
 
 export type CreateSupplierData = {

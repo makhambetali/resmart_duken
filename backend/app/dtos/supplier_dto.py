@@ -12,4 +12,5 @@ class SupplierDTO:
     delivery_pn: Optional[str]
     description: Optional[str]
     last_accessed: Optional[str]
+    last_updated: Optional[str]
     

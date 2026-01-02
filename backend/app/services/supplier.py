@@ -60,7 +60,8 @@ class SupplierService:
             delivery=supplier.delivery,
             delivery_pn=supplier.delivery_pn,
             description=supplier.description,
-            last_accessed=supplier.last_accessed
+            last_accessed=supplier.last_accessed,
+            last_updated=supplier.last_updated
         )
 
 ARRIVAL_INTERVALS = {

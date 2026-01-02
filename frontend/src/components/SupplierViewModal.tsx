@@ -567,12 +567,19 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                           value={formatDateTime(supplier.date_added)}
                           className="bg-gray-50 rounded-lg px-3"
                         />
+                         <InfoRow 
+                          icon={Clock} 
+                          label="Последнее изменение" 
+                          value={supplier.last_updated ? formatDateTime(supplier.last_updated) : 'Никогда'}
+                          className="bg-gray-50 rounded-lg px-3"
+                        />
                         <InfoRow 
                           icon={Clock} 
                           label="Последний доступ" 
                           value={supplier.last_accessed ? formatDateTime(supplier.last_accessed) : 'Никогда'}
                           className="bg-gray-50 rounded-lg px-3"
                         />
+                       
                         <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
                           <Badge className="h-4 w-4 p-0 flex items-center justify-center">
                             {supplier.is_everyday_supply ? '✓' : '•'}

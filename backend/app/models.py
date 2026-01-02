@@ -53,6 +53,7 @@ class Supplier(models.Model):
     is_everyday_supply = models.BooleanField(default=False)
     last_accessed = models.DateTimeField(blank=True, null=True)
     date_added = models.DateTimeField(auto_now_add=True)
+    last_updated = models.DateTimeField(auto_now=True)
     valid = models.BooleanField(default=True)
     store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='suppliers', blank=True)
     def __str__(self):
