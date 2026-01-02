@@ -86,11 +86,15 @@ class Supply(models.Model):
         return f"{self.supplier}: {self.price_bank + self.price_cash}"
     
     def save(self, *args, **kwargs):
+        local_time = timezone.localtime()
         if self.is_confirmed and not self.arrival_date:
-            self.arrival_date = timezone.localtime()
+            self.arrival_date = local_time
 
         elif not self.is_confirmed:
             self.arrival_date = None
+
+        self.supplier.last_accessed = local_time
+        self.supplier.save()
         
         super().save(*args, **kwargs)
 
