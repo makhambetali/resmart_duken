@@ -1,0 +1,24 @@
+name: 🚀 Деплой на сервер
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Клонируем код
+      uses: actions/checkout@v4
+    
+    - name: 🔐 Настраиваем SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    
+    - name: 🚀 Деплой через SSH
+      run: |
+        ssh -o StrictHostKeyChecking=no \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "cd /srv/resmart_duken && ./deploy.sh"
