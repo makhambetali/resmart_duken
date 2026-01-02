@@ -124,9 +124,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddSupplyClick }) =>
                       {getRoleLabel()}
                     </div>
                   </div>
-                  <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  {/* <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
                     <User className="h-4 w-4 text-blue-600" />
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Выпадающее меню пользователя */}
