@@ -3,13 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Client } from '@/types/client';
-import { ChevronLeft, ChevronRight, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ClientTableProps {
   clients: Client[];
@@ -70,12 +64,15 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                 <TableHead>Телефон</TableHead>
                 <TableHead>Долг</TableHead>
                 <TableHead>Последняя активность</TableHead>
-                <TableHead className="text-right">Действия</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {clients.map((client) => (
-                <TableRow key={client.id}>
+                <TableRow 
+                  key={client.id} 
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => onEditClient(client)}
+                >
                   <TableCell className="font-medium">{client.name}</TableCell>
                   <TableCell>{client.phone_number || '-'}</TableCell>
                   <TableCell>
@@ -85,22 +82,6 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {formatDateTime(client.last_accessed)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Открыть меню</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onEditClient(client)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          <span>Редактировать</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}

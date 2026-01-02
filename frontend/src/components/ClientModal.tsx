@@ -225,7 +225,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({
   };
 
   const handleAddDebt = () => {
-
     const rawValue = newDebtValue.replace(/\s/g, '');
     const debtValue = parseFloat(rawValue);
     if (isNaN(debtValue) || debtValue === 0) {
@@ -238,7 +237,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     }
 
     if (client) {
-
       addDebtMutation.mutate({ 
         id: client.id, 
         debt_value: debtValue, 
@@ -334,7 +332,14 @@ export const ClientModal: React.FC<ClientModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-auto max-w-[90vw] min-w-[70vw] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-auto max-w-[90vw] min-w-[70vw] max-h-[90vh] overflow-y-auto" 
+        onInteractOutside={(e) => {
+          e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          e.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {client ? `Клиент: ${client.name}` : 'Управление клиентами'}
@@ -582,26 +587,33 @@ export const ClientModal: React.FC<ClientModalProps> = ({
               )}
 
               <DialogFooter className="flex justify-between">
-                {client && (
+                <div className="space-x-2">
                   <Button 
                     type="button" 
-                    variant="destructive" 
-                    onClick={() => {
-                      if (confirm('Вы уверены, что хотите удалить клиента? Это действие нельзя отменить.')) {
-                        onDelete(client.id);
-                        onOpenChange(false);
-                      }
-                    }}
-                    disabled={client.debt !== 0}
+                    variant="outline" 
+                    onClick={() => onOpenChange(false)}
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Удалить клиента
-                    {client.debt !== 0 && (
-                      <span className="ml-2 text-xs">(нельзя удалить при наличии долга)</span>
-                    )}
+                    Закрыть
                   </Button>
-                )}
-                <div className="space-x-2">
+                  {client && (
+                    <Button 
+                      type="button" 
+                      variant="destructive" 
+                      onClick={() => {
+                        if (confirm('Вы уверены, что хотите удалить клиента? Это действие нельзя отменить.')) {
+                          onDelete(client.id);
+                          onOpenChange(false);
+                        }
+                      }}
+                      disabled={client.debt !== 0}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Удалить клиента
+                      {client.debt !== 0 && (
+                        <span className="ml-2 text-xs">(нельзя удалить при наличии долга)</span>
+                      )}
+                    </Button>
+                  )}
                   <Button type="submit">{client ? 'Сохранить' : 'Добавить'}</Button>
                 </div>
               </DialogFooter>
@@ -631,7 +643,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                     <ClientSearchCombobox
                         value={selectedClientId}
                         onValueChange={(clientId, clientName) => {
-
                           setSelectedClientId(clientId);
                           setSelectedClientName(clientName);
                         }}
@@ -700,6 +711,16 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                 </Button>
               </CardContent>
             </Card>
+            
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+              >
+                Закрыть
+              </Button>
+            </DialogFooter>
           </TabsContent>
         </Tabs>
       </DialogContent>

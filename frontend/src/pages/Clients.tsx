@@ -9,7 +9,7 @@ import { clientsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ListFilter, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 const Clients = () => {
   const queryClient = useQueryClient();
@@ -17,7 +17,6 @@ const Clients = () => {
   
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   
   const [filters, setFilters] = useState<Filters>({
     searchTerm: '',
@@ -154,10 +153,6 @@ const Clients = () => {
             <div className="text-sm text-muted-foreground">
               Найдено: {clientsData?.count || 0}
             </div>
-            <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
-              <ListFilter className="mr-2 h-4 w-4" />
-              {showFilters ? 'Скрыть фильтры' : 'Показать фильтры'}
-            </Button>
             <Button onClick={handleAddClient}>
               <Plus className="mr-2 h-4 w-4" />
               Добавить
@@ -165,16 +160,14 @@ const Clients = () => {
           </div>
         </div>
 
-        {showFilters && (
-          <Card>
-            <CardContent className="p-6 space-y-4">
-              <ClientFilters
-                filters={filters}
-                onFilterChange={handleFilterChange}
-              />
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <ClientFilters
+              filters={filters}
+              onFilterChange={handleFilterChange}
+            />
+          </CardContent>
+        </Card>
 
         {clientsLoading ? (
           <div className="bg-card rounded-lg shadow p-6 text-center">
