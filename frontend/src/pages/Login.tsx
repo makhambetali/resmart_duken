@@ -24,7 +24,7 @@ const LoginPage: React.FC = () => {
 
     try {
       await login({ username, password });
-      navigate('/');
+      navigate('/app');
     } catch (error: any) {
       setError(
         error.response?.data?.error || 

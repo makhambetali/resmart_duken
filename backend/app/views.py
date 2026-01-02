@@ -30,7 +30,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierSerializer
     pagination_class = SupplierResultsPaginationPage
     service_layer = SupplierService()
-    queryset = Supplier.objects.all().exclude(name="[удаленный поставщик]").order_by('-last_accessed')
+    queryset = Supplier.objects.all().order_by('-last_updated')
     front_bool_to_back  = {
         'true':True,
         'false': False,
