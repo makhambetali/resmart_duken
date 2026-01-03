@@ -13,6 +13,7 @@ import Finance from "./pages/Finance";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import History from "./pages/History";
+import Landing from "./pages/Landing"
 import Login from "./pages/Login"; // Добавляем страницу логина
 import { ProtectedRoute } from '@/components/ProtectedRoute'; // Добавляем защищенный роут
 
@@ -48,7 +49,9 @@ const App = () => {
             <Routes>
               {/* Публичные маршруты */}
               <Route path="/login" element={<Login />} />
-              
+              <Route path="" element={
+                <Landing />
+              }/>
               {/* Защищенные маршруты */}
               <Route path="/app" element={
                 <ProtectedRoute>
