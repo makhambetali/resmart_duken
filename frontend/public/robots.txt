@@ -1,14 +1,13 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
 Allow: /
+
+# Закрываем служебные зоны
+Disallow: /admin/
+Disallow: /api/
+Disallow: /login/
+Disallow: /app/
+Disallow: /suppliers/
+Disallow: /clients/
+Disallow: /finance/
+
+Sitemap: https://smart-duken.com/sitemap.xml
