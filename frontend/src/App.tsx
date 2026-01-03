@@ -16,7 +16,7 @@ import History from "./pages/History";
 import Landing from "./pages/Landing"
 import Login from "./pages/Login"; // Добавляем страницу логина
 import { ProtectedRoute } from '@/components/ProtectedRoute'; // Добавляем защищенный роут
-
+import { AnalyticsTracker } from "@/analytics/AnalyticsTracker";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -48,6 +48,7 @@ const App = () => {
           <AuthProvider>
             <Routes>
               {/* Публичные маршруты */}
+              <AnalyticsTracker />
               <Route path="/login" element={<Login />} />
               <Route path="" element={
                 <Landing />
@@ -58,6 +59,7 @@ const App = () => {
                   <Index />
                 </ProtectedRoute>
               } />
+              
               <Route path="/clients" element={
                 <ProtectedRoute>
                   <Clients />
