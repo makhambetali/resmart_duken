@@ -16,7 +16,16 @@ from .services.supply import SupplyService
 from .services.supplier import SupplierService, SupplierStats
 from .services.client import ClientService, ClientStats
 from .services.cashflow import CashFlowService
-
+from .services.telegram import send_telegram_message
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from .models import UserProfile
+from .serializers import UserSerializer, LoginSerializer, UserProfileSerializer
+from .tasks import send_lead_to_telegram_task
 import logging
 
 logger = logging.getLogger('app')
@@ -85,11 +94,20 @@ class SupplierViewSet(viewsets.ModelViewSet):
 
     
     
-class TestViewSet(viewsets.ModelViewSet):
-    serializer_class = SupplierSerializer
-    queryset = Supplier.objects.all()
+class LeadViewSet(viewsets.ModelViewSet):
+    serializer_class = LeadSerializer
+    queryset = Lead.objects.all()
+    permission_classes = [permissions.AllowAny]
+    def perform_create(self, serializer):
+        lead = serializer.save()
+        send_lead_to_telegram_task.delay(
+            name=lead.name,
+            phone=lead.phone_number,
+            comment=lead.comment,
+        )
+        return super().perform_create(serializer)
         
-    
+    # 
 class SupplyViewSet(viewsets.ModelViewSet):
     serializer_class = SupplySerializer
     queryset = Supply.objects.all().select_related("supplier").prefetch_related("images")
@@ -349,14 +367,7 @@ class LoggingTemplateView(TemplateView):
 
 
 # views.py
-from rest_framework import generics, permissions, status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
-from .models import UserProfile
-from .serializers import UserSerializer, LoginSerializer, UserProfileSerializer
+
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()

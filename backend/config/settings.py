@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 # =========================
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env.local")
+print(os.getenv('TG_CHAT_ID', 123))
 # =========================
 # SECURITY
 # =========================

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow, Employee, UserProfile
+from .models import Supplier, Supply, SupplyImage, Client, ClientDebt, CashFlow, Employee, UserProfile, Lead
 from django.utils import timezone
 from django.core.cache import cache
 import logging
@@ -64,7 +64,10 @@ class CashFlowSerializer(serializers.ModelSerializer):
         
         return value
     
-    
+class LeadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lead
+        fields = '__all__'
 
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -116,3 +119,4 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Необходимо указать имя пользователя и пароль")
         
         return data
+    

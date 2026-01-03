@@ -32,6 +32,21 @@ export interface RegisterData {
   password: string;
   password2: string;
 }
+// Типы для лидов (заявок с лендинга)
+export interface LeadData {
+  name: string;
+  phone_number: string;
+  comment?: string;
+}
+
+export interface LeadResponse {
+  id: number;
+  name: string;
+  phone_number: string;
+  comment: string;
+  created_at: string;
+  // status: 'new' | 'contacted' | 'converted' | 'rejected';
+}
 
 // Укажите ваш IP-адрес или домен
 const API_BASE_URL =  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -408,4 +423,13 @@ export const clientsApi = {
 
 export const employeesApi = {
   getEmployees: () => apiRequest<Employee[]>(`/employees/`)
+};
+export const leadsApi = {
+  createLead: (data: LeadData) => 
+    apiRequest<LeadResponse>('/leads/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+
 };

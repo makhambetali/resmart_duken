@@ -158,3 +158,13 @@ class CashFlow(models.Model):
         verbose_name = "Внос/вынос денег"
         verbose_name_plural = "Внос/вынос денег"
 
+
+class Lead(models.Model):
+    name = models.CharField(max_length=100)
+    phone_number = models.CharField(max_length=30)
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Заявка'
+        verbose_name_plural = 'Заявки'
