@@ -4,6 +4,7 @@ Allow: /
 # Закрываем служебные зоны
 Disallow: /admin/
 Disallow: /api/
+Disallow: /server-time/
 Disallow: /login/
 Disallow: /app/
 Disallow: /suppliers/
