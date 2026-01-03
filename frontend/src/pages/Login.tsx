@@ -74,7 +74,7 @@ const LoginPage: React.FC = () => {
               <Store className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">RetailPro</h1>
+              <h1 className="text-2xl font-bold text-gray-900">dukenCRM</h1>
               <p className="text-sm text-gray-600">smart-duken.com</p>
             </div>
           </div>
