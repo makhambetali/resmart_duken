@@ -163,7 +163,6 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                console.log(supply.supplier)
                                 onSupplierClick(supply.supplier);
                               }}
                               className="text-left hover:text-blue-600 hover:underline focus:outline-none focus:text-blue-700 transition-colors"

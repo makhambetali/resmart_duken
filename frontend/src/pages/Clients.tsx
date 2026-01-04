@@ -17,6 +17,8 @@ const Clients = () => {
   
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [modalMode, setModalMode] = useState<'add-debt' | 'edit'>('edit');
+  const [initialTab, setInitialTab] = useState<string>('debts');
   
   const [filters, setFilters] = useState<Filters>({
     searchTerm: '',
@@ -35,8 +37,8 @@ const Clients = () => {
       q: filters.searchTerm,
       show_zeros: filters.showZeros ? 1 : 0,
     }),
-    staleTime: 1000 * 60, // 1 минута кэша, чтобы предотвратить частые запросы
-    gcTime: 1000 * 60 * 5, // 5 минут хранения в кэше
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 5,
   });
 
   const createClientMutation = useMutation({
@@ -99,11 +101,15 @@ const Clients = () => {
 
   const handleEditClient = (client: Client) => {
     setEditingClient(client);
+    setModalMode('edit');
+    setInitialTab('debts'); // Открываем вкладку "Долги"
     setIsClientModalOpen(true);
   };
 
   const handleAddClient = () => {
     setEditingClient(null);
+    setModalMode('add-debt');
+    setInitialTab('add-debt'); // Открываем вкладку "Добавить долг"
     setIsClientModalOpen(true);
   };
   
@@ -191,6 +197,8 @@ const Clients = () => {
           client={editingClient}
           onSubmit={handleClientSubmit}
           onDelete={handleDeleteClient}
+          mode={modalMode}
+          initialTab={initialTab}
         />
       </div>
     </Layout>
