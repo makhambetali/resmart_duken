@@ -1,4 +1,4 @@
-// @/components/SupplyModal.tsx - обновленный код
+// @/components/SupplyModal.tsx - адаптивная версия
 import React, { useState, useEffect, useRef } from 'react';
 import { Supply, AddSupplyForm } from '@/types/supply';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -26,7 +26,13 @@ import {
   ChevronLeft,
   Download,
   Calendar,
-  CheckCircle
+  CheckCircle,
+  Phone,
+  CreditCard,
+  Wallet,
+  FileImage,
+  CalendarDays,
+  MessageSquare
 } from "lucide-react";
 import { formatPrice, getNumericValue } from '@/lib/utils';
 import { EditableInvoiceTable } from '@/components/EditableInvoiceTable';
@@ -43,7 +49,7 @@ interface SupplyModalProps {
   supply?: Supply | null;
   onSubmit: (data: Omit<AddSupplyForm, 'images'> & { images?: File[] }) => Promise<void>;
   suppliers: Array<{ id: string; name: string }>;
-  initialSupplier?: string; // Новый пропс
+  initialSupplier?: string;
 }
 
 interface SupplyImage {
@@ -55,19 +61,12 @@ interface SupplyImage {
 const getTomorrowDate = () => {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  return tomorrow.toLocaleDateString('en-CA');
-};
-
-// Функция для получения даты послезавтра
-const getDayAfterTomorrowDate = () => {
-  const dayAfterTomorrow = new Date();
-  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
-  return dayAfterTomorrow.toLocaleDateString('en-CA');
+  return tomorrow.toISOString().split('T')[0];
 };
 
 // Функция для получения сегодняшней даты
 const getTodayDate = () => {
-  return new Date().toLocaleDateString('en-CA');
+  return new Date().toISOString().split('T')[0];
 };
 
 // Функция для проверки, является ли дата сегодняшней
@@ -79,11 +78,15 @@ const isDateToday = (dateString: string) => {
 const getDateDisplayName = (dateString: string) => {
   const today = getTodayDate();
   const tomorrow = getTomorrowDate();
-  const dayAfterTomorrow = getDayAfterTomorrowDate();
+  
+  // Получаем дату послезавтра
+  const dayAfterTomorrow = new Date();
+  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+  const dayAfterTomorrowStr = dayAfterTomorrow.toISOString().split('T')[0];
   
   if (dateString === today) return 'Сегодня';
   if (dateString === tomorrow) return 'Завтра';
-  if (dateString === dayAfterTomorrow) return 'Послезавтра';
+  if (dateString === dayAfterTomorrowStr) return 'Послезавтра';
   
   // Для других дат показываем в формате ДД.ММ
   const date = new Date(dateString);
@@ -111,7 +114,6 @@ const MoneyInput: React.FC<MoneyInputProps> = ({
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     setIsFocused(true);
-    // Если значение "0", очищаем поле при фокусе
     if (value === '0' || value === '0 ₸') {
       onValueChange('');
     }
@@ -120,7 +122,6 @@ const MoneyInput: React.FC<MoneyInputProps> = ({
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     setIsFocused(false);
-    // Если поле пустое после потери фокуса, устанавливаем "0 ₸"
     if (!value.trim()) {
       onValueChange('0 ₸');
     }
@@ -129,7 +130,6 @@ const MoneyInput: React.FC<MoneyInputProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    // Удаляем все нецифровые символы, кроме ₸ в конце
     const numericValue = inputValue.replace(/[^\d]/g, '').slice(0, maxDigits);
     
     if (numericValue === '') {
@@ -140,7 +140,6 @@ const MoneyInput: React.FC<MoneyInputProps> = ({
     }
   };
 
-  // Форматируем отображение значения
   const displayValue = value === '0' || value === '0 ₸' || value === '' 
     ? (isFocused ? '' : '0 ₸') 
     : value;
@@ -158,8 +157,8 @@ const MoneyInput: React.FC<MoneyInputProps> = ({
         disabled={disabled}
         className={`pr-10 ${isFocused ? 'border-blue-500 ring-1 ring-blue-500' : ''} ${
           isPrimary ? 'bg-blue-50 border-blue-300' : ''
-        }`}
-        maxLength={maxDigits + 4} // Оставляем место для форматирования
+        } text-base sm:text-sm`}
+        maxLength={maxDigits + 4}
         {...props}
       />
       {!isFocused && value !== '' && value !== '0' && value !== '0 ₸' && (
@@ -204,59 +203,48 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
   const [createdAt, setCreatedAt] = useState<string>('');
   const [isRescheduled, setIsRescheduled] = useState<boolean>(false);
   const [showCustomDateInput, setShowCustomDateInput] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<string>('basic');
 
   const today = getTodayDate();
   const tomorrow = getTomorrowDate();
-  const dayAfterTomorrow = getDayAfterTomorrowDate();
   const isToday = isDateToday(formData.delivery_date);
 
-  // Функция для вычисления суммы двух денежных значений
-  const sumMoneyValues = (val1: string, val2: string): string => {
-    const num1 = getNumericValue(val1);
-    const num2 = getNumericValue(val2);
-    const sum = num1 + num2;
-    return formatPrice(sum.toString());
+  // Получаем дату послезавтра
+  const getDayAfterTomorrow = () => {
+    const dayAfterTomorrow = new Date();
+    dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+    return dayAfterTomorrow.toISOString().split('T')[0];
+  };
+  const dayAfterTomorrow = getDayAfterTomorrow();
+
+  const parseMoneyValue = (value: string): number => {
+    if (!value) return 0;
+    const cleaned = value.replace(/[^\d]/g, '');
+    return cleaned ? parseInt(cleaned, 10) : 0;
   };
 
-  // Обработка изменения типа оплаты
   const handlePaymentTypeChange = (newPaymentType: 'cash' | 'bank' | 'mixed') => {
     setFormData(prev => {
       const newData = { ...prev, paymentType: newPaymentType };
       
-      // Если меняемся со смешанного типа на cash или bank
       if (prev.paymentType === 'mixed' && (newPaymentType === 'cash' || newPaymentType === 'bank')) {
-        // const totalSum = sumMoneyValues(prev.price_cash, prev.price_bank);
-        
         if (newPaymentType === 'cash') {
-          // Суммируем оба значения в cash, bank обнуляем
           newData.price_cash = '0 ₸';
           newData.price_bank = '0 ₸';
         } else if (newPaymentType === 'bank') {
-          // Суммируем оба значения в bank, cash обнуляем
-          newData.price_bank ='0 ₸';
+          newData.price_bank = '0 ₸';
           newData.price_cash = '0 ₸';
         }
-      }
-      // Если меняемся с cash на bank
-      else if (newPaymentType === 'bank' && prev.paymentType === 'cash' && prev.price_cash !== '0 ₸') {
-        // Перемещаем сумму из cash в bank
+      } else if (newPaymentType === 'bank' && prev.paymentType === 'cash' && prev.price_cash !== '0 ₸') {
         newData.price_bank = prev.price_cash;
         newData.price_cash = '0 ₸';
-      } 
-      // Если меняемся с bank на cash
-      else if (newPaymentType === 'cash' && prev.paymentType === 'bank' && prev.price_bank !== '0 ₸') {
-        // Перемещаем сумму из bank в cash
+      } else if (newPaymentType === 'cash' && prev.paymentType === 'bank' && prev.price_bank !== '0 ₸') {
         newData.price_cash = prev.price_bank;
         newData.price_bank = '0 ₸';
-      }
-      // Если меняемся на mixed из cash или bank
-      else if (newPaymentType === 'mixed') {
-        // При смешанном типе оставляем текущее значение в основном поле
+      } else if (newPaymentType === 'mixed') {
         if (prev.paymentType === 'cash' && prev.price_cash !== '0 ₸') {
-          // Перемещаем сумму из cash в cash (оставляем как есть), bank ставим 0
           newData.price_bank = '0 ₸';
         } else if (prev.paymentType === 'bank' && prev.price_bank !== '0 ₸') {
-          // Перемещаем сумму из bank в bank (оставляем как есть), cash ставим 0
           newData.price_cash = '0 ₸';
         }
       }
@@ -265,10 +253,8 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     });
   };
 
-  // Загрузка существующих изображений при открытии
   useEffect(() => {
     if (open && supply) {
-      // Типизируем images из supply
       const images = (supply as any).images || [];
       setSupplyImages(images);
       
@@ -283,7 +269,6 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
       setCurrentHtmlForTable(existingHtml);
       setTableHasChanges(false);
 
-      // Проверяем, является ли дата одной из ключевых
       const supplyDate = supply.delivery_date;
       if (supplyDate !== today && supplyDate !== tomorrow && supplyDate !== dayAfterTomorrow) {
         setShowCustomDateInput(true);
@@ -304,7 +289,6 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
       
       setSelectedImages([]);
     } else if (open) {
-      // Новая поставка
       setFormData({
         supplier: '', 
         paymentType: 'cash', 
@@ -323,10 +307,10 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
       setCreatedAt('');
       setIsRescheduled(false);
       setShowCustomDateInput(false);
+      setActiveTab('basic');
     }
   }, [supply, open, today, tomorrow, dayAfterTomorrow]);
 
-  // Функция для обработки выбора даты
   const handleDateSelect = (date: string) => {
     setFormData(prev => ({ ...prev, delivery_date: date }));
     if (date === 'custom') {
@@ -336,28 +320,23 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     }
   };
 
-  // Функция для обработки кастомной даты
   const handleCustomDateChange = (date: string) => {
     setFormData(prev => ({ ...prev, delivery_date: date }));
   };
 
-  // Функция для открытия просмотра изображения
   const handleOpenImageViewer = (index: number) => {
     setImageViewerIndex(index);
     setIsImageViewerOpen(true);
   };
 
-  // Функция для удаления существующего изображения
   const handleDeleteImage = async (imageId: number) => {
     if (confirm('Вы уверены, что хотите удалить это изображение?')) {
       try {
-        // Отправляем запрос на удаление
         const response = await fetch(`/api/v1/supply-images/${imageId}/`, {
           method: 'DELETE',
         });
         
         if (response.ok) {
-          // Удаляем из локального состояния
           setSupplyImages(prev => prev.filter(img => img.id !== imageId));
           toast({
             title: 'Изображение удалено',
@@ -376,7 +355,6 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     }
   };
 
-  // Функция для скачивания изображения
   const handleDownloadImage = async (imageUrl: string, imageId: number) => {
     try {
       const response = await fetch(imageUrl);
@@ -398,7 +376,6 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     }
   };
 
-  // Обработка результатов AI
   const handleAIProcessingComplete = (results: Array<{ file: File; html: string }>) => {
     const validResults = results.filter(r => r.html.trim().length > 0);
     if (validResults.length > 0) {
@@ -414,12 +391,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
       });
     }
   };
-const parseMoneyValue = (value: string): number => {
-  if (!value) return 0;
-  // Удаляем всё кроме цифр (₸, пробелы и форматирование)
-  const cleaned = value.replace(/[^\d]/g, '');
-  return cleaned ? parseInt(cleaned, 10) : 0;
-};
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -472,272 +444,327 @@ const parseMoneyValue = (value: string): number => {
     image: URL.createObjectURL(file),
   }))];
 
-  // Определяем, является ли поле основной суммой
   const isCashPrimary = formData.paymentType === 'cash';
   const isBankPrimary = formData.paymentType === 'bank';
+
+  // Иконки для табов
+  const tabIcons = {
+    basic: <FileText className="w-4 h-4" />,
+    money: <Wallet className="w-4 h-4" />,
+    images: <FileImage className="w-4 h-4" />,
+    comment: <MessageSquare className="w-4 h-4" />,
+  };
 
   return (
     <TooltipProvider>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        {/* Добавлен onPointerDownOutside и onInteractOutside для предотвращения закрытия */}
         <DialogContent 
-          className="w-screen h-screen max-w-2xl max-h-[700px] rounded-none border-none overflow-y-auto"
+          className="w-full max-w-full md:max-w-2xl max-h-[90vh] md:max-h-[700px] md:rounded-lg border-none overflow-y-auto p-0 md:p-6"
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
         >
-          <DialogHeader>
-            <DialogTitle className="flex justify-between items-center">
-              <span>{supply ? 'Редактировать поставку' : 'Добавить поставку'}</span>
+          <DialogHeader className="sticky top-0 bg-white z-10 p-4 md:p-0 border-b">
+            <DialogTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="text-lg sm:text-xl font-semibold">
+                {supply ? 'Редактировать поставку' : 'Добавить поставку'}
+              </span>
               {isRescheduled && supply && (
-                <div className="flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
-                  <RefreshCw className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-medium w-fit">
+                  <RefreshCw className="w-3 h-3" />
                   <span>Перенесена</span>
                 </div>
               )}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
-              <div className="space-y-2">
-                <Label htmlFor="supplier">Поставщик</Label>
-                <SupplierSearchCombobox 
+          {/* Мобильные вкладки */}
+          <div className="md:hidden border-b bg-gray-50">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid grid-cols-4 h-12">
+                <TabsTrigger value="basic" className="text-xs flex flex-col gap-1 h-full">
+                  {tabIcons.basic}
+                  <span>Основное</span>
+                </TabsTrigger>
+                <TabsTrigger value="money" className="text-xs flex flex-col gap-1 h-full">
+                  {tabIcons.money}
+                  <span>Оплата</span>
+                </TabsTrigger>
+                <TabsTrigger value="images" className="text-xs flex flex-col gap-1 h-full">
+                  {tabIcons.images}
+                  <span>Документы</span>
+                </TabsTrigger>
+                <TabsTrigger value="comment" className="text-xs flex flex-col gap-1 h-full">
+                  {tabIcons.comment}
+                  <span>Коммент.</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 md:p-0 md:space-y-4">
+            {/* Вкладка "Основное" */}
+            <div className={`${activeTab === 'basic' ? 'block' : 'hidden'} md:block space-y-4`}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="supplier" className="text-sm font-medium">
+                    <FileText className="inline-block w-4 h-4 mr-2" />
+                    Поставщик
+                  </Label>
+                  <SupplierSearchCombobox 
                     value={formData.supplier} 
                     onValueChange={(value) => setFormData(prev => ({ ...prev, supplier: value }))} 
                     placeholder="Выберите поставщика..." 
-                    autoFocus={open && !supply} // Автофокус только при открытии и для новой поставки
-                    autoOpen={open && !supply} // Автооткрытие только при открытии и для новой поставки
+                    autoFocus={open && !supply}
+                    autoOpen={open && !supply}
                   />
-              </div>
-              
-              {/* Чекбокс подтверждения - перенесен выше */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  Подтверждение
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </Label>
-                <div className="flex items-center space-x-2 p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                  <Checkbox 
-                    id="isConfirmed" 
-                    checked={formData.is_confirmed} 
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_confirmed: Boolean(checked) }))} 
-                    disabled={!isToday} 
-                  />
-                  <Label htmlFor="isConfirmed" className="text-sm font-normal cursor-pointer">
-                    {formData.is_confirmed ? (
-                      <span className="text-green-600 font-medium">Поставка подтверждена</span>
-                    ) : (
-                      <span>Подтвердить поставку</span>
-                    )}
-                  </Label>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="paymentType">Тип оплаты</Label>
-                <Select 
-                  value={formData.paymentType} 
-                  onValueChange={handlePaymentTypeChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">Наличные</SelectItem>
-                    <SelectItem value="bank">Банк</SelectItem>
-                    <SelectItem value="mixed">Смешанная</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="cashAmount">
-                  Сумма наличными
-                  {isCashPrimary && (
-                    <span className="ml-1 text-xs text-green-600 font-medium">(основная)</span>
-                  )}
-                </Label>
-                <MoneyInput 
-                  id="cashAmount"
-                  placeholder="0 ₸"
-                  value={formData.price_cash}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, price_cash: value }))}
-                  disabled={formData.paymentType === 'bank'}
-                  isPrimary={isCashPrimary}
-                  maxDigits={9}
-                />
- </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="bankAmount">
-                  Сумма банком
-                  {isBankPrimary && (
-                    <span className="ml-1 text-xs text-blue-600 font-medium">(основная)</span>
-                  )}
-                </Label>
-                <MoneyInput 
-                  id="bankAmount"
-                  placeholder="0 ₸"
-                  value={formData.price_bank}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, price_bank: value }))}
-                  disabled={formData.paymentType === 'cash'}
-                  isPrimary={isBankPrimary}
-                  maxDigits={9}
-                />
- </div>
-              
-              <div className="md:col-span-2">
-                <div className="space-y-2">
-                  <Label htmlFor="deliveryDate">Дата поставки</Label>
-                  <div className="space-y-3">
-                    {/* Вкладки с ключевыми датами */}
-                    <Tabs 
-                      value={formData.delivery_date} 
-                      onValueChange={handleDateSelect}
-                      className="w-full"
-                    >
-                      <TabsList className="grid grid-cols-4 mb-2">
-                        <TabsTrigger value={today} className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
-                          Сегодня
-                        </TabsTrigger>
-                        <TabsTrigger value={tomorrow} className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
-                          Завтра
-                        </TabsTrigger>
-                        <TabsTrigger value={dayAfterTomorrow} className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
-                          Послезавтра
-                        </TabsTrigger>
-                        <TabsTrigger value="custom" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
-                          <Calendar className="w-4 h-4 mr-2" />
-                          Другая
-                        </TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-
-                    {/* Поле для ввода кастомной даты */}
-                    {showCustomDateInput && (
-                      <div className="mt-2">
-                        <Input 
-                          type="date" 
-                          min={today}
-                          value={formData.delivery_date} 
-                          onChange={(e) => handleCustomDateChange(e.target.value)} 
-                          className="border-blue-300 focus:border-blue-500"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Выбрана дата: <span className="font-medium">{getDateDisplayName(formData.delivery_date)}</span>
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Отображение выбранной даты */}
-                    {!showCustomDateInput && (
-                      <div className="p-3 border rounded-lg bg-blue-50 border-blue-200">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Calendar className="w-4 h-4 text-blue-600" />
-                          <span className="text-blue-700 font-medium">
-                            {getDateDisplayName(formData.delivery_date)}
-                          </span>
-                          <span className="text-gray-600">
-                            ({formData.delivery_date})
-                          </span>
-                        </div>
-                        {isToday && (
-                          <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" />
-                            Сегодня можно загружать изображения и редактировать таблицу
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
-                <div className="space-y-2">
-                  <Label htmlFor="bonus">Бонус (шт.)</Label>
-                  <div className="relative">
-                    <Input 
-                      id="bonus" 
-                      type="number" 
-                      min="0"
-                      max="9999"
-                      inputMode="numeric"
-                      value={formData.bonus || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        // Ограничиваем ввод только цифрами
-                        const numericValue = value.replace(/[^\d]/g, '').slice(0, 4);
-                        setFormData(prev => ({ 
-                          ...prev, 
-                          bonus: numericValue ? Number(numericValue) : 0 
-                        }));
-                      }}
-                      className="pr-10"
-                      placeholder="0"
-                    />
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
-                      шт.
-                    </div>
-                  </div>
-
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="exchange">Обмен (шт.)</Label>
-                  <div className="relative">
-                    <Input 
-                      id="exchange" 
-                      type="number" 
-                      min="0"
-                      max="9999"
-                      inputMode="numeric"
-                      value={formData.exchange || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        // Ограничиваем ввод только цифрами
-                        const numericValue = value.replace(/[^\d]/g, '').slice(0, 4);
-                        setFormData(prev => ({ 
-                          ...prev, 
-                          exchange: numericValue ? Number(numericValue) : 0 
-                        }));
-                      }}
-                      className="pr-10"
-                      placeholder="0"
+                  <Label className="flex items-center gap-2 text-sm font-medium">
+                    <CheckCircle className="w-4 h-4" />
+                    Подтверждение
+                  </Label>
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <Checkbox 
+                      id="isConfirmed" 
+                      checked={formData.is_confirmed} 
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_confirmed: Boolean(checked) }))} 
+                      disabled={!isToday} 
+                      className="h-5 w-5"
                     />
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
-                      шт.
-                    </div>
+                    <Label htmlFor="isConfirmed" className="text-sm font-normal cursor-pointer flex-1">
+                      {formData.is_confirmed ? (
+                        <span className="text-green-600 font-medium">Подтверждена</span>
+                      ) : (
+                        <span>Подтвердить поставку</span>
+                      )}
+                    </Label>
                   </div>
-
                 </div>
               </div>
-              
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="comment">Комментарий</Label>
-                <Textarea 
-                  id="comment" 
-                  value={formData.comment} 
-                  onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))} 
-                  rows={3} 
-                  placeholder="Введите комментарий к поставке..."
-                />
-              </div>
 
-              {/* Блок загрузки и просмотра изображений - показываем только если сегодня */}
-              {isToday && (
-                <div className="space-y-4 md:col-span-2">
-                  <div className="flex justify-between items-center">
-                    <Label className="text-base font-medium">Документы поставки</Label>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm font-medium">
+                  <CalendarDays className="w-4 h-4" />
+                  Дата поставки
+                </Label>
+                <div className="space-y-3">
+                  {/* Вкладки с ключевыми датами */}
+                  <Tabs 
+                    value={formData.delivery_date} 
+                    onValueChange={handleDateSelect}
+                    className="w-full"
+                  >
+                    <TabsList className="grid grid-cols-4 h-9 mb-2">
+                      <TabsTrigger value={today} className="text-xs data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
+                        Сегодня
+                      </TabsTrigger>
+                      <TabsTrigger value={tomorrow} className="text-xs data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
+                        Завтра
+                      </TabsTrigger>
+                      <TabsTrigger value={dayAfterTomorrow} className="text-xs data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
+                        Послезавтра
+                      </TabsTrigger>
+                      <TabsTrigger value="custom" className="text-xs data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        Другая
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+
+                  {/* Поле для ввода кастомной даты */}
+                  {showCustomDateInput && (
+                    <div className="mt-2">
+                      <Input 
+                        type="date" 
+                        min={today}
+                        value={formData.delivery_date} 
+                        onChange={(e) => handleCustomDateChange(e.target.value)} 
+                        className="border-blue-300 focus:border-blue-500 h-10 text-base"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Выбрана дата: <span className="font-medium">{getDateDisplayName(formData.delivery_date)}</span>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Отображение выбранной даты */}
+                  {!showCustomDateInput && (
+                    <div className="p-3 border rounded-lg bg-blue-50 border-blue-200">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="w-4 h-4 text-blue-600" />
+                        <span className="text-blue-700 font-medium">
+                          {getDateDisplayName(formData.delivery_date)}
+                        </span>
+                        <span className="text-gray-600 text-xs">
+                          ({formData.delivery_date})
+                        </span>
+                      </div>
+                      {isToday && (
+                        <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3" />
+                          Сегодня можно загружать документы
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Вкладка "Оплата" */}
+            <div className={`${activeTab === 'money' ? 'block' : 'hidden'} md:block space-y-4`}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-sm font-medium">
+                    <CreditCard className="w-4 h-4" />
+                    Тип оплаты
+                  </Label>
+                  <Select 
+                    value={formData.paymentType} 
+                    onValueChange={handlePaymentTypeChange}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash" className="text-sm">
+                        <Wallet className="inline-block w-4 h-4 mr-2" />
+                        Наличные
+                      </SelectItem>
+                      <SelectItem value="bank" className="text-sm">
+                        <CreditCard className="inline-block w-4 h-4 mr-2" />
+                        Банк
+                      </SelectItem>
+                      <SelectItem value="mixed" className="text-sm">
+                        <div className="flex items-center">
+                          <Wallet className="w-3 h-3 mr-1" />
+                          <span className="mx-1">+</span>
+                          <CreditCard className="w-3 h-3 ml-1" />
+                          <span className="ml-2">Смешанная</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cashAmount" className="text-sm font-medium">
+                    <Wallet className="inline-block w-4 h-4 mr-2" />
+                    Наличные
+                    {isCashPrimary && (
+                      <span className="ml-1 text-xs text-green-600 font-medium">(основная)</span>
+                    )}
+                  </Label>
+                  <MoneyInput 
+                    id="cashAmount"
+                    placeholder="0 ₸"
+                    value={formData.price_cash}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, price_cash: value }))}
+                    disabled={formData.paymentType === 'bank'}
+                    isPrimary={isCashPrimary}
+                    maxDigits={9}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="bankAmount" className="text-sm font-medium">
+                    <CreditCard className="inline-block w-4 h-4 mr-2" />
+                    Банк
+                    {isBankPrimary && (
+                      <span className="ml-1 text-xs text-blue-600 font-medium">(основная)</span>
+                    )}
+                  </Label>
+                  <MoneyInput 
+                    id="bankAmount"
+                    placeholder="0 ₸"
+                    value={formData.price_bank}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, price_bank: value }))}
+                    disabled={formData.paymentType === 'cash'}
+                    isPrimary={isBankPrimary}
+                    maxDigits={9}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="bonus" className="text-xs font-medium">
+                      Бонус (шт.)
+                    </Label>
+                    <div className="relative">
+                      <Input 
+                        id="bonus" 
+                        type="number" 
+                        min="0"
+                        max="9999"
+                        inputMode="numeric"
+                        value={formData.bonus || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const numericValue = value.replace(/[^\d]/g, '').slice(0, 4);
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            bonus: numericValue ? Number(numericValue) : 0 
+                          }));
+                        }}
+                        className="pr-10 h-9 text-base"
+                        placeholder="0"
+                      />
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-xs">
+                        шт.
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="exchange" className="text-xs font-medium">
+                      Обмен (шт.)
+                    </Label>
+                    <div className="relative">
+                      <Input 
+                        id="exchange" 
+                        type="number" 
+                        min="0"
+                        max="9999"
+                        inputMode="numeric"
+                        value={formData.exchange || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const numericValue = value.replace(/[^\d]/g, '').slice(0, 4);
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            exchange: numericValue ? Number(numericValue) : 0 
+                          }));
+                        }}
+                        className="pr-10 h-9 text-base"
+                        placeholder="0"
+                      />
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-xs">
+                        шт.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Вкладка "Документы" */}
+            <div className={`${activeTab === 'images' ? 'block' : 'hidden'} md:block space-y-4`}>
+              {isToday ? (
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                    <Label className="text-base font-medium flex items-center gap-2">
+                      <FileImage className="w-5 h-5" />
+                      Документы поставки
+                    </Label>
                     {AI_CONFIG.ENABLED && (
                       <Button 
                         type="button" 
                         variant="outline" 
-                        size="sm" 
+                        size="sm"
                         onClick={() => setIsPreviewModalOpen(true)}
                         disabled={!hasPreviewContent}
-                        className="gap-1.5"
+                        className="gap-1.5 w-full sm:w-auto"
                       >
                         <Table className="w-4 h-4" />
                         Редактировать таблицу
@@ -751,13 +778,13 @@ const parseMoneyValue = (value: string): number => {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="text-sm font-medium text-gray-700">
-                          Загруженные изображения ({supplyImages.length})
+                          Загружено: {supplyImages.length}
                         </h4>
                         <span className="text-xs text-gray-500">
                           Кликните для просмотра
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
                         {supplyImages.map((image, index) => (
                           <div
                             key={image.id}
@@ -777,7 +804,7 @@ const parseMoneyValue = (value: string): number => {
                             </button>
                             
                             {/* Номер изображения */}
-                            <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                            <div className="absolute bottom-1 left-1 bg-black/70 text-white text-[10px] px-1 py-0.5 rounded">
                               {index + 1}
                             </div>
                           </div>
@@ -816,64 +843,96 @@ const parseMoneyValue = (value: string): number => {
                       <div className="flex items-center gap-2">
                         <Table className="w-4 h-4 text-blue-600" />
                         <span className="text-sm text-blue-700">
-                          Текущая поставка содержит таблицу из {formData.invoice_html.split('<tr>').length - 1} строк
+                          Таблица из {formData.invoice_html.split('<tr>').length - 1} строк
                         </span>
                       </div>
                     </div>
                   )}
                 </div>
+              ) : (
+                <div className="p-4 border rounded-lg bg-gray-50 text-center">
+                  <Calendar className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-600 font-medium">Загрузка документов доступна только для поставок на сегодня</p>
+                  <p className="text-sm text-gray-500 mt-1">Выберите "Сегодня" в дате поставки для загрузки</p>
+                </div>
               )}
             </div>
-            
-            {supply && createdAt && (
-              <div className="md:col-span-2 p-3 border rounded-lg bg-gray-50">
+
+            {/* Вкладка "Комментарий" */}
+            <div className={`${activeTab === 'comment' ? 'block' : 'hidden'} md:block space-y-4`}>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm font-medium">
+                  <MessageSquare className="w-4 h-4" />
+                  Комментарий
+                </Label>
+                <Textarea 
+                  id="comment" 
+                  value={formData.comment} 
+                  onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))} 
+                  rows={4} 
+                  placeholder="Введите комментарий к поставке..."
+                  className="text-base min-h-[120px]"
+                />
+              </div>
+            </div>
+
+            {/* Информация о создании (всегда видно на десктопе) */}
+            <div className="hidden md:block md:col-span-2 p-3 border rounded-lg bg-gray-50 mt-4">
+              {supply && createdAt && (
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <CalendarClock className="w-4 h-4" />
                   <span>Создано: {formatCreatedAt(createdAt)}</span>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
-            <div className="flex justify-between items-center pt-4">
-              <div>
-                {supply && (
+            {/* Кнопки действий - фиксированные внизу на мобильных */}
+            <div className="sticky bottom-0 bg-white border-t pt-4 md:pt-0 md:border-none mt-6 md:mt-4 md:static">
+              <div className="flex flex-col-reverse sm:flex-row justify-between items-center gap-3">
+                <div className="w-full sm:w-auto">
+                  {supply && (
+                    <Button 
+                      type="button" 
+                      variant="destructive" 
+                      onClick={() => handleDeleteSupply(supply.id)} 
+                      disabled={isLoading}
+                      className="gap-2 w-full sm:w-auto"
+                      size="sm"
+                    >
+                      <Trash className="w-4 h-4" />
+                      Удалить поставку
+                    </Button>
+                  )}
+                </div>
+                <div className="flex space-x-2 w-full sm:w-auto">
                   <Button 
                     type="button" 
-                    variant="destructive" 
-                    onClick={() => handleDeleteSupply(supply.id)} 
+                    variant="outline" 
+                    onClick={() => onOpenChange(false)}
                     disabled={isLoading}
-                    className="gap-2"
+                    className="flex-1 sm:flex-none"
+                    size="sm"
                   >
-                    <Trash className="w-4 h-4" />
-                    Удалить поставку
+                    Отмена
                   </Button>
-                )}
-              </div>
-              <div className="flex space-x-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => onOpenChange(false)}
-                  disabled={isLoading}
-                >
-                  Отмена
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={isLoading || !formData.supplier}
-                  className="gap-2 bg-blue-600 hover:bg-blue-700"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Сохранение...
-                    </>
-                  ) : (
-                    <>
-                      {supply ? 'Обновить поставку' : 'Добавить поставку'}
-                    </>
-                  )}
-                </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={isLoading || !formData.supplier}
+                    className="flex-1 sm:flex-none gap-2 bg-blue-600 hover:bg-blue-700"
+                    size="sm"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Сохранение...
+                      </>
+                    ) : (
+                      <>
+                        {supply ? 'Обновить' : 'Добавить'}
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           </form>
@@ -882,11 +941,11 @@ const parseMoneyValue = (value: string): number => {
 
       {/* Модальное окно для редактирования таблицы */}
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
-        <DialogContent className="w-screen h-screen max-w-none max-h-none rounded-none border-none p-0 flex flex-col">
-          <DialogHeader className="flex-shrink-0 px-6 py-4 border-b bg-white">
-            <DialogTitle>Редактирование таблицы</DialogTitle>
+        <DialogContent className="w-full h-full md:max-w-4xl md:max-h-[80vh] md:rounded-lg p-0 flex flex-col">
+          <DialogHeader className="flex-shrink-0 px-4 py-3 sm:px-6 sm:py-4 border-b bg-white">
+            <DialogTitle className="text-lg sm:text-xl">Редактирование таблицы</DialogTitle>
           </DialogHeader>
-          <div className="flex-grow overflow-auto bg-gray-50 p-4">
+          <div className="flex-grow overflow-auto bg-gray-50 p-2 sm:p-4">
             <EditableInvoiceTable
               html={currentHtmlForTable}
               onHtmlChange={(newHtml) => {
@@ -896,27 +955,28 @@ const parseMoneyValue = (value: string): number => {
               }}
             />
           </div>
-          <DialogFooter className="flex-shrink-0 px-6 py-4 border-t bg-white">
-            <div className="flex justify-between items-center w-full">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsPreviewModalOpen(false)}
-              >
-                Отмена
-              </Button>
-              <Button 
-                onClick={() => {
-                  toast({
-                    title: 'Изменения сохранены',
-                    variant: "default",
-                  });
-                  setIsPreviewModalOpen(false);
-                }}
-                className="bg-emerald-600 hover:bg-emerald-700"
-              >
-                Сохранить
-              </Button>
-            </div>
+          <DialogFooter className="flex-shrink-0 px-4 py-3 sm:px-6 sm:py-4 border-t bg-white flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsPreviewModalOpen(false)}
+              className="w-full sm:w-auto order-2 sm:order-1"
+              size="sm"
+            >
+              Отмена
+            </Button>
+            <Button 
+              onClick={() => {
+                toast({
+                  title: 'Изменения сохранены',
+                  variant: "default",
+                });
+                setIsPreviewModalOpen(false);
+              }}
+              className="w-full sm:w-auto order-1 sm:order-2 bg-emerald-600 hover:bg-emerald-700"
+              size="sm"
+            >
+              Сохранить
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
