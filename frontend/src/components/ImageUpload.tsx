@@ -1,7 +1,7 @@
 // @/components/ImageUpload/ImageUpload.tsx
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, Camera, X, Eye, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Eye, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { compressImage } from '@/lib/image-utils';
 
@@ -14,6 +14,9 @@ interface ImageUploadProps {
   maxSizeMB?: number;
 }
 
+const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+const isIOS = /iPhone|iPad/i.test(navigator.userAgent);
+
 export const ImageUpload: React.FC<ImageUploadProps> = ({
   selectedFiles,
   onFilesChange,
@@ -25,37 +28,47 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
   const [isCompressing, setIsCompressing] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+  /* =======================
+     VALIDATION
+  ======================= */
+
   const validateFile = (file: File): boolean => {
-    // Проверка типа файла
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+    const validTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/heic',
+      'image/heif',
+    ];
+
     if (!validTypes.includes(file.type)) {
       toast({
-        title: 'Неверный формат файла',
-        description: `Формат ${file.type} не поддерживается. Используйте JPEG, PNG, WebP или HEIC.`,
+        title: 'Неверный формат',
+        description: `Формат ${file.type} не поддерживается`,
         variant: 'destructive',
       });
       return false;
     }
 
-    // Проверка размера файла
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
     if (file.size > maxSizeBytes) {
       toast({
-        title: 'Слишком большой файл',
-        description: `Максимальный размер: ${maxSizeMB}MB. Ваш файл: ${(file.size / (1024 * 1024)).toFixed(2)}MB`,
+        title: 'Файл слишком большой',
+        description: `Макс: ${maxSizeMB}MB`,
         variant: 'destructive',
       });
       return false;
     }
 
-    // Проверка количества файлов
     if (selectedFiles.length >= maxFiles) {
       toast({
-        title: 'Достигнут лимит файлов',
-        description: `Максимальное количество файлов: ${maxFiles}`,
+        title: 'Лимит файлов',
+        description: `Максимум ${maxFiles}`,
         variant: 'destructive',
       });
       return false;
@@ -64,200 +77,177 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     return true;
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  /* =======================
+     FILE HANDLER
+  ======================= */
+
+  const handleFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    fromCamera: boolean
+  ) => {
     const files = e.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
-    const newFiles = Array.from(files);
-    const validFiles: File[] = [];
+    const incoming = Array.from(files).filter(validateFile);
+    if (incoming.length === 0) return;
 
-    // Валидация всех файлов
-    for (const file of newFiles) {
-      if (validateFile(file)) {
-        validFiles.push(file);
-      }
-    }
-
-    if (validFiles.length === 0) return;
-
-    // Сжатие изображений
     setIsCompressing(true);
+
     try {
-      const compressedFiles = await Promise.all(
-        validFiles.map(file => compressImage(file, 500)) // 500KB для загрузки
-      );
-      
-      onFilesChange([...selectedFiles, ...compressedFiles]);
-      
+      let processedFiles: File[];
+
+      // ❗ НЕ сжимаем фото с камеры на мобильных (iOS баги)
+      if (fromCamera && isMobile) {
+        processedFiles = incoming;
+      } else {
+        processedFiles = await Promise.all(
+          incoming.map((file) => compressImage(file))
+        );
+      }
+
+      onFilesChange([...selectedFiles, ...processedFiles]);
+
       toast({
         title: 'Файлы добавлены',
-        description: `Добавлено ${validFiles.length} изображений`,
-        variant: 'default',
+        description: `Добавлено: ${processedFiles.length}`,
       });
-    } catch (error) {
+    } catch (err) {
+      console.error('Image upload error:', err);
       toast({
-        title: 'Ошибка обработки файлов',
-        description: 'Не удалось обработать изображения',
+        title: 'Ошибка обработки',
+        description: 'Попробуйте выбрать фото из галереи',
         variant: 'destructive',
       });
     } finally {
       setIsCompressing(false);
-      e.target.value = '';
+      e.target.value = ''; // 🔴 КРИТИЧНО
     }
   };
 
-  const handleRemoveFile = (index: number) => {
-    const newFiles = [...selectedFiles];
-    newFiles.splice(index, 1);
-    onFilesChange(newFiles);
+  /* =======================
+     ACTIONS
+  ======================= */
+
+  const openFilePicker = () => {
+    if (!fileInputRef.current) return;
+    fileInputRef.current.value = ''; // 🔴 КРИТИЧНО
+    fileInputRef.current.click();
   };
 
-  const handlePreview = (file: File) => {
+  const openCamera = () => {
+    if (!cameraInputRef.current) return;
+    cameraInputRef.current.value = ''; // 🔴 КРИТИЧНО
+    cameraInputRef.current.click();
+  };
+
+  const removeFile = (index: number) => {
+    const copy = [...selectedFiles];
+    copy.splice(index, 1);
+    onFilesChange(copy);
+  };
+
+  const previewFile = (file: File) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
-      setPreviewImage(e.target?.result as string);
-    };
+    reader.onload = () => setPreviewImage(reader.result as string);
     reader.readAsDataURL(file);
   };
 
-  const handleCameraCapture = () => {
-    if (cameraInputRef.current) {
-      cameraInputRef.current.click();
-    }
-  };
-
-  const handleFileUpload = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+  /* =======================
+     RENDER
+  ======================= */
 
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             type="button"
             variant="outline"
-            onClick={handleFileUpload}
+            onClick={openFilePicker}
             disabled={disabled || !isToday || isCompressing}
-            className="gap-1.5"
           >
-            <Upload className="w-4 h-4" />
-            {isCompressing ? 'Сжатие...' : 'Выбрать файлы'}
+            <Upload className="w-4 h-4 mr-2" />
+            {isCompressing ? 'Обработка…' : 'Выбрать файлы'}
           </Button>
-          
-          {/* {isMobile && (
+
+          {isMobile && (
             <Button
               type="button"
               variant="outline"
-              onClick={handleCameraCapture}
+              onClick={openCamera}
               disabled={disabled || !isToday || isCompressing}
-              className="gap-1.5"
             >
-              <Camera className="w-4 h-4" />
-              Сфотографировать
+              📷 Камера
             </Button>
-          )} */}
+          )}
         </div>
 
-        {/* Скрытые input'ы */}
+        {/* INPUTS */}
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif"
           multiple
-          onChange={handleFileSelect}
+          accept="image/*"
           className="hidden"
-          disabled={disabled}
+          onChange={(e) => handleFileSelect(e, false)}
         />
+
         <input
           ref={cameraInputRef}
           type="file"
           accept="image/*"
           capture="environment"
-          onChange={handleFileSelect}
           className="hidden"
-          disabled={disabled}
+          onChange={(e) => handleFileSelect(e, true)}
         />
 
-        {/* Список файлов */}
+        {/* FILE LIST */}
         {selectedFiles.length > 0 && (
-          <div className="space-y-2">
-            <div className="text-sm font-medium text-gray-700">
-              Выбранные файлы ({selectedFiles.length}/{maxFiles}):
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {selectedFiles.map((file, index) => (
-                <div
-                  key={`${file.name}-${file.size}-${index}`}
-                  className="border rounded-lg p-3 hover:border-primary transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center space-x-2 flex-1 min-w-0">
-                      <ImageIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      <span className="text-sm truncate" title={file.name}>
-                        {file.name}
-                      </span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveFile(index)}
-                      className="h-6 w-6 p-0 ml-2 flex-shrink-0"
-                      disabled={disabled}
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {selectedFiles.map((file, i) => (
+              <div key={`${file.name}-${i}`} className="border rounded-lg p-3">
+                <div className="flex justify-between mb-2">
+                  <div className="flex items-center gap-2 truncate">
+                    <ImageIcon className="w-4 h-4" />
+                    <span className="truncate text-sm">{file.name}</span>
                   </div>
-                  
-                  <div className="flex justify-between items-center text-xs text-muted-foreground">
-                    <span>{(file.size / 1024).toFixed(1)} KB</span>
-                    <div className="flex space-x-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handlePreview(file)}
-                        className="h-6 px-2 text-xs"
-                      >
-                        <Eye className="w-3 h-3 mr-1" />
-                        Просмотр
-                      </Button>
-                    </div>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => removeFile(i)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
                 </div>
-              ))}
-            </div>
+
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{(file.size / 1024).toFixed(1)} KB</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => previewFile(file)}
+                  >
+                    <Eye className="w-3 h-3 mr-1" />
+                    Просмотр
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Модальное окно предпросмотра */}
+      {/* PREVIEW MODAL */}
       {previewImage && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="font-semibold">Просмотр изображения</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setPreviewImage(null)}
-                className="h-8 w-8 p-0"
-              >
-                <X className="w-4 h-4" />
+          <div className="bg-white rounded-lg max-w-4xl w-full">
+            <div className="flex justify-between p-3 border-b">
+              <span className="font-medium">Просмотр</span>
+              <Button size="sm" variant="ghost" onClick={() => setPreviewImage(null)}>
+                <X />
               </Button>
             </div>
-            <div className="p-4 overflow-auto max-h-[calc(90vh-80px)]">
-              <img
-                src={previewImage}
-                alt="Preview"
-                className="max-w-full h-auto rounded"
-              />
-            </div>
+            <img src={previewImage} className="max-w-full max-h-[80vh] m-auto p-4" />
           </div>
         </div>
       )}
