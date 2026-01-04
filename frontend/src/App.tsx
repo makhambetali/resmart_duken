@@ -71,7 +71,7 @@ const App = () => {
                 </ProtectedRoute>
               } />
               <Route path="/finance" element={
-                <ProtectedRoute>
+                <ProtectedRoute adminOnly>
                   <Finance />
                 </ProtectedRoute>
               } />
