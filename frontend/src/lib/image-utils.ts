@@ -1,5 +1,5 @@
 // @/lib/image-utils.ts
-export const compressImage = async (file: File, maxSizeKB = 300): Promise<File> => {
+export const compressImage = async (file: File, maxSizeKB = 3000): Promise<File> => {
   // Если не изображение, возвращаем как есть
   if (!file.type.startsWith('image/')) {
     return file;
