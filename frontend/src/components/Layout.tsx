@@ -75,12 +75,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddSupplyClick }) =>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Link 
+            {isAdmin && <Link 
               to="/finance" 
               className="text-blue-600 hover:text-blue-800 px-3 py-2 rounded-md hover:bg-blue-50 transition-colors font-medium"
             >
               Финансы
-            </Link>
+            </Link>}
 
             {/* Кнопка добавления поставки (только на главной) */}
             {isHomePage && onAddSupplyClick && (
