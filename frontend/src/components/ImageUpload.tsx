@@ -149,7 +149,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             {isCompressing ? 'Сжатие...' : 'Выбрать файлы'}
           </Button>
           
-          {isMobile && (
+          {/* {isMobile && (
             <Button
               type="button"
               variant="outline"
@@ -160,7 +160,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
               <Camera className="w-4 h-4" />
               Сфотографировать
             </Button>
-          )}
+          )} */}
         </div>
 
         {/* Скрытые input'ы */}

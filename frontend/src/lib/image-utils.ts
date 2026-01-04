@@ -1,110 +1,96 @@
 // @/lib/image-utils.ts
-export const compressImage = async (file: File, maxSizeKB = 3000): Promise<File> => {
-  // Если не изображение, возвращаем как есть
+
+type CompressOptions = {
+  maxSizeKB?: number;
+  maxDimension?: number;
+  maxIterations?: number;
+};
+
+export const compressImage = async (
+  file: File,
+  {
+    maxSizeKB = 3000,
+    maxDimension = 1600,
+    maxIterations = 6,
+  }: CompressOptions = {}
+): Promise<File> => {
   if (!file.type.startsWith('image/')) {
     return file;
   }
 
-  // Если размер уже меньше лимита, не сжимаем
-  if (file.size <= maxSizeKB * 1024) {
+  const maxBytes = maxSizeKB * 1024;
+
+  if (file.size <= maxBytes) {
     return file;
   }
 
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
+  // Определяем формат
+  const isPng = file.type === 'image/png';
+  const mimeType = isPng ? 'image/png' : 'image/jpeg';
 
-    reader.onload = (e) => {
-      const img = new Image();
-      img.src = e.target?.result as string;
-
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('Canvas context not available'));
-          return;
-        }
-
-        // Рассчитываем новые размеры сохраняя пропорции
-        let width = img.width;
-        let height = img.height;
-        const maxDimension = 1600; // Максимальный размер любой стороны
-
-        if (width > maxDimension || height > maxDimension) {
-          const ratio = Math.min(maxDimension / width, maxDimension / height);
-          width = Math.floor(width * ratio);
-          height = Math.floor(height * ratio);
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        // Настройка качества для разных форматов
-        ctx.drawImage(img, 0, 0, width, height);
-
-        const mimeType = 'image/jpeg'; // Всегда конвертируем в JPEG для лучшего сжатия
-        const quality = Math.max(0.6, Math.min(0.9, maxSizeKB / 500)); // Адаптивное качество
-
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              reject(new Error('Blob creation failed'));
-              return;
-            }
-
-            const compressedFile = new File(
-              [blob],
-              file.name.replace(/\.[^/.]+$/, '') + '.jpg',
-              {
-                type: mimeType,
-                lastModified: Date.now(),
-              }
-            );
-
-            // Рекурсивное сжатие если все еще слишком большой
-            if (compressedFile.size > maxSizeKB * 1024 * 1.1) {
-              compressImage(compressedFile, maxSizeKB).then(resolve).catch(reject);
-            } else {
-              resolve(compressedFile);
-            }
-          },
-          mimeType,
-          quality
-        );
-      };
-
-      img.onerror = () => {
-        reject(new Error('Image loading failed'));
-      };
-    };
-
-    reader.onerror = () => {
-      reject(new Error('File reading failed'));
-    };
+  // Загружаем изображение с учётом EXIF-ориентации
+  const bitmap = await createImageBitmap(file, {
+    imageOrientation: 'from-image',
   });
-};
 
-export const formatBytes = (bytes: number, decimals = 2): string => {
-  if (bytes === 0) return '0 Bytes';
+  let width = bitmap.width;
+  let height = bitmap.height;
 
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  // Масштабируем с сохранением пропорций
+  if (width > maxDimension || height > maxDimension) {
+    const ratio = Math.min(maxDimension / width, maxDimension / height);
+    width = Math.round(width * ratio);
+    height = Math.round(height * ratio);
+  }
 
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-};
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Canvas context not available');
+  }
 
-export const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.split(',')[1]); // Убираем data:image/...;base64,
-    };
-    reader.onerror = error => reject(error);
-  });
+  ctx.drawImage(bitmap, 0, 0, width, height);
+
+  let quality = 0.85;
+  let outputBlob: Blob | null = null;
+
+  for (let i = 0; i < maxIterations; i++) {
+    outputBlob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(
+        (blob) => resolve(blob),
+        mimeType,
+        isPng ? undefined : quality
+      )
+    );
+
+    if (!outputBlob) break;
+
+    if (outputBlob.size <= maxBytes * 1.05) {
+      break;
+    }
+
+    // Понижаем качество постепенно
+    quality -= 0.1;
+
+    if (quality < 0.4) {
+      break;
+    }
+  }
+
+  if (!outputBlob) {
+    return file;
+  }
+
+  return new File(
+    [outputBlob],
+    file.name.replace(/\.[^/.]+$/, '') +
+      (mimeType === 'image/png' ? '.png' : '.jpg'),
+    {
+      type: mimeType,
+      lastModified: Date.now(),
+    }
+  );
 };
