@@ -140,6 +140,7 @@ class SupplyViewSet(viewsets.ModelViewSet):
         images = self.request.FILES.getlist("images")
         serializer.validated_data['store'] = self.request.user.profile.store
         supply = serializer.save()
+        print(f'Получил {len(images)} файлов при добавлении')
         for image in images:
             SupplyImage.objects.create(
                 supply=supply,
@@ -151,6 +152,7 @@ class SupplyViewSet(viewsets.ModelViewSet):
         supply = serializer.save()
 
         if images:
+            print(f'Получил {len(images)} файлов при изменении')
             supply.images.all().delete()
 
             for image in images:
