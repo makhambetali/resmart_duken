@@ -286,17 +286,17 @@ const Index = () => {
                     onValueChange={(value) => setConfirmationFilter(value as 'all' | 'confirmed' | 'unconfirmed')}
                     className="w-full"
                   >
-                    <TabsList className="grid grid-cols-3 h-8 w-full">
-                      <TabsTrigger value="all" className="text-xs sm:text-sm">
-                        Все
-                      </TabsTrigger>
-                      <TabsTrigger value="confirmed" className="text-xs sm:text-sm">
-                        Подтв.
-                      </TabsTrigger>
-                      <TabsTrigger value="unconfirmed" className="text-xs sm:text-sm">
-                        Не подтв.
-                      </TabsTrigger>
-                    </TabsList>
+                    <TabsList className="flex h-10 w-full gap-1 p-1">
+  <TabsTrigger value="all" className="text-xs sm:text-sm flex-1">
+    Все
+  </TabsTrigger>
+  <TabsTrigger value="confirmed" className="text-xs sm:text-sm flex-1">
+    Подтв.
+  </TabsTrigger>
+  <TabsTrigger value="unconfirmed" className="text-xs sm:text-sm flex-1">
+    Не подтв.
+  </TabsTrigger>
+</TabsList>
                   </Tabs>
                 </div>
 
