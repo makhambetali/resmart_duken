@@ -498,7 +498,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                             </div>
                           </TableCell>
                           <TableCell>
-                            {employees.find(emp => emp.id === debt.responsible_employee_id)?.username ?? 'Неизвестно'}
+                            {employees.find(emp => emp.id === debt.responsible_employee_id)?.first_name ?? 'Неизвестно'}
                           </TableCell>
                           <TableCell>
                             {debt.is_valid ? (
@@ -615,7 +615,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                       </SelectTrigger>
                       <SelectContent>
                         {employees.map((emp: { id: number; name: string }) => (
-                          <SelectItem key={emp.id} value={String(emp.id)}>{emp.username}</SelectItem>
+                          <SelectItem key={emp.id} value={String(emp.id)}>{emp.first_name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
