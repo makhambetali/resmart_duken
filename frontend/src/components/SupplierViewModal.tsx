@@ -1,3 +1,4 @@
+// [file name]: SupplierViewModal.tsx
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -30,20 +31,21 @@ import {
   Hash,
   Target,
   Zap,
-  Timer
+  Timer,
+  X
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { stat } from 'fs';
 
 interface SupplierViewModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   supplier: any | null;
   onEdit: () => void;
+  canEdit?: boolean;
 }
 
 const COEFFICIENT_CONFIG = {
@@ -371,7 +373,8 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
   open, 
   onOpenChange, 
   supplier, 
-  onEdit 
+  onEdit,
+  canEdit = true 
 }) => {
   const [stats, setStats] = useState<any | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
@@ -424,61 +427,71 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 sm:max-w-[95vw]">
         {/* Заголовок (фиксированный) */}
-        <DialogHeader className="px-6 py-4 border-b shrink-0">
+        <DialogHeader className="px-4 sm:px-6 py-4 border-b shrink-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="hidden sm:block p-2 rounded-lg bg-primary/10">
                 <User className="h-6 w-6 text-primary" />
               </div>
-              <div>
-                <DialogTitle className="text-xl font-bold">
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-lg sm:text-xl font-bold truncate">
                   {supplier.name}
                 </DialogTitle>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant={supplier.is_everyday_supply ? "default" : "secondary"}>
-                    {supplier.is_everyday_supply ? 'Ежедневная поставка' : 'Обычная поставка'}
+                <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1">
+                  <Badge variant={supplier.is_everyday_supply ? "default" : "secondary"} className="text-xs">
+                    {supplier.is_everyday_supply ? 'Ежедневная' : 'Обычная'}
                   </Badge>
                   <div className="flex items-center gap-1 text-xs text-gray-500">
                     <Hash className="h-3 w-3" />
                     ID: {getShortId(supplier.id)}
                   </div>
                   {hasPrediction && (
-                    <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-700">
+                    <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-700 text-xs">
                       <Target className="h-3 w-3 mr-1" />
-                      Прогноз доступен
+                      Прогноз
                     </Badge>
                   )}
                 </div>
               </div>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onOpenChange(false)}
+              className="ml-2 sm:hidden h-8 w-8"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         </DialogHeader>
 
         {/* Основной контент с прокруткой */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="info" className="flex items-center gap-2">
+              <TabsTrigger value="info" className="flex items-center gap-2 text-xs sm:text-sm">
                 <Info className="h-4 w-4" />
-                Информация
+                <span className="hidden sm:inline">Информация</span>
+                <span className="sm:hidden">Инфо</span>
               </TabsTrigger>
-              <TabsTrigger value="stats" className="flex items-center gap-2">
+              <TabsTrigger value="stats" className="flex items-center gap-2 text-xs sm:text-sm">
                 <BarChart3 className="h-4 w-4" />
-                Статистика
+                <span className="hidden sm:inline">Статистика</span>
+                <span className="sm:hidden">Стат</span>
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="info" className="space-y-6 focus:outline-none">
+            <TabsContent value="info" className="space-y-4 sm:space-y-6 focus:outline-none">
               {/* Основная информация */}
               <Card>
-                <CardContent className="p-6">
-                  <div className="space-y-6">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="space-y-4 sm:space-y-6">
                     {/* Название и описание */}
                     <div>
                       <h3 className="text-sm font-semibold text-gray-900 mb-2">Название компании</h3>
-                      <div className="text-lg font-bold text-primary break-words">{supplier.name}</div>
+                      <div className="text-base sm:text-lg font-bold text-primary break-words">{supplier.name}</div>
                     </div>
 
                     {supplier.description && (
@@ -487,7 +500,7 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                           <FileText className="h-4 w-4" />
                           Описание
                         </h3>
-                        <p className="text-gray-700 bg-gray-50 p-3 rounded-lg whitespace-pre-wrap break-words">
+                        <p className="text-gray-700 bg-gray-50 p-3 rounded-lg whitespace-pre-wrap break-words text-sm">
                           {supplier.description}
                         </p>
                       </div>
@@ -496,7 +509,7 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                     <Separator />
 
                     {/* Контактная информация */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                       {/* Контактное лицо */}
                       <div className="space-y-3">
                         <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
@@ -588,7 +601,7 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                           </Badge>
                           <div className="flex-1">
                             <div className="text-xs font-medium text-gray-500 mb-1">Тип поставки</div>
-                            <Badge variant={supplier.is_everyday_supply ? "default" : "outline"}>
+                            <Badge variant={supplier.is_everyday_supply ? "default" : "outline"} className="text-xs">
                               {supplier.is_everyday_supply ? 'Ежедневная' : 'Обычная'}
                             </Badge>
                           </div>
@@ -602,20 +615,20 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
               {/* Краткая статистика */}
               {stats && (
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <BarChart3 className="h-4 w-4" />
                       Краткая статистика
                     </h3>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-3 gap-3 sm:gap-4">
                       <div className="text-center p-3 bg-blue-50 rounded-lg">
                         <div className="text-xs text-gray-600 font-medium">Поставок</div>
-                        <div className="text-2xl font-bold text-gray-900">{stats.price?.count || 0}</div>
+                        <div className="text-xl sm:text-2xl font-bold text-gray-900">{stats.price?.count || 0}</div>
                       </div>
                       <div className="text-center p-3 bg-purple-50 rounded-lg">
                         <div className="text-xs text-gray-600 font-medium">Коэффициент</div>
                         <div 
-                          className="text-2xl font-bold" 
+                          className="text-xl sm:text-2xl font-bold" 
                           style={{ color: coeffColor?.textColor }}
                         >
                           {(stats.price?.rescheduled_coef || 0).toFixed(2)}
@@ -623,7 +636,7 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                       </div>
                       <div className="text-center p-3 bg-green-50 rounded-lg">
                         <div className="text-xs text-gray-600 font-medium">Ср. цена</div>
-                        <div className="text-2xl font-bold text-gray-900">
+                        <div className="text-xl sm:text-2xl font-bold text-gray-900">
                           {(stats.price?.avg || 0).toFixed(0)} ₸
                         </div>
                       </div>
@@ -634,10 +647,10 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                           <div className="flex items-center justify-center gap-2 mb-2">
                             <Target className="h-4 w-4 text-indigo-600" />
                             <span className="text-sm font-medium text-gray-700">
-                              Наиболее вероятное время прибытия
+                              Вероятное время прибытия
                             </span>
                           </div>
-                          <Badge className="text-base px-4 py-1 bg-indigo-100 text-indigo-700 border-indigo-200">
+                          <Badge className="text-sm px-4 py-1 bg-indigo-100 text-indigo-700 border-indigo-200">
                             {stats.arrival_prediction[0].interval}
                           </Badge>
                         </div>
@@ -648,13 +661,13 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
               )}
             </TabsContent>
 
-            <TabsContent value="stats" className="space-y-6 focus:outline-none">
+            <TabsContent value="stats" className="space-y-4 sm:space-y-6 focus:outline-none">
               <SupplierStatsDisplay stats={stats} isLoading={isLoadingStats} />
 
               {/* Уведомления и рекомендации */}
               {stats && (
                 <Card className="border-0 shadow-sm">
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4" />
                       Анализ и рекомендации
@@ -662,9 +675,9 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                     
                     <div className="space-y-4">
                       {(stats.price?.rescheduled_coef || 0) >= 1 && (
-                        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <AlertTriangle className="h-5 w-5 text-red-600" />
+                        <div className="p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                             <div>
                               <div className="font-medium text-red-800">Внимание: Высокий риск</div>
                               <p className="text-sm text-red-700 mt-1">
@@ -680,9 +693,9 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                       )}
                       
                       {(stats.price?.rescheduled_coef || 0) <= 0.4 && (
-                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <CheckCircle className="h-5 w-5 text-green-600" />
+                        <div className="p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                             <div>
                               <div className="font-medium text-green-800">Надежный поставщик</div>
                               <p className="text-sm text-green-700 mt-1">
@@ -690,7 +703,7 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                                 {hasPrediction && (
                                   <> Прогноз прибытия: {stats.arrival_prediction[0].interval} (вероятность {stats.arrival_prediction[0].probability}%). </>
                                 )}
-                                Отличная стабильность поставок. Рекомендуется к приоритетному сотрудничеству.
+                                Отличная стабильность поставок.
                               </p>
                             </div>
                           </div>
@@ -698,9 +711,9 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                       )}
 
                       {(stats.price?.rescheduled_coef || 0) > 0.4 && (stats.price?.rescheduled_coef || 0) < 1 && (
-                        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <Info className="h-5 w-5 text-yellow-600" />
+                        <div className="p-3 sm:p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <Info className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                             <div>
                               <div className="font-medium text-yellow-800">Средняя стабильность</div>
                               <p className="text-sm text-yellow-700 mt-1">
@@ -708,7 +721,7 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
                                 {hasPrediction && (
                                   <> Ориентируйтесь на прогноз: {stats.arrival_prediction.map((p: any) => p.interval).join(', ')}.</>
                                 )}
-                                Требуется мониторинг поставок. Рекомендуется договориться о строгих сроках.
+                                Требуется мониторинг поставок.
                               </p>
                             </div>
                           </div>
@@ -723,9 +736,9 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
         </div>
 
         {/* Футер (фиксированный) */}
-        <DialogFooter className="px-6 py-4 border-t bg-gray-50 shrink-0">
-          <div className="flex items-center justify-between w-full">
-            <div className="text-sm text-gray-500">
+        <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t bg-gray-50 shrink-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between w-full gap-3">
+            <div className="text-xs sm:text-sm text-gray-500 text-center sm:text-left">
               {stats ? (
                 <>
                   Показано {stats.price?.count || 0} поставок
@@ -738,13 +751,24 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
               ) : 'Нет данных'}
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <Button 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+                size="sm"
+                className="flex-1 sm:flex-none"
+              >
                 Закрыть
               </Button>
-              <Button onClick={onEdit} className="gap-2">
-                <Edit className="h-4 w-4" />
-                Редактировать
-              </Button>
+              {canEdit && (
+                <Button 
+                  onClick={onEdit} 
+                  className="gap-2 flex-1 sm:flex-none"
+                  size="sm"
+                >
+                  <Edit className="h-4 w-4" />
+                  <span>Редактировать</span>
+                </Button>
+              )}
             </div>
           </div>
         </DialogFooter>

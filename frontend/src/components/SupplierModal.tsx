@@ -1,3 +1,4 @@
+// [file name]: SupplierModal.tsx
 import React, { useState, useEffect } from 'react';
 import { IMaskInput } from 'react-imask';
 import { Supplier, CreateSupplierData } from '@/types/suppliers';
@@ -65,17 +66,17 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ open, onOpenChange
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] sm:max-h-[85vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">
             {supplier ? 'Редактировать поставщика' : 'Новый поставщик'}
           </DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="name">Название *</Label>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-sm">Название *</Label>
               <Input 
                 id="name" 
                 name="name" 
@@ -83,80 +84,86 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ open, onOpenChange
                 onChange={handleChange} 
                 required 
                 placeholder="Введите название компании"
+                className="text-sm sm:text-base"
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="supervisor">Контактное лицо (нач.)</Label>
-              <Input 
-                id="supervisor" 
-                name="supervisor" 
-                value={formData.supervisor} 
-                onChange={handleChange} 
-                placeholder="ФИО"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="supervisor_pn">Телефон</Label>
-              <IMaskInput
-                mask={phoneMask}
-                id="supervisor_pn"
-                name="supervisor_pn"
-                value={formData.supervisor_pn}
-                onAccept={(value) => handleChange({ target: { name: 'supervisor_pn', value } } as any)}
-                className={inputClassName}
-                placeholder="+7 ___ ___ __ __"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="supervisor" className="text-sm">Контактное лицо</Label>
+                <Input 
+                  id="supervisor" 
+                  name="supervisor" 
+                  value={formData.supervisor} 
+                  onChange={handleChange} 
+                  placeholder="ФИО"
+                  className="text-sm sm:text-base"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="supervisor_pn" className="text-sm">Телефон</Label>
+                <IMaskInput
+                  mask={phoneMask}
+                  id="supervisor_pn"
+                  name="supervisor_pn"
+                  value={formData.supervisor_pn}
+                  onAccept={(value) => handleChange({ target: { name: 'supervisor_pn', value } } as any)}
+                  className={`${inputClassName} text-sm sm:text-base`}
+                  placeholder="+7 ___ ___ __ __"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="representative" className="text-sm">Представитель</Label>
+                <Input 
+                  id="representative" 
+                  name="representative" 
+                  value={formData.representative} 
+                  onChange={handleChange} 
+                  placeholder="ФИО"
+                  className="text-sm sm:text-base"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="representative_pn" className="text-sm">Телефон</Label>
+                <IMaskInput
+                  mask={phoneMask}
+                  id="representative_pn"
+                  name="representative_pn"
+                  value={formData.representative_pn}
+                  onAccept={(value) => handleChange({ target: { name: 'representative_pn', value } } as any)}
+                  className={`${inputClassName} text-sm sm:text-base`}
+                  placeholder="+7 ___ ___ __ __"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="delivery" className="text-sm">Доставка</Label>
+                <Input 
+                  id="delivery" 
+                  name="delivery" 
+                  value={formData.delivery} 
+                  onChange={handleChange} 
+                  placeholder="ФИО"
+                  className="text-sm sm:text-base"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="delivery_pn" className="text-sm">Телефон</Label>
+                <IMaskInput
+                  mask={phoneMask}
+                  id="delivery_pn"
+                  name="delivery_pn"
+                  value={formData.delivery_pn}
+                  onAccept={(value) => handleChange({ target: { name: 'delivery_pn', value } } as any)}
+                  className={`${inputClassName} text-sm sm:text-base`}
+                  placeholder="+7 ___ ___ __ __"
+                />
+              </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="representative">Представитель</Label>
-              <Input 
-                id="representative" 
-                name="representative" 
-                value={formData.representative} 
-                onChange={handleChange} 
-                placeholder="ФИО"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="representative_pn">Телефон</Label>
-              <IMaskInput
-                mask={phoneMask}
-                id="representative_pn"
-                name="representative_pn"
-                value={formData.representative_pn}
-                onAccept={(value) => handleChange({ target: { name: 'representative_pn', value } } as any)}
-                className={inputClassName}
-                placeholder="+7 ___ ___ __ __"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="delivery">Доставка</Label>
-              <Input 
-                id="delivery" 
-                name="delivery" 
-                value={formData.delivery} 
-                onChange={handleChange} 
-                placeholder="ФИО"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="delivery_pn">Телефон</Label>
-              <IMaskInput
-                mask={phoneMask}
-                id="delivery_pn"
-                name="delivery_pn"
-                value={formData.delivery_pn}
-                onAccept={(value) => handleChange({ target: { name: 'delivery_pn', value } } as any)}
-                className={inputClassName}
-                placeholder="+7 ___ ___ __ __"
-              />
-            </div>
-            
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="description">Описание</Label>
+              <Label htmlFor="description" className="text-sm">Описание</Label>
               <Textarea 
                 id="description" 
                 name="description" 
@@ -164,10 +171,11 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ open, onOpenChange
                 onChange={handleChange} 
                 placeholder="Дополнительная информация о поставщике"
                 rows={3}
+                className="text-sm sm:text-base"
               />
             </div>
 
-            <div className="flex items-center space-x-2 md:col-span-2">
+            <div className="flex items-center space-x-2">
               <Checkbox 
                 id="is_everyday_supply"
                 checked={formData.is_everyday_supply}
@@ -179,11 +187,20 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ open, onOpenChange
             </div>
           </div>
           
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              className="w-full sm:w-auto order-2 sm:order-1"
+            >
               Отмена
             </Button>
-            <Button type="submit" disabled={isLoading || !formData.name}>
+            <Button 
+              type="submit" 
+              disabled={isLoading || !formData.name}
+              className="w-full sm:w-auto order-1 sm:order-2"
+            >
               {isLoading ? 'Сохранение...' : supplier ? 'Обновить' : 'Создать'}
             </Button>
           </DialogFooter>
