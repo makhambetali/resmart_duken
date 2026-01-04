@@ -9,7 +9,7 @@ type CompressOptions = {
 export const compressImage = async (
   file: File,
   {
-    maxSizeKB = 3000,
+    maxSizeKB = 1000,
     maxDimension = 1600,
     maxIterations = 6,
   }: CompressOptions = {}
