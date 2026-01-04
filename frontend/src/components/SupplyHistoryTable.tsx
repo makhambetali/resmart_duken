@@ -14,22 +14,38 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronDown, ChevronRight, Package, Calendar, Banknote, MessageSquare, CheckCircle2, Clock, FileText, X } from 'lucide-react';
+import { 
+  ChevronDown, 
+  ChevronRight, 
+  Package, 
+  Calendar, 
+  Banknote, 
+  MessageSquare, 
+  CheckCircle2, 
+  Clock, 
+  FileText, 
+  X,
+  Eye,
+  ExternalLink
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { suppliesApi } from '@/lib/api';
-
 
 interface SupplyHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   supplierName: string;
+  supplierId?: string;
+  onSelectSupply?: (supply: Supply) => void;
 }
 
 export const SupplyHistoryModal: React.FC<SupplyHistoryModalProps> = ({
   isOpen,
   onClose,
   supplierName,
+  supplierId,
+  onSelectSupply,
 }) => {
   const [supplies, setSupplies] = useState<Supply[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,19 +60,18 @@ export const SupplyHistoryModal: React.FC<SupplyHistoryModalProps> = ({
   }, [isOpen, supplierName]);
 
   const fetchSupplyHistory = async () => {
-  setLoading(true);
-  setError(null);
+    setLoading(true);
+    setError(null);
 
-  try {
-    const data = await suppliesApi.getSupplyHistory(supplierName);
-    setSupplies(data);
-  } catch (err) {
-    setError('Не удалось загрузить историю поставок');
-  } finally {
-    setLoading(false);
-  }
-};
-
+    try {
+      const data = await suppliesApi.getSupplyHistory(supplierName);
+      setSupplies(data);
+    } catch (err) {
+      setError('Не удалось загрузить историю поставок');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleItem = (id: number) => {
     setOpenItems(prev => {
@@ -77,15 +92,32 @@ export const SupplyHistoryModal: React.FC<SupplyHistoryModalProps> = ({
     }).format(amount) + ' ₸';
   };
 
+  const handleViewFullSupply = (supply: Supply) => {
+    onSelectSupply?.(supply);
+    onClose();
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-primary" />
-              История поставок: {supplierName}
-            </DialogTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                <DialogTitle>
+                  История поставок: {supplierName}
+                </DialogTitle>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto pr-2 space-y-2">
@@ -132,39 +164,64 @@ export const SupplyHistoryModal: React.FC<SupplyHistoryModalProps> = ({
                         </div>
                       </div>
                     </div>
-                    <Badge variant={supply.is_confirmed ? "default" : "secondary"}>
-                      {supply.is_confirmed ? (
-                        <><CheckCircle2 className="h-3 w-3 mr-1" /> Подтверждено</>
-                      ) : (
-                        <><Clock className="h-3 w-3 mr-1" /> Ожидает</>
-                      )}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewFullSupply(supply);
+                        }}
+                        className="h-7 px-2"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      <Badge variant={supply.is_confirmed ? "default" : "secondary"}>
+                        {supply.is_confirmed ? (
+                          <><CheckCircle2 className="h-3 w-3 mr-1" /> Подтверждено</>
+                        ) : (
+                          <><Clock className="h-3 w-3 mr-1" /> Ожидает</>
+                        )}
+                      </Badge>
+                    </div>
                   </div>
                 </CollapsibleTrigger>
 
                 <CollapsibleContent>
                   <div className="mt-2 p-4 rounded-lg border bg-card space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <div className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Banknote className="h-3 w-3" /> Оплата наличными
+                    <div className="flex justify-between items-start">
+                      <div className="grid grid-cols-2 gap-4 flex-1">
+                        <div className="space-y-1">
+                          <div className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Banknote className="h-3 w-3" /> Оплата наличными
+                          </div>
+                          <div className="font-medium">{formatCurrency(supply.price_cash)}</div>
                         </div>
-                        <div className="font-medium">{formatCurrency(supply.price_cash)}</div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Banknote className="h-3 w-3" /> Оплата картой
+                        <div className="space-y-1">
+                          <div className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Banknote className="h-3 w-3" /> Оплата картой
+                          </div>
+                          <div className="font-medium">{formatCurrency(supply.price_bank)}</div>
                         </div>
-                        <div className="font-medium">{formatCurrency(supply.price_bank)}</div>
+                        <div className="space-y-1">
+                          <div className="text-xs text-muted-foreground">Бонус</div>
+                          <div className="font-medium">{supply.bonus}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs text-muted-foreground">Кол-во обмена</div>
+                          <div className="font-medium">{supply.exchange}</div>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <div className="text-xs text-muted-foreground">Бонус</div>
-                        <div className="font-medium">{supply.bonus}</div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-xs text-muted-foreground">Кол-во обмена</div>
-                        <div className="font-medium">{supply.exchange}</div>
-                      </div>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewFullSupply(supply)}
+                        className="h-8 gap-1"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Детали
+                      </Button>
                     </div>
 
                     {supply.arrival_date && (
@@ -217,10 +274,20 @@ export const SupplyHistoryModal: React.FC<SupplyHistoryModalProps> = ({
       <Dialog open={!!invoiceHtml} onOpenChange={() => setInvoiceHtml(null)}>
         <DialogContent className="w-screen h-screen max-w-none m-0 rounded-none p-0 overflow-hidden flex flex-col">
           <DialogHeader className="p-4 border-b">
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Накладная
-            </DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Накладная
+              </DialogTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setInvoiceHtml(null)}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </DialogHeader>
           <div className="flex-1 overflow-auto p-6 bg-background">
             {invoiceHtml && (

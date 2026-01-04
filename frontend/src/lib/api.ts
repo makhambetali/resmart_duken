@@ -337,6 +337,9 @@ export const suppliersApi = {
     apiRequest(`/suppliers/${id}/`, {
       method: 'DELETE',
     }),
+  getSupplierStats: (supplierId: string): Promise<SupplierStats> => {
+    return apiRequest<SupplierStats>(`/suppliers/${supplierId}/get_stats/`);
+  },
 };
 
 export const cashFlowApi = {

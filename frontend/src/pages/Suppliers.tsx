@@ -297,14 +297,15 @@ const SuppliersPage = () => {
                 ))}
               </div>
             ) : (
-              <SupplierTable 
-                suppliers={suppliersData?.results || []}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onView={handleView}
-                canDelete={isAdmin} // Передаем права на удаление
-                canEdit={isAdmin || user?.profile?.role === 'admin'} // Права на редактирование
-              />
+            // В рендере SupplierTable добавьте пропсы canEdit и canDelete:
+<SupplierTable 
+  suppliers={suppliersData?.results || []}
+  onEdit={handleEdit}
+  onDelete={handleDelete}
+  onView={handleView}
+  canEdit={isAdmin || user?.profile?.role === 'admin'} // Права на редактирование
+  canDelete={isAdmin || user?.profile?.role === 'admin'} // Права на удаление
+/>
             )}
           </CardContent>
         </Card>

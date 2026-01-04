@@ -37,6 +37,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { stat } from 'fs';
 
 interface SupplierViewModalProps {
   open: boolean;
@@ -175,6 +176,7 @@ const PredictionDisplay = ({ prediction }: { prediction: any[] }) => {
 };
 
 const SupplierStatsDisplay = ({ stats, isLoading }: { stats: any | null; isLoading: boolean }) => {
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center p-8">
