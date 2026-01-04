@@ -11,23 +11,34 @@ import { suppliesApi, suppliersApi, cashFlowApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Archive, Search, DollarSign } from 'lucide-react';
+import { Archive, Search, DollarSign, Filter, Plus, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const EmptyState = ({ onAddClick, searchTerm }: { onAddClick: () => void; searchTerm: string }) => (
-  <Card className="flex flex-col items-center justify-center p-12 border-2 border-dashed">
-    <Archive className="mx-auto h-12 w-12 text-gray-400" />
-    <h3 className="mt-4 text-sm font-semibold text-gray-900">
+  <Card className="flex flex-col items-center justify-center p-6 sm:p-12 border-2 border-dashed">
+    <Archive className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400" />
+    <h3 className="mt-4 text-base sm:text-lg font-semibold text-gray-900 text-center">
       {searchTerm ? `По запросу "${searchTerm}" ничего не найдено` : 'Поставок не найдено'}
     </h3>
-    <p className="mt-1 text-sm text-gray-500">
+    <p className="mt-1 text-sm text-gray-500 text-center px-4">
       {searchTerm ? 'Попробуйте другой поисковый запрос или создайте новую поставку' : 'Добавьте новую поставку'}
     </p>
-    <Button onClick={onAddClick} className="mt-6">
-      {searchTerm ? `Создать поставку для "${searchTerm}"` : 'Добавить поставку'}
+    <Button 
+      onClick={onAddClick} 
+      className="mt-6" 
+      size="sm"
+      smSize="default" // 🔧 ИСПРАВЛЕНО: убрано двоеточие
+    >
+      {searchTerm ? `Создать поставку` : 'Добавить поставку'}
     </Button>
   </Card>
 );
@@ -44,8 +55,8 @@ const Index = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [confirmationFilter, setConfirmationFilter] = useState<'all' | 'confirmed' | 'unconfirmed'>('all');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // 🔧 ИСПРАВЛЕНО: Добавлены staleTime и gcTime для кэширования
   const { 
     data: supplies = [], 
     isLoading: suppliesLoading, 
@@ -53,12 +64,11 @@ const Index = () => {
   } = useQuery({
     queryKey: ['supplies'],
     queryFn: suppliesApi.getSupplies,
-    staleTime: 1000 * 60, // 1 минута кэша
-    gcTime: 1000 * 60 * 5, // 5 минут хранения в кэше
-    refetchOnWindowFocus: false, // Не обновлять при переключении вкладок
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 
-  // 🔧 ИЗМЕНЕНО: Загружаем поставщиков при загрузке страницы, а не только при открытии модалки
   const { 
     data: suppliers = [], 
     isLoading: suppliersLoading,
@@ -66,8 +76,8 @@ const Index = () => {
   } = useQuery({
     queryKey: ['suppliers'],
     queryFn: () => suppliersApi.getSuppliers(),
-    staleTime: 1000 * 60 * 5, // 5 минут кэша
-    gcTime: 1000 * 60 * 10, // 10 минут хранения в кэше
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
   });
 
@@ -75,7 +85,6 @@ const Index = () => {
     mutationFn: suppliesApi.createSupply,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supplies'] });
-      // 🔧 ДОБАВЛЕНО: Обновляем данные о поставщиках после создания поставки
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       toast({ 
         title: 'Поставка добавлена', 
@@ -174,9 +183,7 @@ const Index = () => {
     }
   };
 
-  // Функция для открытия модалки поставщика
   const handleOpenSupplierModal = (supplierName: string) => {
-    // Находим поставщика по имени в уже загруженных данных
     const supplier = suppliers.find(s => s.name === supplierName);
     if (supplier) {
       setSelectedSupplier(supplier);
@@ -201,8 +208,8 @@ const Index = () => {
   if (suppliesError) {
     return (
       <Layout>
-        <div className="text-center py-16 px-6 bg-red-50 rounded-lg">
-          <h3 className="mt-2 text-lg font-semibold text-red-800">Ошибка загрузки данных</h3>
+        <div className="text-center py-8 sm:py-16 px-4 sm:px-6 bg-red-50 rounded-lg">
+          <h3 className="mt-2 text-base sm:text-lg font-semibold text-red-800">Ошибка загрузки данных</h3>
           <p className="mt-1 text-sm text-red-600">Не удалось получить данные с сервера. Проверьте ваше соединение.</p>
         </div>
       </Layout>
@@ -210,74 +217,175 @@ const Index = () => {
   }
 
   return (
-    <Layout>
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-3xl font-bold tracking-tight">Поставки</h1>
-          <Button onClick={handleAddSupply}>
+    <Layout onAddSupplyClick={handleAddSupply}>
+      <div className="space-y-4 sm:space-y-6">
+        {/* Заголовок и кнопка - адаптивно */}
+        <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Поставки</h1>
+          
+          {/* Десктопная кнопка */}
+          <Button 
+            onClick={handleAddSupply}
+            className="hidden sm:flex gap-2"
+            size="default" // 🔧 ИСПРАВЛЕНО
+          >
+            <Plus className="h-4 w-4" />
             Добавить поставку
+          </Button>
+          
+          {/* Мобильная кнопка */}
+          <Button 
+            onClick={handleAddSupply}
+            className="sm:hidden"
+            size="sm"
+          >
+            <Plus className="h-4 w-4" />
           </Button>
         </div>
 
-        {/* Фильтры и поиск - в одном ряду, занимают всю ширину */}
+        {/* Карточка с фильтрами и поиском */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row md:items-end gap-6">
-              {/* Поиск - занимает большую часть ширины */}
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="search">Поиск поставок</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-  id="search"
-  placeholder="Поиск по поставщику или комментарию..."
-  value={searchTerm}
-  onChange={(e) => setSearchTerm(e.target.value.replace(/(^|\s)\S/g, char => char.toUpperCase()))}
-  className="pl-10 w-full"
-/>
+          <CardContent className="pt-4 sm:pt-6">
+            {/* Заголовок и кнопка фильтров на мобильных */}
+            <div className="flex items-center justify-between mb-4 sm:hidden">
+              <h2 className="text-base font-semibold">Фильтры</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowMobileFilters(!showMobileFilters)}
+                className="gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                {showMobileFilters ? 'Скрыть' : 'Показать'}
+              </Button>
+            </div>
+
+            {/* Основная форма фильтров */}
+            <div className={`${showMobileFilters ? 'block' : 'hidden sm:block'}`}>
+              <div className="space-y-4 sm:space-y-0 sm:flex sm:items-end sm:gap-4 lg:gap-6">
+                {/* Поиск - адаптивный */}
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="search" className="text-sm sm:text-base">Поиск поставок</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      id="search"
+                      placeholder="Поиск по поставщику или комментарию..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value.replace(/(^|\s)\S/g, char => char.toUpperCase()))}
+                      className="pl-10 w-full text-sm sm:text-base"
+                    />
+                  </div>
+                </div>
+
+                {/* Десктопный фильтр статуса */}
+                <div className="hidden sm:block space-y-2 min-w-[180px]">
+                  <Label className="text-sm sm:text-base">Статус</Label>
+                  <Tabs 
+                    value={confirmationFilter} 
+                    onValueChange={(value) => setConfirmationFilter(value as 'all' | 'confirmed' | 'unconfirmed')}
+                    className="w-full"
+                  >
+                    <TabsList className="grid grid-cols-3 h-8 w-full">
+                      <TabsTrigger value="all" className="text-xs sm:text-sm">
+                        Все
+                      </TabsTrigger>
+                      <TabsTrigger value="confirmed" className="text-xs sm:text-sm">
+                        Подтв.
+                      </TabsTrigger>
+                      <TabsTrigger value="unconfirmed" className="text-xs sm:text-sm">
+                        Не подтв.
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+
+                {/* Мобильный фильтр статуса */}
+                <div className="sm:hidden space-y-2">
+                  <Label className="text-sm">Статус поставки</Label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between">
+                        {confirmationFilter === 'all' && 'Все поставки'}
+                        {confirmationFilter === 'confirmed' && 'Подтвержденные'}
+                        {confirmationFilter === 'unconfirmed' && 'Неподтвержденные'}
+                        <ChevronDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-full">
+                      <DropdownMenuItem onClick={() => setConfirmationFilter('all')}>
+                        Все поставки
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setConfirmationFilter('confirmed')}>
+                        Подтвержденные
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setConfirmationFilter('unconfirmed')}>
+                        Неподтвержденные
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
 
-              {/* Фильтр подтверждения */}
-              <div className="space-y-2 min-w-[180px]">
-                <Label className="text-sm">Статус</Label>
-                <Tabs 
-                  value={confirmationFilter} 
-                  onValueChange={(value) => setConfirmationFilter(value as 'all' | 'confirmed' | 'unconfirmed')}
-                  className="w-full"
+              {/* Кнопки действий на мобильных */}
+              <div className="flex gap-3 mt-4 sm:hidden">
+                <Button 
+                  onClick={() => setIsCashFlowModalOpen(true)}
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  size="sm"
                 >
-                  <TabsList className="grid grid-cols-3 h-8 w-full">
-                    <TabsTrigger value="all" className="text-xs">
-                      Все
-                    </TabsTrigger>
-                    <TabsTrigger value="confirmed" className="text-xs">
-                      Подтв.
-                    </TabsTrigger>
-                    <TabsTrigger value="unconfirmed" className="text-xs">
-                      Не подтв.
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
+                  <DollarSign className="h-4 w-4" />
+                  Касса
+                </Button>
+                <Button 
+                  onClick={handleAddSupply}
+                  className="flex-1 gap-2"
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Добавить
+                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Информация о количестве */}
+        <div className="flex items-center justify-between px-1">
+          <div className="text-sm sm:text-base">
+            <span className="font-medium">Найдено:</span> {filteredSupplies.length} поставок
+            {searchTerm && (
+              <span className="text-gray-600 ml-2">
+                по запросу "<span className="font-medium">{searchTerm}</span>"
+              </span>
+            )}
+          </div>
+          {confirmationFilter !== 'all' && (
+            <div className="text-xs sm:text-sm bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+              {confirmationFilter === 'confirmed' ? 'Подтвержденные' : 'Неподтвержденные'}
+            </div>
+          )}
+        </div>
         
+        {/* Таблица поставок */}
         <Card>
-          <CardContent className="p-0">
+          <CardContent className="p-2 sm:p-0 overflow-hidden">
             {suppliesLoading || suppliersLoading ? (
-              <div className="p-6 space-y-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
+              <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
+                <Skeleton className="h-8 sm:h-10 w-full" />
+                <Skeleton className="h-8 sm:h-10 w-full" />
+                <Skeleton className="h-8 sm:h-10 w-full" />
+                <Skeleton className="h-8 sm:h-10 w-full" />
               </div>
             ) : filteredSupplies.length > 0 ? (
-              <SupplyTable 
-                supplies={filteredSupplies}
-                onEditSupply={handleEditSupply}
-                onSupplierClick={handleOpenSupplierModal}
-              />
+              <div className="overflow-x-auto">
+                <SupplyTable 
+                  supplies={filteredSupplies}
+                  onEditSupply={handleEditSupply}
+                  onSupplierClick={handleOpenSupplierModal}
+                />
+              </div>
             ) : (
               <EmptyState 
                 onAddClick={handleAddSupplyWithSearch} 
@@ -287,6 +395,7 @@ const Index = () => {
           </CardContent>
         </Card>
 
+        {/* Модальные окна */}
         <SupplyModal
           open={isSupplyModalOpen}
           onOpenChange={setIsSupplyModalOpen}
@@ -296,7 +405,6 @@ const Index = () => {
           handleDeleteSupply={handleDeleteSupply}
         />
         
-        {/* Модалка для просмотра информации о поставщике */}
         <SupplierViewModal
           open={isSupplierModalOpen}
           onOpenChange={setIsSupplierModalOpen}
@@ -304,12 +412,16 @@ const Index = () => {
           onEdit={handleSupplierEdit}
         />
         
-        {/* Floating Action Button для CashFlowModal */}
-        <FloatingActionButton
-          icon={<DollarSign className="h-6 w-6" />}
-          onClick={() => setIsCashFlowModalOpen(true)}
-          tooltip="Взнос/вынос"
-        />
+        {/* Floating Action Button для CashFlowModal - только для десктопа */}
+       {/* Floating Action Button для CashFlowModal - скрыта на мобильных */}
+{/* Условный рендеринг для разных экранов */}
+{typeof window !== 'undefined' && window.innerWidth >= 640 && (
+  <FloatingActionButton
+    icon={<DollarSign className="h-6 w-6" />}
+    onClick={() => setIsCashFlowModalOpen(true)}
+    tooltip="Взнос/вынос"
+  />
+)}
         
         <CashFlowModal
           open={isCashFlowModalOpen}

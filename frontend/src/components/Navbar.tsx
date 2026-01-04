@@ -1,4 +1,5 @@
 // @/components/Navbar.tsx
+// не юзается вообще?
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
