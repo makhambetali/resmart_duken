@@ -1,7 +1,7 @@
 // @/components/ImageUpload/ImageUpload.tsx
 import React, { useRef, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, Camera, X, Eye, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Eye, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { compressImage } from '@/lib/image-utils';
 
@@ -24,7 +24,6 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 }) => {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
@@ -51,16 +50,6 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       return false;
     }
 
-    // Проверка количества файлов
-    if (selectedFiles.length >= maxFiles) {
-      toast({
-        title: 'Достигнут лимит файлов',
-        description: `Максимальное количество файлов: ${maxFiles}`,
-        variant: 'destructive',
-      });
-      return false;
-    }
-
     return true;
   };
 
@@ -68,7 +57,24 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     const files = e.target.files;
     if (!files) return;
 
+    // Важно: делаем копию файлов до очистки input
     const newFiles = Array.from(files);
+    
+    // Сразу очищаем input, чтобы можно было выбирать те же файлы снова
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
+    // Проверка общего количества файлов
+    if (selectedFiles.length + newFiles.length > maxFiles) {
+      toast({
+        title: 'Достигнут лимит файлов',
+        description: `Максимальное количество файлов: ${maxFiles}. У вас уже ${selectedFiles.length}`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const validFiles: File[] = [];
 
     // Валидация всех файлов
@@ -87,14 +93,17 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         validFiles.map(file => compressImage(file, 500)) // 500KB для загрузки
       );
       
-      onFilesChange([...selectedFiles, ...compressedFiles]);
+      // Добавляем новые файлы к существующим
+      const updatedFiles = [...selectedFiles, ...compressedFiles];
+      onFilesChange(updatedFiles);
       
       toast({
         title: 'Файлы добавлены',
-        description: `Добавлено ${validFiles.length} изображений`,
+        description: `Добавлено ${validFiles.length} изображений. Всего: ${updatedFiles.length}/${maxFiles}`,
         variant: 'default',
       });
     } catch (error) {
+      console.error('Ошибка при сжатии файлов:', error);
       toast({
         title: 'Ошибка обработки файлов',
         description: 'Не удалось обработать изображения',
@@ -102,7 +111,6 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       });
     } finally {
       setIsCompressing(false);
-      e.target.value = '';
     }
   };
 
@@ -120,19 +128,11 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     reader.readAsDataURL(file);
   };
 
-  const handleCameraCapture = () => {
-    if (cameraInputRef.current) {
-      cameraInputRef.current.click();
-    }
-  };
-
   const handleFileUpload = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
-
-  const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
   return (
     <>
@@ -148,22 +148,9 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             <Upload className="w-4 h-4" />
             {isCompressing ? 'Сжатие...' : 'Выбрать файлы'}
           </Button>
-          
-          {isMobile && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCameraCapture}
-              disabled={disabled || !isToday || isCompressing}
-              className="gap-1.5"
-            >
-              <Camera className="w-4 h-4" />
-              Сфотографировать
-            </Button>
-          )}
         </div>
 
-        {/* Скрытые input'ы */}
+        {/* Скрытый input */}
         <input
           ref={fileInputRef}
           type="file"
@@ -172,15 +159,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           onChange={handleFileSelect}
           className="hidden"
           disabled={disabled}
-        />
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleFileSelect}
-          className="hidden"
-          disabled={disabled}
+          // Для мобильных устройств используем capture, но без указания камеры
+          // Это позволит выбрать несколько фото из галереи или сделать одно фото
         />
 
         {/* Список файлов */}
@@ -199,7 +179,9 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                     <div className="flex items-center space-x-2 flex-1 min-w-0">
                       <ImageIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <span className="text-sm truncate" title={file.name}>
-                        {file.name}
+                        {file.name.length > 20 
+                          ? `${file.name.substring(0, 20)}...${file.name.substring(file.name.lastIndexOf('.'))}`
+                          : file.name}
                       </span>
                     </div>
                     <Button
