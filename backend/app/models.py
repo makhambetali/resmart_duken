@@ -1,7 +1,8 @@
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
-
+import os
+import uuid
 class Store(models.Model):
     name = models.CharField(max_length=50, default='Магазин')
     # owner = models.OneToOneField(settings.AUTH_USER_MODEL,
@@ -101,10 +102,15 @@ class Supply(models.Model):
     class Meta:
         verbose_name = "Поставка"
         verbose_name_plural = "Поставки"
-    
+
+def upload_to(instance, filename):
+    ext = os.path.splitext(filename)[1]
+    return f"supply/{instance.supply.id}/{uuid.uuid4()}{ext}"
+
+
 class SupplyImage(models.Model):
     supply = models.ForeignKey(Supply, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='supply_images/')
+    image = models.ImageField(upload_to=upload_to)
 
     def __str__(self):
         return f"Image for {self.supply}"

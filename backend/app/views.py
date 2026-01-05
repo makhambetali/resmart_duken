@@ -153,13 +153,25 @@ class SupplyViewSet(viewsets.ModelViewSet):
 
         if images:
             print(f'Получил {len(images)} файлов при изменении')
+
             supply.images.all().delete()
 
-            for image in images:
+            for i, image in enumerate(images, start=1):
+                print(
+                    f"""
+                    --- Файл #{i} ---
+                    name: {image.name}
+                    size: {image.size} bytes
+                    content_type: {image.content_type}
+                    multiple_chunks: {image.multiple_chunks()}
+                    """
+                )
+
                 SupplyImage.objects.create(
                     supply=supply,
                     image=image
                 )
+
     
 
 
