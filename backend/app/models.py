@@ -43,7 +43,7 @@ class UserProfile(models.Model):
 
 
 class Supplier(models.Model):
-    name = models.CharField(max_length=30, db_index=True, unique=True)
+    name = models.CharField(max_length=30, db_index=True)
     description = models.TextField(blank=True, null=True)
     supervisor = models.CharField(blank=True, max_length=30)
     supervisor_pn = models.CharField(blank=True, max_length=30)
@@ -60,9 +60,16 @@ class Supplier(models.Model):
     def __str__(self):
         return self.name
     
+        
     class Meta:
         verbose_name = "Поставщик"
         verbose_name_plural = "Поставщики"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name','store'],
+                name='unique_supplier_per_store'
+            )
+        ]
 
 
 def get_default_supplier():

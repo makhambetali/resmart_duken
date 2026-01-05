@@ -53,39 +53,34 @@ class SupplierViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         cache.delete('suppliers')
+
         user = self.request.user
         if not user.is_authenticated:
             raise serializers.ValidationError(
-                {"detail": "Требуется аутентификация для создания поставщика"}
+                {"detail": "Требуется аутентификация"}
             )
-        
+
         try:
-            # Получаем профиль пользователя
             profile = user.profile
-            
-            # Проверяем, что у профиля есть store
-            if not hasattr(profile, 'store') or profile.store is None:
+
+            if not profile.store:
                 raise serializers.ValidationError(
                     {"detail": "У вашего профиля не назначен магазин"}
                 )
-            
-            # Получаем store из профиля
+
             store = profile.store
-            
-            # Добавляем store в данные сериализатора
-            serializer.validated_data['store'] = store
-            
-            # Логирование
+
             logger.info(
                 f"User {user.username} создает поставщика для магазина {store.name}"
             )
-            
+
+            serializer.save(store=store)  # ✅ КЛЮЧЕВОЕ МЕСТО
+
         except UserProfile.DoesNotExist:
             raise serializers.ValidationError(
                 {"detail": "Профиль пользователя не найден"}
             )
-        return super().perform_create(serializer)
-    
+
     @action(detail = True, methods = ['get'])
     def get_stats(self, request, pk = None):
         supplier_obj = self.get_object()
