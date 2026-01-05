@@ -197,7 +197,7 @@ class ClientDAO:
         #     timeout=300
         # )
         queryset = Client.objects.filter(store = user.profile.store)
-        # print('dao:', show_zeros)
+
         if not show_zeros:
             queryset = queryset.exclude(debt = 0)
         if query:

@@ -6,7 +6,6 @@ from app.models import Supply
 
 class SupplyDAO:
     def get_related_supplies(self, user):
-        print(user.profile.store)
         return Supply.objects.filter(
             store = user.profile.store
         ).select_related('supplier')
