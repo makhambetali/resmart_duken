@@ -1,4 +1,4 @@
-// @/components/SupplyModal.tsx - исправленная версия
+// @/components/SupplyModal.tsx - с ImageUpload
 import React, { useState, useEffect } from 'react';
 import { Supply, AddSupplyForm } from '@/types/supply';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -23,14 +23,12 @@ import {
   Building,
   Package,
   Plus,
-  Camera,
-  Images,
-  X,
   Table
 } from "lucide-react";
 import { formatPrice } from '@/lib/utils';
 import { EditableInvoiceTable } from '@/components/EditableInvoiceTable';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { ImageUpload } from '@/components/ImageUpload';
 import { AITableExtractor } from '@/components/AITableExtractor';
 import { ImageViewer } from '@/components/ImageViewer';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -305,16 +303,6 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     image: URL.createObjectURL(file),
   }))];
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setSelectedImages(prev => [...prev, ...files]);
-  };
-
-  const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setSelectedImages(prev => [...prev, ...files]);
-  };
-
   return (
     <TooltipProvider>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -576,105 +564,24 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                         </div>
                       )}
 
-                      {/* Кнопки загрузки */}
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <input
-                              id="file-upload"
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              className="hidden"
-                              onChange={handleFileSelect}
-                            />
-                            <Button 
-                              type="button"
-                              variant="outline" 
-                              className="w-full h-14 gap-4"
-                              onClick={() => document.getElementById('file-upload')?.click()}
-                            >
-                              <Images className="w-5 h-5" />
-                              <div className="text-left">
-                                <div className="font-medium">Из галереи</div>
-                                <div className="text-sm text-gray-500">Выбрать файлы</div>
-                              </div>
-                            </Button>
-                          </div>
-                          
-                          <div>
-                            <input
-                              id="camera-upload"
-                              type="file"
-                              accept="image/*"
-                              capture="environment"
-                              className="hidden"
-                              onChange={handleCameraCapture}
-                            />
-                            <Button 
-                              type="button"
-                              variant="outline" 
-                              className="w-full h-14 gap-4"
-                              onClick={() => document.getElementById('camera-upload')?.click()}
-                            >
-                              <Camera className="w-5 h-5" />
-                              <div className="text-left">
-                                <div className="font-medium">Сделать фото</div>
-                                <div className="text-sm text-gray-500">Камера</div>
-                              </div>
-                            </Button>
-                          </div>
-                        </div>
+                      {/* Компонент загрузки изображений */}
+                      <ImageUpload
+                        selectedFiles={selectedImages}
+                        onFilesChange={setSelectedImages}
+                        disabled={!isToday || isLoading}
+                        isToday={isToday}
+                        maxFiles={10}
+                        maxSizeMB={5}
+                      />
 
-                        {/* Выбранные файлы */}
-                        {selectedImages.length > 0 && (
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium">
-                                Новые документы: {selectedImages.length}
-                              </span>
-                              <Button 
-                                type="button"
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => setSelectedImages([])}
-                                className="h-7"
-                              >
-                                Очистить
-                              </Button>
-                            </div>
-                            <div className="grid grid-cols-4 gap-3">
-                              {selectedImages.map((file, index) => (
-                                <div key={index} className="relative">
-                                  <img
-                                    src={URL.createObjectURL(file)}
-                                    alt=""
-                                    className="w-full h-24 object-cover rounded-lg border"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedImages(prev => prev.filter((_, i) => i !== index));
-                                    }}
-                                    className="absolute -top-2 -right-2 bg-red-500 text-white w-7 h-7 rounded-full flex items-center justify-center hover:bg-red-600 shadow-md"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* AI обработка */}
-                        {selectedImages.length > 0 && AI_CONFIG.ENABLED && (
-                          <AITableExtractor
-                            files={selectedImages}
-                            onProcessingComplete={handleAIProcessingComplete}
-                            disabled={isLoading}
-                          />
-                        )}
-                      </div>
+                      {/* AI обработка */}
+                      {selectedImages.length > 0 && AI_CONFIG.ENABLED && (
+                        <AITableExtractor
+                          files={selectedImages}
+                          onProcessingComplete={handleAIProcessingComplete}
+                          disabled={isLoading}
+                        />
+                      )}
                     </>
                   )}
 
@@ -986,99 +893,24 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                           </div>
                         )}
 
-                        {/* Кнопки загрузки */}
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <input
-                                id="file-upload-mobile"
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                className="hidden"
-                                onChange={handleFileSelect}
-                              />
-                              <Button 
-                                type="button"
-                                variant="outline" 
-                                className="w-full h-12 gap-2"
-                                onClick={() => document.getElementById('file-upload-mobile')?.click()}
-                              >
-                                <Images className="w-4 h-4" />
-                                <span className="text-xs">Из галереи</span>
-                              </Button>
-                            </div>
-                            
-                            <div>
-                              <input
-                                id="camera-upload-mobile"
-                                type="file"
-                                accept="image/*"
-                                capture="environment"
-                                className="hidden"
-                                onChange={handleCameraCapture}
-                              />
-                              <Button 
-                                type="button"
-                                variant="outline" 
-                                className="w-full h-12 gap-2"
-                                onClick={() => document.getElementById('camera-upload-mobile')?.click()}
-                              >
-                                <Camera className="w-4 h-4" />
-                                <span className="text-xs">Сделать фото</span>
-                              </Button>
-                            </div>
-                          </div>
+                        {/* Компонент загрузки изображений */}
+                        <ImageUpload
+                          selectedFiles={selectedImages}
+                          onFilesChange={setSelectedImages}
+                          disabled={!isToday || isLoading}
+                          isToday={isToday}
+                          maxFiles={10}
+                          maxSizeMB={5}
+                        />
 
-                          {/* Выбранные файлы */}
-                          {selectedImages.length > 0 && (
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium">
-                                  Новые: {selectedImages.length}
-                                </span>
-                                <Button 
-                                  type="button"
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => setSelectedImages([])}
-                                  className="h-7"
-                                >
-                                  Очистить
-                                </Button>
-                              </div>
-                              <div className="grid grid-cols-3 gap-2">
-                                {selectedImages.map((file, index) => (
-                                  <div key={index} className="relative">
-                                    <img
-                                      src={URL.createObjectURL(file)}
-                                      alt=""
-                                      className="w-full h-20 object-cover rounded border"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setSelectedImages(prev => prev.filter((_, i) => i !== index));
-                                      }}
-                                      className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center"
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* AI обработка */}
-                          {selectedImages.length > 0 && AI_CONFIG.ENABLED && (
-                            <AITableExtractor
-                              files={selectedImages}
-                              onProcessingComplete={handleAIProcessingComplete}
-                              disabled={isLoading}
-                            />
-                          )}
-                        </div>
+                        {/* AI обработка */}
+                        {selectedImages.length > 0 && AI_CONFIG.ENABLED && (
+                          <AITableExtractor
+                            files={selectedImages}
+                            onProcessingComplete={handleAIProcessingComplete}
+                            disabled={isLoading}
+                          />
+                        )}
                       </>
                     )}
                   </TabsContent>
