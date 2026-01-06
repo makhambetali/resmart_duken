@@ -1,3 +1,4 @@
+// SupplierSearchCombobox.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -80,14 +81,14 @@ export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
     enabled: false, // Не делаем запрос, так как данные уже загружены
   });
 
-  // 🔧 ДОБАВЛЕНО: Отдельный запрос для поиска
+  // 🔧 ДОБАВЛЕНО: Отдельный запрос для поиска - только при 2+ символах
   const { data: searchResults = [], isLoading: isSearching } = useQuery({
     queryKey: ['suppliers', 'search', debouncedSearch],
     queryFn: () => suppliersApi.getSuppliers({ 
       q: debouncedSearch,
       page_size: 50 
     }),
-    enabled: open && debouncedSearch.length > 0, // Только при открытом попапе и наличии поискового запроса
+    enabled: open && debouncedSearch.length >= 2, // Только при открытом попапе и наличии минимум 2 символов
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
   });
@@ -137,23 +138,30 @@ export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
     createSupplier({ name: searchQuery.trim() });
   };
 
-  // Используем либо результаты поиска, либо все поставщики
-  const suppliers = debouncedSearch.length > 0 ? (searchResults?.results || searchResults || []) : (suppliersData?.results || suppliersData || []);
-  const selectedSupplier = suppliers.find((supplier: Supplier) => supplier.name === value);
+  // 🔧 ИЗМЕНЕНО: Показываем результаты поиска только если введено 2+ символа
+  const shouldShowSearchResults = debouncedSearch.length >= 2;
+  const suppliers = shouldShowSearchResults 
+    ? (searchResults?.results || searchResults || [])
+    : []; // Пока не показываем никакие результаты если меньше 2 символов
+
+  const selectedSupplier = suppliersData?.results?.find((supplier: Supplier) => supplier.name === value) || 
+                          suppliers.find((supplier: Supplier) => supplier.name === value);
 
   // Функция для фильтрации поставщиков на клиенте при отсутствии поискового запроса
   const getFilteredSuppliers = () => {
-    if (debouncedSearch.length === 0) {
-      // Фильтруем локально если нет поискового запроса
-      return suppliers.filter((supplier: Supplier) => 
-        supplier.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+    if (!shouldShowSearchResults) {
+      // Если меньше 2 символов - не показываем никакие результаты
+      return [];
     }
-    return suppliers;
+    return suppliers.filter((supplier: Supplier) => 
+      supplier.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
   };
 
   const filteredSuppliers = getFilteredSuppliers();
-  const showCreateButton = searchQuery.trim().length > 0 && 
+  
+  // 🔧 ИЗМЕНЕНО: Кнопка создания показывается только при 2+ символах
+  const showCreateButton = searchQuery.trim().length >= 2 && 
                           !filteredSuppliers.some((s: Supplier) => 
                             s.name.toLowerCase() === searchQuery.trim().toLowerCase()
                           );
@@ -168,8 +176,8 @@ export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
           className="w-full justify-between"
           disabled={disabled}
         >
-          {selectedSupplier ? (
-            <span className="truncate">{selectedSupplier.name}</span>
+          {value ? (
+            <span className="truncate">{value}</span>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}
@@ -180,21 +188,28 @@ export const SupplierSearchCombobox: React.FC<SupplierSearchComboboxProps> = ({
         <Command shouldFilter={false}>
           <div className="flex items-center border-b px-3">
             <CommandInput
-  ref={commandInputRef}
-  placeholder="Поиск или создание..."
-  value={searchQuery}
-  onValueChange={(value) => setSearchQuery(value.replace(/(^|\s)[а-яa-z]/gi, char => char.toUpperCase()))}
-  className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-/>
+              ref={commandInputRef}
+              placeholder="Введите минимум 2 символа для поиска..."
+              value={searchQuery}
+              onValueChange={(value) => setSearchQuery(value.replace(/(^|\s)[а-яa-z]/gi, char => char.toUpperCase()))}
+              className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            />
           </div>
           <CommandList>
-            {isSuppliersLoading || isSearching ? (
+            {isSearching ? (
               <div className="p-4 text-sm text-muted-foreground text-center">
-                Загрузка...
+                Поиск...
               </div>
             ) : (
               <>
-                {filteredSuppliers.length === 0 && searchQuery.length > 0 && (
+                {searchQuery.length > 0 && searchQuery.length < 2 && (
+                  <CommandEmpty>
+                    <div className="p-4 text-sm text-center text-muted-foreground">
+                      Введите минимум 2 символа для поиска
+                    </div>
+                  </CommandEmpty>
+                )}
+                {searchQuery.length >= 2 && filteredSuppliers.length === 0 && (
                   <CommandEmpty>
                     <div className="p-4 text-sm text-center">
                       <div className="text-muted-foreground mb-2">
