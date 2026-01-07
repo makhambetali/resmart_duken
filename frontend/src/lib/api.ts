@@ -49,7 +49,7 @@ export interface LeadResponse {
 }
 
 // Укажите ваш IP-адрес или домен
-const testOnMobile=true
+const testOnMobile=false
 var API_BASE_URL =  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 if(testOnMobile){
   API_BASE_URL = "http://172.20.10.3:8000/api/v1" 
