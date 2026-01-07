@@ -19,6 +19,7 @@ import {
 import { ImageUpload } from '@/components/ImageUpload';
 import { suppliesApi, suppliersApi } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
+import { capitalize } from '@/lib/utils';
 
 interface SupplyAcceptanceModalProps {
   open: boolean;
@@ -134,7 +135,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
           toast({
             title: 'Поставщик не найден',
             description: `Поставщик "${supplierName}" не существует`,
-            variant: 'warning',
+            variant: 'destructive',
           });
         }
       } else if (todayUnconfirmedSupplies.length === 1) {
@@ -383,15 +384,15 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                   Поставщик *
                 </Label>
                 <div className="flex gap-2">
-                  <Input
-                    value={supplierName}
-                    onChange={(e) => setSupplierName(e.target.value)}
-                    onKeyDown={handleKeyPress}
-                    placeholder="Введите название поставщика..."
-                    className="flex-1"
-                    disabled={!!foundSupply || isLoading || creatingSupply}
-                    autoFocus
-                  />
+                 <Input
+  value={supplierName}
+  onChange={(e) => setSupplierName(capitalize(e.target.value))}
+  onKeyDown={handleKeyPress}
+  placeholder="Введите название поставщика..."
+  className="flex-1"
+  disabled={!!foundSupply || isLoading || creatingSupply}
+  autoFocus
+/>
                   {!foundSupply && (
                     <Button
                       type="button"

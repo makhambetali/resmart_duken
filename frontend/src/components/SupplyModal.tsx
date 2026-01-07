@@ -1,4 +1,4 @@
-// @/components/SupplyModal.tsx - упрощенная версия
+// @/components/SupplyModal.tsx - исправленная версия с изображениями
 import React, { useState, useEffect } from 'react';
 import { Supply, AddSupplyForm } from '@/types/supply';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -18,10 +18,16 @@ import {
   MessageSquare,
   Building,
   Package,
-  Plus
+  Plus,
+  FileImage,
+  Eye,
+  Clock,
+  Upload,
+  X
 } from "lucide-react";
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, formatDateTime } from '@/lib/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 interface SupplyModalProps {
   open: boolean;
@@ -31,6 +37,12 @@ interface SupplyModalProps {
   onSubmit: (data: Omit<AddSupplyForm, 'images'> & { images?: File[] }) => Promise<void>;
   suppliers: Array<{ id: string; name: string }>;
   initialSupplier?: string;
+}
+
+interface SupplyImage {
+  id: number;
+  image: string;
+  file?: File;
 }
 
 const getTomorrowDate = () => {
@@ -43,6 +55,10 @@ const getDayAfterTomorrow = () => {
   const dayAfterTomorrow = new Date();
   dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
   return dayAfterTomorrow.toISOString().split('T')[0];
+};
+
+const getTodayDate = () => {
+  return new Date().toISOString().split('T')[0];
 };
 
 interface MoneyInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -123,6 +139,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
 }) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('basic');
   const [formData, setFormData] = useState<Omit<AddSupplyForm, 'images'>>({
     supplier: '',
     paymentType: 'cash',
@@ -136,14 +153,28 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     invoice_html: '',
   });
 
+  const [existingImages, setExistingImages] = useState<SupplyImage[]>([]);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [isToday, setIsToday] = useState(false);
+
+  const today = getTodayDate();
   const tomorrow = getTomorrowDate();
   const dayAfterTomorrow = getDayAfterTomorrow();
 
   useEffect(() => {
     if (open && supply) {
+      const images = (supply as any).images || [];
+      setExistingImages(images.map((img: any) => ({ 
+        id: img.id, 
+        image: img.image 
+      })));
+      
       let paymentType: 'cash' | 'bank' | 'mixed' = 'cash';
       if (supply.price_cash > 0 && supply.price_bank > 0) paymentType = 'mixed';
       else if (supply.price_bank > 0) paymentType = 'bank';
+
+      const isSupplyToday = supply.delivery_date === today;
+      setIsToday(isSupplyToday);
 
       setFormData({
         supplier: supply.supplier,
@@ -157,6 +188,9 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
         is_confirmed: supply.is_confirmed,
         invoice_html: '',
       });
+      
+      setSelectedImages([]);
+      setActiveTab('basic');
     } else if (open) {
       setFormData({
         supplier: '', 
@@ -170,11 +204,17 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
         is_confirmed: false, 
         invoice_html: '',
       });
+      setExistingImages([]);
+      setSelectedImages([]);
+      setIsToday(false);
+      setActiveTab('basic');
     }
-  }, [supply, open, tomorrow]);
+  }, [supply, open, tomorrow, today]);
 
   const handleDateSelect = (date: string) => {
+    const isSelectedDateToday = date === today;
     setFormData(prev => ({ ...prev, delivery_date: date }));
+    setIsToday(isSelectedDateToday);
   };
 
   const handlePaymentTypeChange = (newPaymentType: 'cash' | 'bank' | 'mixed') => {
@@ -202,6 +242,22 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     return cleaned ? parseInt(cleaned, 10) : 0;
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newFiles = Array.from(files).slice(0, 10 - selectedImages.length);
+      setSelectedImages(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeSelectedImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingImage = (id: number) => {
+    setExistingImages(prev => prev.filter(img => img.id !== id));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.supplier) {
@@ -221,6 +277,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
         price_cash: (parseMoneyValue(formData.price_cash)).toString(),
         price_bank: (parseMoneyValue(formData.price_bank)).toString(),
         invoice_html: formData.invoice_html,
+        images: selectedImages.length > 0 ? selectedImages : undefined,
       };
       
       await onSubmit(submitData);
@@ -242,195 +299,792 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     }
   };
 
+  const getTimeString = (dateTimeString?: string) => {
+    if (!dateTimeString) return 'Не указано';
+    return formatDateTime(dateTimeString);
+  };
+
+  const allImages = [
+    ...existingImages,
+    ...selectedImages.map((file, index) => ({
+      id: -(index + 1),
+      image: URL.createObjectURL(file),
+      file
+    }))
+  ];
+
   return (
     <TooltipProvider>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full max-w-[95vw] md:max-w-2xl max-h-[90vh] p-0 gap-0">
+        <DialogContent className="w-full max-w-[95vw] md:max-w-6xl max-h-[90vh] p-0 gap-0">
           <DialogHeader className="px-4 md:px-6 py-3 md:py-4 border-b">
             <DialogTitle className="text-lg md:text-xl font-semibold flex items-center gap-2 md:gap-3">
               <Package className="w-5 h-5 md:w-6 md:h-6" />
               {supply ? 'Редактирование поставки' : 'Новая поставка'}
             </DialogTitle>
-            <p className="text-sm text-gray-500 mt-1">
-              Дата поставки от завтрашнего дня. Документы и подтверждение - при приёмке поставки.
-            </p>
+            <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 mt-1">
+              <p className="text-sm text-gray-500">
+                {supply && isToday 
+                  ? 'Сегодняшняя поставка' 
+                  : 'Дата поставки от завтрашнего дня'}
+              </p>
+              {supply?.is_confirmed && (
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <Clock className="w-4 h-4" />
+                  <span>Подтверждена: {getTimeString(supply.confirmed_at || supply.arrival_date)}</span>
+                </div>
+              )}
+            </div>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="flex flex-col h-[calc(90vh-120px)] md:h-[calc(90vh-140px)]">
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
-              {/* Поставщик */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium flex items-center gap-2">
-                  <Building className="w-4 h-4" />
-                  Поставщик *
-                </Label>
-                <SupplierSearchCombobox 
-                  value={formData.supplier} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, supplier: value }))} 
-                  placeholder="Выберите или создайте поставщика..." 
-                  autoFocus={open && !supply}
-                  autoOpen={open && !supply}
-                />
-              </div>
+            {/* Десктопный вид - две колонки */}
+            <div className="hidden md:block flex-1 overflow-hidden">
+              <div className="grid grid-cols-2 h-full">
+                {/* Левая колонка - Основные данные */}
+                <div className="border-r p-6 space-y-8 overflow-y-auto">
+                  {/* Поставщик */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Building className="w-4 h-4" />
+                      Поставщик *
+                    </Label>
+                    <SupplierSearchCombobox 
+                      value={formData.supplier} 
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, supplier: value }))} 
+                      placeholder="Выберите или создайте поставщика..." 
+                      autoFocus={open && !supply}
+                      autoOpen={open && !supply}
+                    />
+                  </div>
 
-              {/* Дата поставки */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Дата поставки *
-                </Label>
-                <div className="grid grid-cols-3 gap-3">
-                  <Button
-                    type="button"
-                    variant={formData.delivery_date === tomorrow ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleDateSelect(tomorrow)}
-                    className="h-10"
-                  >
-                    Завтра
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={formData.delivery_date === dayAfterTomorrow ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleDateSelect(dayAfterTomorrow)}
-                    className="h-10"
-                  >
-                    Послезавтра
-                  </Button>
-                  <div className="relative">
-                    <Input 
-                      type="date" 
-                      min={tomorrow}
-                      value={formData.delivery_date} 
-                      onChange={(e) => handleDateSelect(e.target.value)} 
-                      className="h-10"
+                  {/* Дата поставки */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      Дата поставки *
+                    </Label>
+                    
+                    {supply ? (
+                      // При редактировании
+                      <div>
+                        {isToday ? (
+                          // Сегодняшняя поставка
+                          <div className="text-sm text-gray-700">
+                            Сегодня ({formData.delivery_date})
+                          </div>
+                        ) : (
+                          // Не сегодняшняя поставка
+                          <div>
+                            <div className="mb-3">
+                              <p className="text-sm font-medium mb-2">Выбрать дату:</p>
+                              <div className="grid grid-cols-3 gap-2 mb-3">
+                                <Button
+                                  type="button"
+                                  variant={formData.delivery_date === tomorrow ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => handleDateSelect(tomorrow)}
+                                  className="h-9"
+                                >
+                                  Завтра
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant={formData.delivery_date === dayAfterTomorrow ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => handleDateSelect(dayAfterTomorrow)}
+                                  className="h-9"
+                                >
+                                  Послезавтра
+                                </Button>
+                                <div className="relative">
+                                  <Input 
+                                    type="date" 
+                                    min={tomorrow}
+                                    value={formData.delivery_date} 
+                                    onChange={(e) => handleDateSelect(e.target.value)} 
+                                    className="h-9 text-sm"
+                                    placeholder="Другая дата"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              Текущая дата: {formData.delivery_date}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      // При создании новой поставки - только даты от завтра
+                      <div>
+                        <div className="mb-3">
+                          <p className="text-sm font-medium mb-2">Выбрать дату:</p>
+                          <div className="grid grid-cols-3 gap-2 mb-3">
+                            <Button
+                              type="button"
+                              variant={formData.delivery_date === tomorrow ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleDateSelect(tomorrow)}
+                              className="h-9"
+                            >
+                              Завтра
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={formData.delivery_date === dayAfterTomorrow ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleDateSelect(dayAfterTomorrow)}
+                              className="h-9"
+                            >
+                              Послезавтра
+                            </Button>
+                            <div className="relative">
+                              <Input 
+                                type="date" 
+                                min={tomorrow}
+                                value={formData.delivery_date} 
+                                onChange={(e) => handleDateSelect(e.target.value)} 
+                                className="h-9 text-sm"
+                                placeholder="Другая дата"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          Выбрано: {formData.delivery_date}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Финансы */}
+                  <div className="space-y-6">
+                    {/* <Label className="text-sm font-medium">Финансы</Label> */}
+                    
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label className="text-xs text-gray-600">Тип оплаты</Label>
+                        <Select 
+                          value={formData.paymentType} 
+                          onValueChange={handlePaymentTypeChange}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cash">
+                              <div className="flex items-center gap-2">
+                                <Wallet className="w-4 h-4" />
+                                Наличные
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="bank">
+                              <div className="flex items-center gap-2">
+                                <CreditCard className="w-4 h-4" />
+                                Банк
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="mixed">
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center">
+                                  <Wallet className="w-3 h-3" />
+                                  <span className="mx-1">+</span>
+                                  <CreditCard className="w-3 h-3" />
+                                </div>
+                                Смешанная
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-xs text-gray-600">Сумма</Label>
+                        {formData.paymentType === 'cash' && (
+                          <MoneyInput 
+                            placeholder="0 ₸"
+                            value={formData.price_cash}
+                            onValueChange={(value) => setFormData(prev => ({ ...prev, price_cash: value }))}
+                          />
+                        )}
+                        {formData.paymentType === 'bank' && (
+                          <MoneyInput 
+                            placeholder="0 ₸"
+                            value={formData.price_bank}
+                            onValueChange={(value) => setFormData(prev => ({ ...prev, price_bank: value }))}
+                          />
+                        )}
+                        {formData.paymentType === 'mixed' && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <MoneyInput 
+                              placeholder="Нал."
+                              value={formData.price_cash}
+                              onValueChange={(value) => setFormData(prev => ({ ...prev, price_cash: value }))}
+                            />
+                            <MoneyInput 
+                              placeholder="Банк"
+                              value={formData.price_bank}
+                              onValueChange={(value) => setFormData(prev => ({ ...prev, price_bank: value }))}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label className="text-xs text-gray-600">Бонус (шт.)</Label>
+                        <Input 
+                          type="number" 
+                          min="0"
+                          value={formData.bonus || ''}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            bonus: e.target.value ? Number(e.target.value) : 0 
+                          }))}
+                          className="h-9"
+                          placeholder="0"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-xs text-gray-600">Обмен (шт.)</Label>
+                        <Input 
+                          type="number" 
+                          min="0"
+                          value={formData.exchange || ''}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            exchange: e.target.value ? Number(e.target.value) : 0 
+                          }))}
+                          className="h-9"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Комментарий */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4" />
+                      Комментарий
+                    </Label>
+                    <Textarea 
+                      value={formData.comment} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))} 
+                      rows={5} 
+                      placeholder="Введите комментарий..."
+                      className="resize-none min-h-[120px]"
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* Финансы */}
-              <div className="space-y-6">
-                <Label className="text-sm font-medium">Финансы</Label>
-                
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-xs text-gray-600">Тип оплаты</Label>
-                    <Select 
-                      value={formData.paymentType} 
-                      onValueChange={handlePaymentTypeChange}
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">
-                          <div className="flex items-center gap-2">
-                            <Wallet className="w-4 h-4" />
-                            Наличные
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="bank">
-                          <div className="flex items-center gap-2">
-                            <CreditCard className="w-4 h-4" />
-                            Банк
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="mixed">
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center">
-                              <Wallet className="w-3 h-3" />
-                              <span className="mx-1">+</span>
-                              <CreditCard className="w-3 h-3" />
-                            </div>
-                            Смешанная
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                {/* Правая колонка - Изображения */}
+                <div className="p-6 space-y-8 overflow-y-auto">
+                  {/* Заголовок */}
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <FileImage className="w-4 h-4" />
+                      Документы и изображения
+                    </Label>
+                    {allImages.length > 0 && (
+                      <span className="text-sm text-gray-500">
+                        Всего: {allImages.length} файлов
+                      </span>
+                    )}
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label className="text-xs text-gray-600">Сумма</Label>
+
+                  {/* Загрузка новых изображений */}
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm text-gray-700 mb-2 block">Добавить новые изображения</Label>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-600 mb-2">
+                          Перетащите файлы сюда или нажмите для выбора
+                        </p>
+                        <input
+                          type="file"
+                          id="image-upload"
+                          multiple
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                        <Label 
+                          htmlFor="image-upload"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 cursor-pointer transition-colors"
+                        >
+                          <Upload className="w-4 h-4" />
+                          Выбрать файлы
+                        </Label>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Максимум 10 файлов, каждый до 5 MB
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Выбранные файлы */}
+                    {selectedImages.length > 0 && (
+                      <div className="space-y-3">
+                        <Label className="text-sm text-gray-700">
+                          Новые файлы ({selectedImages.length})
+                        </Label>
+                        <div className="grid grid-cols-4 gap-3">
+                          {selectedImages.map((file, index) => (
+                            <div key={index} className="relative group">
+                              <div className="aspect-square bg-gray-100 rounded-lg border flex items-center justify-center overflow-hidden">
+                                <img
+                                  src={URL.createObjectURL(file)}
+                                  alt={file.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => removeSelectedImage(index)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                              <p className="text-xs text-gray-500 mt-1 truncate">
+                                {file.name}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Существующие изображения */}
+                    {existingImages.length > 0 && (
+                      <div className="space-y-3">
+                        <Label className="text-sm text-gray-700">
+                          Существующие изображения ({existingImages.length})
+                        </Label>
+                        <div className="grid grid-cols-4 gap-3">
+                          {existingImages.map((image) => (
+                            <div key={image.id} className="relative group">
+                              <div 
+                                className="aspect-square bg-gray-100 rounded-lg border flex items-center justify-center overflow-hidden cursor-pointer"
+                                onClick={() => window.open(image.image, '_blank')}
+                              >
+                                <img
+                                  src={image.image}
+                                  alt=""
+                                  className="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity" />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => removeExistingImage(image.id)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                              <div className="flex items-center justify-center mt-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 text-xs"
+                                  onClick={() => window.open(image.image, '_blank')}
+                                >
+                                  <Eye className="h-3 w-3 mr-1" />
+                                  Просмотр
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Нет изображений */}
+                    {allImages.length === 0 && (
+                      <div className="text-center py-8">
+                        <FileImage className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">
+                          Нет загруженных изображений
+                        </p>
+                        <p className="text-sm text-gray-400 mt-1">
+                          Добавьте документы поставки
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Информация о загрузке */}
+                  <div className="p-3 border border-blue-200 rounded-lg bg-blue-50">
+                    <p className="text-sm text-blue-700">
+                      Поддерживаются форматы: JPG, PNG, PDF
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Максимальный размер файла: 5 MB
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Мобильный вид - вкладки */}
+            <div className="md:hidden flex-1 flex flex-col">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+                <div className="border-b flex-shrink-0">
+                  <TabsList className="grid grid-cols-3 w-full h-12 rounded-none">
+                    <TabsTrigger value="basic" className="text-xs flex flex-col gap-1">
+                      <Building className="w-4 h-4" />
+                      Основное
+                    </TabsTrigger>
+                    <TabsTrigger value="money" className="text-xs flex flex-col gap-1">
+                      <Wallet className="w-4 h-4" />
+                      Оплата
+                    </TabsTrigger>
+                    <TabsTrigger value="images" className="text-xs flex flex-col gap-1">
+                      <FileImage className="w-4 h-4" />
+                      Документы
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <div className="flex-1 overflow-y-auto">
+                  <TabsContent value="basic" className="p-4 space-y-6 mt-0">
+                    {/* Поставщик */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Building className="w-4 h-4" />
+                        Поставщик *
+                      </Label>
+                      <SupplierSearchCombobox 
+                        value={formData.supplier} 
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, supplier: value }))} 
+                        placeholder="Выберите или создайте поставщика..." 
+                        autoFocus={open && !supply}
+                        autoOpen={open && !supply}
+                      />
+                    </div>
+
+                    {/* Дата поставки */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        Дата поставки
+                      </Label>
+                      {supply ? (
+                        isToday ? (
+                          <div className="text-sm text-gray-700">
+                            Сегодня ({formData.delivery_date})
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Input 
+                              type="date" 
+                              min={tomorrow}
+                              value={formData.delivery_date} 
+                              onChange={(e) => handleDateSelect(e.target.value)} 
+                              className="h-10"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                variant={formData.delivery_date === tomorrow ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleDateSelect(tomorrow)}
+                                className="flex-1"
+                              >
+                                Завтра
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={formData.delivery_date === dayAfterTomorrow ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleDateSelect(dayAfterTomorrow)}
+                                className="flex-1"
+                              >
+                                Послезавтра
+                              </Button>
+                            </div>
+                          </div>
+                        )
+                      ) : (
+                        <div className="space-y-2">
+                          <Input 
+                            type="date" 
+                            min={tomorrow}
+                            value={formData.delivery_date} 
+                            onChange={(e) => handleDateSelect(e.target.value)} 
+                            className="h-10"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant={formData.delivery_date === tomorrow ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleDateSelect(tomorrow)}
+                              className="flex-1"
+                            >
+                              Завтра
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={formData.delivery_date === dayAfterTomorrow ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleDateSelect(dayAfterTomorrow)}
+                              className="flex-1"
+                            >
+                              Послезавтра
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Бонус и обмен */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Бонус (шт.)</Label>
+                        <Input 
+                          type="number" 
+                          min="0"
+                          value={formData.bonus || ''}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            bonus: e.target.value ? Number(e.target.value) : 0 
+                          }))}
+                          className="h-10"
+                          placeholder="0"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Обмен (шт.)</Label>
+                        <Input 
+                          type="number" 
+                          min="0"
+                          value={formData.exchange || ''}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            exchange: e.target.value ? Number(e.target.value) : 0 
+                          }))}
+                          className="h-10"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Комментарий */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4" />
+                        Комментарий
+                      </Label>
+                      <Textarea 
+                        value={formData.comment} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))} 
+                        rows={4} 
+                        placeholder="Введите комментарий..."
+                        className="resize-none min-h-[100px]"
+                      />
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="money" className="p-4 space-y-6 mt-0">
+                    {/* Тип оплаты */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Тип оплаты</Label>
+                      <Select 
+                        value={formData.paymentType} 
+                        onValueChange={handlePaymentTypeChange}
+                      >
+                        <SelectTrigger className="h-10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash">
+                            <div className="flex items-center gap-2">
+                              <Wallet className="w-4 h-4" />
+                              Наличные
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="bank">
+                            <div className="flex items-center gap-2">
+                              <CreditCard className="w-4 h-4" />
+                              Банк
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="mixed">
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center">
+                                <Wallet className="w-3 h-3" />
+                                <span className="mx-1">+</span>
+                                <CreditCard className="w-3 h-3" />
+                              </div>
+                              Смешанная
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Суммы */}
                     {formData.paymentType === 'cash' && (
-                      <MoneyInput 
-                        placeholder="0 ₸"
-                        value={formData.price_cash}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, price_cash: value }))}
-                      />
-                    )}
-                    {formData.paymentType === 'bank' && (
-                      <MoneyInput 
-                        placeholder="0 ₸"
-                        value={formData.price_bank}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, price_bank: value }))}
-                      />
-                    )}
-                    {formData.paymentType === 'mixed' && (
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Наличные</Label>
                         <MoneyInput 
-                          placeholder="Нал."
+                          placeholder="0 ₸"
                           value={formData.price_cash}
                           onValueChange={(value) => setFormData(prev => ({ ...prev, price_cash: value }))}
                         />
+                      </div>
+                    )}
+                    
+                    {formData.paymentType === 'bank' && (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Банк</Label>
                         <MoneyInput 
-                          placeholder="Банк"
+                          placeholder="0 ₸"
                           value={formData.price_bank}
                           onValueChange={(value) => setFormData(prev => ({ ...prev, price_bank: value }))}
                         />
                       </div>
                     )}
-                  </div>
-                </div>
+                    
+                    {formData.paymentType === 'mixed' && (
+                      <>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Наличные</Label>
+                          <MoneyInput 
+                            placeholder="0 ₸"
+                            value={formData.price_cash}
+                            onValueChange={(value) => setFormData(prev => ({ ...prev, price_cash: value }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Банк</Label>
+                          <MoneyInput 
+                            placeholder="0 ₸"
+                            value={formData.price_bank}
+                            onValueChange={(value) => setFormData(prev => ({ ...prev, price_bank: value }))}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </TabsContent>
 
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-xs text-gray-600">Бонус (шт.)</Label>
-                    <Input 
-                      type="number" 
-                      min="0"
-                      value={formData.bonus || ''}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        bonus: e.target.value ? Number(e.target.value) : 0 
-                      }))}
-                      className="h-9"
-                      placeholder="0"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label className="text-xs text-gray-600">Обмен (шт.)</Label>
-                    <Input 
-                      type="number" 
-                      min="0"
-                      value={formData.exchange || ''}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        exchange: e.target.value ? Number(e.target.value) : 0 
-                      }))}
-                      className="h-9"
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-              </div>
+                  <TabsContent value="images" className="p-4 space-y-6 mt-0">
+                    {/* Загрузка новых изображений */}
+                    <div className="space-y-4">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <FileImage className="w-4 h-4" />
+                        Добавить новые изображения
+                      </Label>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                        <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-600 mb-2">
+                          Нажмите для выбора файлов
+                        </p>
+                        <input
+                          type="file"
+                          id="image-upload-mobile"
+                          multiple
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                        <Label 
+                          htmlFor="image-upload-mobile"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 cursor-pointer transition-colors"
+                        >
+                          <Upload className="w-4 h-4" />
+                          Выбрать файлы
+                        </Label>
+                      </div>
 
-              {/* Комментарий */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4" />
-                  Комментарий
-                </Label>
-                <Textarea 
-                  value={formData.comment} 
-                  onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))} 
-                  rows={5} 
-                  placeholder="Введите комментарий..."
-                  className="resize-none min-h-[120px]"
-                />
-              </div>
+                      {/* Выбранные файлы */}
+                      {selectedImages.length > 0 && (
+                        <div className="space-y-3">
+                          <Label className="text-sm text-gray-700">
+                            Новые файлы ({selectedImages.length})
+                          </Label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {selectedImages.map((file, index) => (
+                              <div key={index} className="relative">
+                                <div className="aspect-square bg-gray-100 rounded border overflow-hidden">
+                                  <img
+                                    src={URL.createObjectURL(file)}
+                                    alt={file.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="icon"
+                                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full"
+                                  onClick={() => removeSelectedImage(index)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Существующие изображения */}
+                      {existingImages.length > 0 && (
+                        <div className="space-y-3">
+                          <Label className="text-sm text-gray-700">
+                            Существующие изображения ({existingImages.length})
+                          </Label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {existingImages.map((image) => (
+                              <div key={image.id} className="relative">
+                                <div 
+                                  className="aspect-square bg-gray-100 rounded border overflow-hidden"
+                                  onClick={() => window.open(image.image, '_blank')}
+                                >
+                                  <img
+                                    src={image.image}
+                                    alt=""
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="icon"
+                                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full"
+                                  onClick={() => removeExistingImage(image.id)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Нет изображений */}
+                      {allImages.length === 0 && (
+                        <div className="text-center py-6">
+                          <FileImage className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                          <p className="text-gray-500 text-sm">
+                            Нет загруженных изображений
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                </div>
+              </Tabs>
             </div>
 
             {/* Футер с кнопками */}

@@ -20,3 +20,24 @@ export const capitalize = (value: string): string => {
 export const getNumericValue = (formattedValue: string): string => {
   return formattedValue.replace(/\s/g, '');
 };
+
+// В @/lib/utils.ts добавьте:
+export const formatDateTime = (dateTimeString: string): string => {
+  try {
+    const date = new Date(dateTimeString);
+    return date.toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  } catch (error) {
+    return dateTimeString;
+  }
+};
+const capitalizeWords = (value: string) =>
+  value.replace(/\p{L}+/gu, word =>
+    word.charAt(0).toLocaleUpperCase() + word.slice(1).toLocaleLowerCase()
+  );
