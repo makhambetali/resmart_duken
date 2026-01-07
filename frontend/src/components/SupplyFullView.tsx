@@ -16,7 +16,10 @@ import {
   CheckCircle,
   AlertCircle,
   FileText,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Clock,
+  CheckCheck,
+  Hourglass
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -49,6 +52,48 @@ const formatDateTime = (dateString: string) => {
     return format(new Date(dateString), 'dd.MM.yyyy HH:mm', { locale: ru });
   } catch {
     return dateString;
+  }
+};
+
+// Функция для получения текста статуса
+const getStatusText = (status: string): string => {
+  switch (status) {
+    case 'pending':
+      return 'Ожидает подтверждения';
+    case 'confirmed':
+      return 'Ожидает оплаты';
+    case 'delivered':
+      return 'Подтверждена';
+    default:
+      return status;
+  }
+};
+
+// Функция для получения иконки статуса
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500" />;
+    case 'confirmed':
+      return <Hourglass className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500" />;
+    case 'delivered':
+      return <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" />;
+    default:
+      return <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
+  }
+};
+
+// Функция для получения цвета статуса
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return 'bg-gray-100 text-gray-800 border-gray-300';
+    case 'confirmed':
+      return 'bg-amber-100 text-amber-800 border-amber-300';
+    case 'delivered':
+      return 'bg-green-100 text-green-800 border-green-300';
+    default:
+      return 'bg-gray-100 text-gray-800';
   }
 };
 
@@ -233,25 +278,47 @@ export const SupplyFullView: React.FC<SupplyFullViewProps> = ({
         <div className={`${images.length > 0 ? 'lg:w-1/2' : 'w-full'} flex flex-col overflow-y-auto`}>
           {/* Supply Information */}
           <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6">
-            {/* Status Badge */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full ${supply.is_confirmed ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                {supply.is_confirmed ? (
-                  <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                ) : (
-                  <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                )}
-                <span className="text-sm font-medium">
-                  {supply.is_confirmed ? 'Подтверждена' : 'Не подтверждена'}
-                </span>
-              </div>
+            {/* Status Information */}
+            <div className="space-y-3 sm:space-y-4">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                Статус поставки
+              </h3>
               
-              {(supply as any).rescheduled_cnt > 0 && (
-                <Badge variant="secondary" className="gap-1">
-                  <RefreshCw className="h-3 w-3" />
-                  <span className="text-xs">Перенесена {(supply as any).rescheduled_cnt} раз</span>
-                </Badge>
-              )}
+              <div className="space-y-3">
+                {/* Основной бейдж статуса */}
+                <div className={`flex items-center justify-between gap-2 p-3 sm:p-4 rounded-lg border ${getStatusColor(supply.status)}`}>
+                  <div className="flex items-center gap-3">
+                    {getStatusIcon(supply.status)}
+                    <div>
+                      <div className="font-semibold text-sm sm:text-base">
+                        {getStatusText(supply.status)}
+                      </div>
+                      <div className="text-xs text-gray-600 mt-0.5">
+                        {supply.status === 'pending' && 'Поставка создана, ожидает подтверждения'}
+                        {supply.status === 'confirmed' && 'Поставка принята, ожидает оплаты'}
+                        {supply.status === 'delivered' && 'Поставка оплачена и завершена'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Дата изменения статуса */}
+                  {supply.arrival_date && (
+                    <div className="text-right">
+                      <div className="text-xs text-gray-500">Изменён:</div>
+                      <div className="text-xs font-medium">{formatDateTime(supply.arrival_date)}</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Бейдж переносов */}
+                {(supply as any).rescheduled_cnt > 0 && (
+                  <Badge variant="secondary" className="gap-1.5 px-3 py-1.5">
+                    <RefreshCw className="h-3 w-3" />
+                    <span className="text-xs">Перенесена {(supply as any).rescheduled_cnt} раз</span>
+                  </Badge>
+                )}
+              </div>
             </div>
 
             {/* Payment Information */}
@@ -348,7 +415,7 @@ export const SupplyFullView: React.FC<SupplyFullViewProps> = ({
                 
                 {supply.arrival_date && (
                   <div className="flex justify-between items-center py-2">
-                    <span className="text-sm text-gray-600">Дата прибытия</span>
+                    <span className="text-sm text-gray-600">Дата изменения статуса</span>
                     <span className="text-sm font-medium">{formatDateTime(supply.arrival_date)}</span>
                   </div>
                 )}

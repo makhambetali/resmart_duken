@@ -27,7 +27,9 @@ import {
   FileText, 
   X,
   Eye,
-  ExternalLink
+  ExternalLink,
+  AlertCircle,
+  Hourglass
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -41,6 +43,48 @@ interface SupplyHistoryModalProps {
   supplierId?: string;
   onSelectSupply?: (supply: Supply) => void;
 }
+
+// Функция для получения текста статуса
+const getStatusText = (status: string): string => {
+  switch (status) {
+    case 'pending':
+      return 'Ожидает подтверждения';
+    case 'confirmed':
+      return 'Ожидает оплаты';
+    case 'delivered':
+      return 'Подтверждена';
+    default:
+      return status;
+  }
+};
+
+// Функция для получения иконки статуса
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return <AlertCircle className="h-3 w-3" />;
+    case 'confirmed':
+      return <Hourglass className="h-3 w-3" />;
+    case 'delivered':
+      return <CheckCircle2 className="h-3 w-3" />;
+    default:
+      return <AlertCircle className="h-3 w-3" />;
+  }
+};
+
+// Функция для получения варианта бейджа статуса
+const getStatusBadgeVariant = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return 'secondary';
+    case 'confirmed':
+      return 'outline';
+    case 'delivered':
+      return 'default';
+    default:
+      return 'secondary';
+  }
+};
 
 export const SupplyHistoryModal: React.FC<SupplyHistoryModalProps> = ({
   isOpen,
@@ -126,10 +170,13 @@ export const SupplyHistoryModal: React.FC<SupplyHistoryModalProps> = ({
                   <Eye className="h-3.5 w-3.5" />
                 </Button>
                 <Badge 
-                  variant={supply.is_confirmed ? "default" : "secondary"} 
-                  className="text-xs"
+                  variant={getStatusBadgeVariant(supply.status || 'pending')} 
+                  className="text-xs gap-1"
                 >
-                  {supply.is_confirmed ? '✓' : '…'}
+                  {getStatusIcon(supply.status || 'pending')}
+                  <span className="truncate max-w-[60px] sm:max-w-none">
+                    {getStatusText(supply.status || 'pending')}
+                  </span>
                 </Badge>
               </div>
             </div>
@@ -161,7 +208,7 @@ export const SupplyHistoryModal: React.FC<SupplyHistoryModalProps> = ({
 
                 {supply.arrival_date && (
                   <div>
-                    <div className="text-xs text-gray-500">Дата прибытия</div>
+                    <div className="text-xs text-gray-500">Дата изменения статуса</div>
                     <div className="font-medium text-sm">
                       {format(new Date(supply.arrival_date), 'd MMM, HH:mm', { locale: ru })}
                     </div>
@@ -223,7 +270,7 @@ export const SupplyHistoryModal: React.FC<SupplyHistoryModalProps> = ({
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Package className="h-5 w-5 text-primary flex-shrink-0" />
                 <DialogTitle className="text-lg sm:text-xl truncate">
-                  История: {supplierName}
+                  История поставок: {supplierName}
                 </DialogTitle>
               </div>
               <Button
@@ -302,12 +349,12 @@ export const SupplyHistoryModal: React.FC<SupplyHistoryModalProps> = ({
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
-                        <Badge variant={supply.is_confirmed ? "default" : "secondary"}>
-                          {supply.is_confirmed ? (
-                            <><CheckCircle2 className="h-3 w-3 mr-1" /> Подтверждено</>
-                          ) : (
-                            <><Clock className="h-3 w-3 mr-1" /> Ожидает</>
-                          )}
+                        <Badge 
+                          variant={getStatusBadgeVariant(supply.status || 'pending')}
+                          className="gap-1"
+                        >
+                          {getStatusIcon(supply.status || 'pending')}
+                          {getStatusText(supply.status || 'pending')}
                         </Badge>
                       </div>
                     </div>
@@ -353,7 +400,7 @@ export const SupplyHistoryModal: React.FC<SupplyHistoryModalProps> = ({
                       {supply.arrival_date && (
                         <div className="space-y-1">
                           <div className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Calendar className="h-3 w-3" /> Дата прибытия
+                            <Calendar className="h-3 w-3" /> Дата изменения статуса
                           </div>
                           <div className="font-medium">
                             {format(new Date(supply.arrival_date), 'd MMMM yyyy, HH:mm', { locale: ru })}
