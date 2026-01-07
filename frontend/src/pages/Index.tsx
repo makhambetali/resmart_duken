@@ -6,12 +6,13 @@ import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { SupplyModal } from '@/components/SupplyModal';
 import { CashFlowModal } from '@/components/CashFlowModal';
 import { SupplierViewModal } from '@/components/SupplierViewModal';
+import { SupplyAcceptanceModal } from '@/components/SupplyAcceptanceModal'; // Импорт нового компонента
 import { Supply, AddSupplyForm } from '@/types/supply';
 import { suppliesApi, suppliersApi, cashFlowApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Archive, Search, DollarSign, Filter, Plus, ChevronDown } from 'lucide-react';
+import { Archive, Search, DollarSign, Filter, Plus, ChevronDown, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,7 +37,7 @@ const EmptyState = ({ onAddClick, searchTerm }: { onAddClick: () => void; search
       onClick={onAddClick} 
       className="mt-6" 
       size="sm"
-      smSize="default" // 🔧 ИСПРАВЛЕНО: убрано двоеточие
+      smSize="default"
     >
       {searchTerm ? `Создать поставку` : 'Добавить поставку'}
     </Button>
@@ -50,6 +51,7 @@ const Index = () => {
   const [isSupplyModalOpen, setIsSupplyModalOpen] = useState(false);
   const [isCashFlowModalOpen, setIsCashFlowModalOpen] = useState(false);
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  const [isAcceptanceModalOpen, setIsAcceptanceModalOpen] = useState(false); // Состояние для модалки приёмки
   const [editingSupply, setEditingSupply] = useState<Supply | null>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<any | null>(null);
   
@@ -205,6 +207,17 @@ const Index = () => {
     });
   };
 
+  const handleAcceptanceSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['supplies'] });
+    queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+    toast({
+      title: 'Приёмка завершена',
+      description: 'Поставка успешно подтверждена',
+      variant: 'default',
+      className: 'bg-green-500 text-white',
+    });
+  };
+
   if (suppliesError) {
     return (
       <Layout>
@@ -223,24 +236,45 @@ const Index = () => {
         <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Поставки</h1>
           
-          {/* Десктопная кнопка */}
-          <Button 
-            onClick={handleAddSupply}
-            className="hidden sm:flex gap-2"
-            size="default" // 🔧 ИСПРАВЛЕНО
-          >
-            <Plus className="h-4 w-4" />
-            Добавить поставку
-          </Button>
+          {/* Десктопные кнопки */}
+          <div className="hidden sm:flex gap-2">
+            <Button 
+              onClick={() => setIsAcceptanceModalOpen(true)}
+              variant="outline"
+              className="gap-2"
+              size="default"
+            >
+              <CheckCircle className="h-4 w-4" />
+              Приёмка поставки
+            </Button>
+            
+            <Button 
+              onClick={handleAddSupply}
+              className="gap-2"
+              size="default"
+            >
+              <Plus className="h-4 w-4" />
+              Добавить поставку
+            </Button>
+          </div>
           
-          {/* Мобильная кнопка */}
-          <Button 
-            onClick={handleAddSupply}
-            className="sm:hidden"
-            size="sm"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+          {/* Мобильные кнопки */}
+          <div className="flex gap-2 sm:hidden">
+            <Button 
+              onClick={() => setIsAcceptanceModalOpen(true)}
+              variant="outline"
+              size="sm"
+            >
+              <CheckCircle className="h-4 w-4" />
+            </Button>
+            
+            <Button 
+              onClick={handleAddSupply}
+              size="sm"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Карточка с фильтрами и поиском */}
@@ -287,16 +321,16 @@ const Index = () => {
                     className="w-full"
                   >
                     <TabsList className="flex h-10 w-full gap-1 p-1">
-  <TabsTrigger value="all" className="text-xs sm:text-sm flex-1">
-    Все
-  </TabsTrigger>
-  <TabsTrigger value="confirmed" className="text-xs sm:text-sm flex-1">
-    Подтв.
-  </TabsTrigger>
-  <TabsTrigger value="unconfirmed" className="text-xs sm:text-sm flex-1">
-    Не подтв.
-  </TabsTrigger>
-</TabsList>
+                      <TabsTrigger value="all" className="text-xs sm:text-sm flex-1">
+                        Все
+                      </TabsTrigger>
+                      <TabsTrigger value="confirmed" className="text-xs sm:text-sm flex-1">
+                        Подтв.
+                      </TabsTrigger>
+                      <TabsTrigger value="unconfirmed" className="text-xs sm:text-sm flex-1">
+                        Не подтв.
+                      </TabsTrigger>
+                    </TabsList>
                   </Tabs>
                 </div>
 
@@ -337,6 +371,15 @@ const Index = () => {
                 >
                   <DollarSign className="h-4 w-4" />
                   Касса
+                </Button>
+                <Button 
+                  onClick={() => setIsAcceptanceModalOpen(true)}
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  size="sm"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  Приёмка
                 </Button>
                 <Button 
                   onClick={handleAddSupply}
@@ -412,16 +455,21 @@ const Index = () => {
           onEdit={handleSupplierEdit}
         />
         
-        {/* Floating Action Button для CashFlowModal - только для десктопа */}
-       {/* Floating Action Button для CashFlowModal - скрыта на мобильных */}
-{/* Условный рендеринг для разных экранов */}
-{typeof window !== 'undefined' && window.innerWidth >= 640 && (
-  <FloatingActionButton
-    icon={<DollarSign className="h-6 w-6" />}
-    onClick={() => setIsCashFlowModalOpen(true)}
-    tooltip="Взнос/вынос"
-  />
-)}
+        {/* Модальное окно приёмки поставки */}
+        <SupplyAcceptanceModal
+          open={isAcceptanceModalOpen}
+          onOpenChange={setIsAcceptanceModalOpen}
+          onSuccess={handleAcceptanceSuccess}
+        />
+        
+        {/* Floating Action Button для CashFlowModal - скрыта на мобильных */}
+        {typeof window !== 'undefined' && window.innerWidth >= 640 && (
+          <FloatingActionButton
+            icon={<DollarSign className="h-6 w-6" />}
+            onClick={() => setIsCashFlowModalOpen(true)}
+            tooltip="Взнос/вынос"
+          />
+        )}
         
         <CashFlowModal
           open={isCashFlowModalOpen}

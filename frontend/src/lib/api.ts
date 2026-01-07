@@ -52,7 +52,7 @@ export interface LeadResponse {
 const testOnMobile=false
 var API_BASE_URL =  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 if(testOnMobile){
-  API_BASE_URL = "http://192.168.8.166:8000/api/v1" 
+  API_BASE_URL = "http://172.20.10.3:8000/api/v1" 
 }
 console.log(API_BASE_URL)
 
