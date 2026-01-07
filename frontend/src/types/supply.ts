@@ -9,7 +9,7 @@ export interface Supply {
   exchange: number;
   delivery_date: string;
   comment?: string;
-  is_confirmed: boolean;
+  status: string;
   rescheduled_cnt?: number
   date_added?: string;
   updated_at?: string;
@@ -27,7 +27,7 @@ export interface AddSupplyForm {
   exchange: number;
   delivery_date: string;
   comment: string;
-  is_confirmed: boolean;
+  status: string;
   rescheduled_cnt?: number
   invoice_html: string;
 }

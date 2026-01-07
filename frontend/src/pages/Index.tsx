@@ -56,7 +56,7 @@ const Index = () => {
   const [selectedSupplier, setSelectedSupplier] = useState<any | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [confirmationFilter, setConfirmationFilter] = useState<'all' | 'confirmed' | 'unconfirmed'>('all');
+  const [confirmationFilter, setConfirmationFilter] = useState<'all' | 'confirmed' | 'unconfirmed' | 'pending_payment'>('all');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const { 
@@ -145,8 +145,9 @@ const Index = () => {
                           (supply.comment?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
     
     const matchesConfirmation = confirmationFilter === 'all' || 
-                              (confirmationFilter === 'confirmed' && supply.is_confirmed) ||
-                              (confirmationFilter === 'unconfirmed' && !supply.is_confirmed);
+                              (confirmationFilter === 'confirmed' && supply.status == 'delivered') ||
+                              (confirmationFilter === 'pending_payment' && supply.status == 'confirmed') ||
+                              (confirmationFilter === 'unconfirmed' && supply.status == 'pending');
     
     return matchesSearch && matchesConfirmation;
   });
@@ -317,7 +318,7 @@ const Index = () => {
                   <Label className="text-sm sm:text-base">Статус</Label>
                   <Tabs 
                     value={confirmationFilter} 
-                    onValueChange={(value) => setConfirmationFilter(value as 'all' | 'confirmed' | 'unconfirmed')}
+                    onValueChange={(value) => setConfirmationFilter(value as 'all' | 'confirmed' | 'unconfirmed' | 'pending_payment')}
                     className="w-full"
                   >
                     <TabsList className="flex h-10 w-full gap-1 p-1">
@@ -326,6 +327,9 @@ const Index = () => {
                       </TabsTrigger>
                       <TabsTrigger value="confirmed" className="text-xs sm:text-sm flex-1">
                         Подтв.
+                      </TabsTrigger>
+                      <TabsTrigger value="pending_payment" className="text-xs sm:text-sm flex-1">
+                        Ожид. опл.
                       </TabsTrigger>
                       <TabsTrigger value="unconfirmed" className="text-xs sm:text-sm flex-1">
                         Не подтв.
@@ -342,7 +346,9 @@ const Index = () => {
                       <Button variant="outline" className="w-full justify-between">
                         {confirmationFilter === 'all' && 'Все поставки'}
                         {confirmationFilter === 'confirmed' && 'Подтвержденные'}
+                        {confirmationFilter === 'pending_payment' && 'Ожидает оплаты'}
                         {confirmationFilter === 'unconfirmed' && 'Неподтвержденные'}
+                        
                         <ChevronDown className="ml-2 h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -352,6 +358,9 @@ const Index = () => {
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setConfirmationFilter('confirmed')}>
                         Подтвержденные
+                      </DropdownMenuItem>
+                         <DropdownMenuItem onClick={() => setConfirmationFilter('pending_payment')}>
+                        Ожидает оплаты
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setConfirmationFilter('unconfirmed')}>
                         Неподтвержденные

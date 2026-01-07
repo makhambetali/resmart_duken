@@ -3,6 +3,14 @@ from django.utils import timezone
 from django.conf import settings
 import os
 import uuid
+
+SUPPLY_STATUS_CHOICES = [
+    ('pending', 'Не подтверждена'),
+    ('confirmed', "Ожидает оплаты"),
+    ('delivered', 'Подтверждена'),
+]
+
+
 class Store(models.Model):
     name = models.CharField(max_length=50, default='Магазин')
     # owner = models.OneToOneField(settings.AUTH_USER_MODEL,
@@ -83,7 +91,8 @@ class Supply(models.Model):
     exchange = models.SmallIntegerField(default=0)
     delivery_date = models.DateField(db_index=True)
     comment = models.TextField(blank=True, null=True)
-    is_confirmed = models.BooleanField(default=False)
+    # is_confirmed = models.BooleanField(default=False)
+    status = models.CharField(choices=SUPPLY_STATUS_CHOICES, max_length=30, default='pending')
     arrival_date = models.DateTimeField(null=True, blank=True)
     date_added = models.DateTimeField(auto_now_add=True)
     invoice_html = models.TextField(blank=True)
@@ -95,10 +104,10 @@ class Supply(models.Model):
     
     def save(self, *args, **kwargs):
         local_time = timezone.localtime()
-        if self.is_confirmed and not self.arrival_date:
+        if self.status != 'pending' and not self.arrival_date:
             self.arrival_date = local_time
 
-        elif not self.is_confirmed:
+        elif self.status != 'pending':
             self.arrival_date = None
 
         self.supplier.last_accessed = local_time

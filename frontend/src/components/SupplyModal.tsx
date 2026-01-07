@@ -1,4 +1,4 @@
-// @/components/SupplyModal.tsx - исправленная версия с изображениями
+// @/components/SupplyModal.tsx - версия с кнопкой для смены статуса
 import React, { useState, useEffect } from 'react';
 import { Supply, AddSupplyForm } from '@/types/supply';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -23,7 +23,11 @@ import {
   Eye,
   Clock,
   Upload,
-  X
+  X,
+  CheckCircle,
+  Clock as ClockIcon,
+  AlertCircle,
+  ChevronDown
 } from "lucide-react";
 import { formatPrice, formatDateTime } from '@/lib/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -129,6 +133,34 @@ const MoneyInput: React.FC<MoneyInputProps> = ({
   );
 };
 
+// Функция для получения текста статуса
+const getStatusText = (status: string): string => {
+  switch (status) {
+    case 'pending':
+      return 'Ожидает подтверждения';
+    case 'confirmed':
+      return 'Ожидает оплаты';
+    case 'delivered':
+      return 'Подтверждена';
+    default:
+      return status;
+  }
+};
+
+// Функция для получения иконки статуса
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return <AlertCircle className="w-4 h-4 text-gray-500" />;
+    case 'confirmed':
+      return <ClockIcon className="w-4 h-4 text-amber-500" />;
+    case 'delivered':
+      return <CheckCircle className="w-4 h-4 text-green-600" />;
+    default:
+      return <AlertCircle className="w-4 h-4" />;
+  }
+};
+
 export const SupplyModal: React.FC<SupplyModalProps> = ({
   open,
   onOpenChange,
@@ -149,13 +181,14 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     exchange: 0,
     delivery_date: getTomorrowDate(),
     comment: '',
-    is_confirmed: false,
+    status: 'pending',
     invoice_html: '',
   });
 
   const [existingImages, setExistingImages] = useState<SupplyImage[]>([]);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [isToday, setIsToday] = useState(false);
+  const [showStatusChange, setShowStatusChange] = useState(false);
 
   const today = getTodayDate();
   const tomorrow = getTomorrowDate();
@@ -185,12 +218,13 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
         exchange: supply.exchange,
         delivery_date: supply.delivery_date,
         comment: supply.comment || '',
-        is_confirmed: supply.is_confirmed,
+        status: supply.status || 'pending',
         invoice_html: '',
       });
       
       setSelectedImages([]);
       setActiveTab('basic');
+      setShowStatusChange(false);
     } else if (open) {
       setFormData({
         supplier: '', 
@@ -201,12 +235,13 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
         exchange: 0,
         delivery_date: tomorrow,
         comment: '', 
-        is_confirmed: false, 
+        status: 'pending',
         invoice_html: '',
       });
       setExistingImages([]);
       setSelectedImages([]);
       setIsToday(false);
+      setShowStatusChange(false);
       setActiveTab('basic');
     }
   }, [supply, open, tomorrow, today]);
@@ -233,6 +268,17 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
       }
       
       return newData;
+    });
+  };
+
+  const handleStatusChange = (newStatus: string) => {
+    setFormData(prev => ({ ...prev, status: newStatus }));
+    setShowStatusChange(false);
+    
+    toast({
+      title: 'Статус изменён',
+      description: `Статус поставки изменён на "${getStatusText(newStatus)}"`,
+      variant: 'default',
     });
   };
 
@@ -299,7 +345,7 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
     }
   };
 
-  const getTimeString = (dateTimeString?: string) => {
+  const getTimeString = (dateTimeString?: string | null) => {
     if (!dateTimeString) return 'Не указано';
     return formatDateTime(dateTimeString);
   };
@@ -312,6 +358,20 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
       file
     }))
   ];
+
+  // Определяем доступные статусы для изменения
+  const getAvailableStatuses = () => {
+    const statuses = [
+      { value: 'pending', label: 'Ожидает подтверждения' },
+      { value: 'confirmed', label: 'Ожидает оплаты' },
+      { value: 'delivered', label: 'Подтверждена' },
+    ];
+    
+    // Возвращаем все статусы, кроме текущего
+    return statuses.filter(status => status.value !== formData.status);
+  };
+
+  const availableStatuses = getAvailableStatuses();
 
   return (
     <TooltipProvider>
@@ -328,10 +388,22 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                   ? 'Сегодняшняя поставка' 
                   : 'Дата поставки от завтрашнего дня'}
               </p>
-              {supply?.is_confirmed && (
-                <div className="flex items-center gap-2 text-sm text-green-600">
-                  <Clock className="w-4 h-4" />
-                  <span>Подтверждена: {getTimeString(supply.confirmed_at || supply.arrival_date)}</span>
+              
+              {/* Отображение статуса */}
+              {supply?.status && (
+                <div className={`flex items-center gap-2 text-sm ${
+                  supply.status === 'delivered' ? 'text-green-600' :
+                  supply.status === 'confirmed' ? 'text-amber-600' :
+                  'text-gray-500'
+                }`}>
+                  {getStatusIcon(supply.status)}
+                  <span>
+                    {getStatusText(supply.status)}
+                    {(supply.status === 'delivered' || supply.status === 'confirmed') && 
+                     supply.arrival_date && (
+                      <>: {getTimeString(supply.arrival_date)}</>
+                    )}
+                  </span>
                 </div>
               )}
             </div>
@@ -460,8 +532,6 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
 
                   {/* Финансы */}
                   <div className="space-y-6">
-                    {/* <Label className="text-sm font-medium">Финансы</Label> */}
-                    
                     <div className="grid grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label className="text-xs text-gray-600">Тип оплаты</Label>
@@ -579,51 +649,113 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                       className="resize-none min-h-[120px]"
                     />
                   </div>
+
+                  {/* Статус поставки (только для редактирования) */}
+                  {supply && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Статус поставки
+                      </Label>
+                      <div className="p-3 border rounded-md bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(formData.status)}
+                            <span className="font-medium">{getStatusText(formData.status)}</span>
+                          </div>
+                          <span className="text-sm text-gray-500">
+                            {formData.status === 'pending' && 'Ожидает подтверждения'}
+                            {formData.status === 'confirmed' && 'Ожидает оплаты'}
+                            {formData.status === 'delivered' && 'Доставлено'}
+                          </span>
+                        </div>
+                        {supply.arrival_date && (
+                          <div className="mt-2 text-sm text-gray-600">
+                            Дата изменения статуса: {getTimeString(supply.arrival_date)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Правая колонка - Изображения */}
-                <div className="p-6 space-y-8 overflow-y-auto">
-                  {/* Заголовок */}
-                  <div className="flex items-center justify-between">
+                <div className="p-6 space-y-6 overflow-y-auto">
+                  {/* Кнопка смены статуса и заголовок */}
+                  <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm font-medium flex items-center gap-2">
                       <FileImage className="w-4 h-4" />
                       Документы и изображения
                     </Label>
-                    {allImages.length > 0 && (
-                      <span className="text-sm text-gray-500">
-                        Всего: {allImages.length} файлов
-                      </span>
+                    
+                    {/* Кнопка для смены статуса поставки */}
+                    {supply && availableStatuses.length > 0 && (
+                      <div className="relative">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowStatusChange(!showStatusChange)}
+                          className="gap-2"
+                        >
+                          <Clock className="w-4 h-4" />
+                          Изменить статус
+                          <ChevronDown className="w-4 h-4" />
+                        </Button>
+                        
+                        {showStatusChange && (
+                          <div className="absolute right-0 top-full mt-1 z-10 bg-white border rounded-md shadow-lg min-w-[200px]">
+                            <div className="p-2">
+                              <div className="text-xs font-medium text-gray-500 mb-2 px-2">
+                                Выберите новый статус:
+                              </div>
+                              {availableStatuses.map((status) => (
+                                <Button
+                                  key={status.value}
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full justify-start gap-2 mb-1"
+                                  onClick={() => handleStatusChange(status.value)}
+                                >
+                                  {getStatusIcon(status.value)}
+                                  {status.label}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
+                  
+                  {allImages.length > 0 && (
+                    <div className="text-sm text-gray-500 mb-4">
+                      Всего: {allImages.length} файлов
+                    </div>
+                  )}
 
-                  {/* Загрузка новых изображений */}
+                  {/* Кнопка загрузки новых изображений */}
                   <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm text-gray-700 mb-2 block">Добавить новые изображения</Label>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600 mb-2">
-                          Перетащите файлы сюда или нажмите для выбора
-                        </p>
-                        <input
-                          type="file"
-                          id="image-upload"
-                          multiple
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                        />
-                        <Label 
-                          htmlFor="image-upload"
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 cursor-pointer transition-colors"
-                        >
-                          <Upload className="w-4 h-4" />
-                          Выбрать файлы
-                        </Label>
-                        <p className="text-xs text-gray-500 mt-2">
-                          Максимум 10 файлов, каждый до 5 MB
-                        </p>
-                      </div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="file"
+                        id="image-upload"
+                        multiple
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                      <Label 
+                        htmlFor="image-upload"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 cursor-pointer transition-colors border border-blue-200"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Загрузить файлы
+                      </Label>
+                      <span className="text-sm text-gray-500">
+                        Максимум 10 файлов, каждый до 5 MB
+                      </span>
                     </div>
 
                     {/* Выбранные файлы */}
@@ -893,6 +1025,65 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                         className="resize-none min-h-[100px]"
                       />
                     </div>
+
+                    {/* Статус поставки и кнопка изменения */}
+                    {supply && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            Статус поставки
+                          </Label>
+                          
+                          {/* Кнопка смены статуса для мобильной версии */}
+                          {availableStatuses.length > 0 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowStatusChange(!showStatusChange)}
+                              className="gap-2"
+                            >
+                              <Clock className="w-4 h-4" />
+                              Изменить
+                            </Button>
+                          )}
+                        </div>
+                        
+                        <div className="p-3 border rounded-md bg-gray-50">
+                          <div className="flex items-center gap-2 mb-1">
+                            {getStatusIcon(formData.status)}
+                            <span className="font-medium">{getStatusText(formData.status)}</span>
+                          </div>
+                          <span className="text-xs text-gray-500 block mb-2">
+                            {formData.status === 'pending' && 'Ожидает подтверждения'}
+                            {formData.status === 'confirmed' && 'Ожидает оплаты'}
+                            {formData.status === 'delivered' && 'Доставлено'}
+                          </span>
+                          
+                          {showStatusChange && (
+                            <div className="mt-3 pt-3 border-t space-y-1">
+                              <div className="text-xs font-medium text-gray-500 mb-2">
+                                Выберите новый статус:
+                              </div>
+                              {availableStatuses.map((status) => (
+                                <Button
+                                  key={status.value}
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full justify-start gap-2 mb-1"
+                                  onClick={() => handleStatusChange(status.value)}
+                                >
+                                  {getStatusIcon(status.value)}
+                                  {status.label}
+                                </Button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="money" className="p-4 space-y-6 mt-0">
@@ -979,32 +1170,70 @@ export const SupplyModal: React.FC<SupplyModalProps> = ({
                   </TabsContent>
 
                   <TabsContent value="images" className="p-4 space-y-6 mt-0">
-                    {/* Загрузка новых изображений */}
-                    <div className="space-y-4">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        <FileImage className="w-4 h-4" />
-                        Добавить новые изображения
-                      </Label>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                        <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600 mb-2">
-                          Нажмите для выбора файлов
-                        </p>
-                        <input
-                          type="file"
-                          id="image-upload-mobile"
-                          multiple
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                        />
-                        <Label 
-                          htmlFor="image-upload-mobile"
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 cursor-pointer transition-colors"
+                    {/* Кнопка для смены статуса в мобильной версии на вкладке документов */}
+                    {supply && availableStatuses.length > 0 && (
+                      <div className="mb-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowStatusChange(!showStatusChange)}
+                          className="w-full gap-2"
                         >
-                          <Upload className="w-4 h-4" />
-                          Выбрать файлы
+                          <Clock className="w-4 h-4" />
+                          Изменить статус поставки
+                          <ChevronDown className="w-4 h-4" />
+                        </Button>
+                        
+                        {showStatusChange && (
+                          <div className="mt-2 border rounded-md p-3 bg-gray-50">
+                            <div className="text-xs font-medium text-gray-500 mb-2">
+                              Выберите новый статус:
+                            </div>
+                            <div className="space-y-1">
+                              {availableStatuses.map((status) => (
+                                <Button
+                                  key={status.value}
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full justify-start gap-2"
+                                  onClick={() => handleStatusChange(status.value)}
+                                >
+                                  {getStatusIcon(status.value)}
+                                  {status.label}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Кнопка загрузки файлов */}
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <FileImage className="w-4 h-4" />
+                          Загрузить файлы
                         </Label>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="file"
+                            id="image-upload-mobile"
+                            multiple
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                          />
+                          <Label 
+                            htmlFor="image-upload-mobile"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 cursor-pointer transition-colors border border-blue-200 flex-1 justify-center"
+                          >
+                            <Upload className="w-4 h-4" />
+                            Выбрать файлы
+                          </Label>
+                        </div>
                       </div>
 
                       {/* Выбранные файлы */}

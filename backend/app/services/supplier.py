@@ -88,7 +88,7 @@ class SupplierStats:
     def get_queryset(self):
         return Supply.objects.filter(
             supplier=self.supplier,
-            is_confirmed=True,
+            status='delivered',
         )
 
     def get_price_stats(self, qs) -> Dict:

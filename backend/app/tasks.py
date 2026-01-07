@@ -18,7 +18,7 @@ def create_everyday_supply():
 @shared_task 
 def shift_supply_to_the_next_day():
     today = timezone.localdate()
-    supplies = Supply.objects.filter(delivery_date = today - timedelta(days=1), is_confirmed=False)
+    supplies = Supply.objects.filter(delivery_date = today - timedelta(days=1), status='pending')
     supplies.update(
         delivery_date = today,
         rescheduled_cnt=F("rescheduled_cnt") + 1,

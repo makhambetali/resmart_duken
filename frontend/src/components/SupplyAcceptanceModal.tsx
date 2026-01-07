@@ -14,7 +14,9 @@ import {
   CheckCircle,
   FileImage,
   MessageSquare,
-  Search
+  Search,
+  Clock,
+  AlertCircle
 } from "lucide-react";
 import { ImageUpload } from '@/components/ImageUpload';
 import { suppliesApi, suppliersApi } from '@/lib/api';
@@ -34,6 +36,20 @@ interface SupplyImage {
 
 const getTodayDate = () => {
   return new Date().toISOString().split('T')[0];
+};
+
+// Функция для получения текста статуса
+const getStatusText = (status: string): string => {
+  switch (status) {
+    case 'pending':
+      return 'Не подтверждена';
+    case 'confirmed':
+      return 'Ожидает оплаты';
+    case 'delivered':
+      return 'Подтверждена';
+    default:
+      return status;
+  }
 };
 
 export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
@@ -95,7 +111,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
     }
   };
 
-  // Поиск неподтвержденных поставок по названию поставщика
+  // Поиск поставок в статусе 'pending' по названию поставщика
   const handleSearchSupplies = async () => {
     if (!supplierName.trim()) {
       toast({
@@ -115,20 +131,20 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
       // Получаем все поставки
       const supplies = await suppliesApi.getSupplies();
       
-      // Фильтруем поставки: на сегодня, не подтвержденные, и с указанным поставщиком
-      const todayUnconfirmedSupplies = supplies.filter(supply => 
+      // Фильтруем поставки: на сегодня, в статусе 'pending', и с указанным поставщиком
+      const todayPendingSupplies = supplies.filter(supply => 
         supply.delivery_date === today && 
-        !supply.is_confirmed &&
+        supply.status === 'pending' && // Используем status вместо is_confirmed
         supply.supplier.toLowerCase().includes(supplierName.toLowerCase())
       );
 
-      setSearchResults(todayUnconfirmedSupplies);
+      setSearchResults(todayPendingSupplies);
 
-      if (todayUnconfirmedSupplies.length === 0) {
+      if (todayPendingSupplies.length === 0) {
         if (exists) {
           toast({
             title: 'Поставки не найдены',
-            description: `У поставщика "${supplierName}" нет неподтвержденных поставок на сегодня`,
+            description: `У поставщика "${supplierName}" нет поставок в статусе "Ожидает подтверждения" на сегодня`,
             variant: 'default',
           });
         } else {
@@ -138,9 +154,9 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
             variant: 'destructive',
           });
         }
-      } else if (todayUnconfirmedSupplies.length === 1) {
-        // Если найдена одна неподтвержденная поставка - автоматически выбираем её
-        handleSelectSupply(todayUnconfirmedSupplies[0]);
+      } else if (todayPendingSupplies.length === 1) {
+        // Если найдена одна поставка в статусе 'pending' - автоматически выбираем её
+        handleSelectSupply(todayPendingSupplies[0]);
       }
     } catch (error) {
       toast({
@@ -167,7 +183,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
     
     toast({
       title: 'Поставка найдена',
-      description: `Выбрана неподтвержденная поставка от ${supply.supplier}`,
+      description: `Выбрана поставка от ${supply.supplier} в статусе "${getStatusText(supply.status)}"`,
       variant: 'default',
     });
   };
@@ -184,7 +200,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
         exchange: formData.exchange,
         delivery_date: today,
         comment: formData.comment,
-        is_confirmed: false, // Сначала создаем как неподтвержденную
+        status: 'pending', // Сначала создаем в статусе 'pending'
         invoice_html: '',
       };
 
@@ -192,7 +208,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
       
       toast({
         title: 'Поставка создана',
-        description: `Поставка от ${supplierName} создана на сегодня`,
+        description: `Поставка от ${supplierName} создана на сегодня в статусе "Ожидает подтверждения"`,
         variant: 'default',
       });
       
@@ -214,7 +230,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
         bonus: formData.bonus,
         exchange: formData.exchange,
         comment: formData.comment,
-        is_confirmed: true, // Подтверждаем поставку
+        status: 'confirmed', // Изменяем статус на 'confirmed' (Ожидает оплаты)
       };
 
       await suppliesApi.updateSupply(supplyId, updateData);
@@ -278,6 +294,16 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
       return;
     }
 
+    // Проверяем, не находится ли уже поставка в статусе 'confirmed' или 'delivered'
+    if (foundSupply && foundSupply.status !== 'pending') {
+      toast({
+        title: 'Поставка уже обработана',
+        description: `Эта поставка уже находится в статусе "${getStatusText(foundSupply.status)}" и не может быть подтверждена повторно`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -307,7 +333,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
         setCreatingSupply(false);
       }
       
-      // Подтверждаем поставку (обновляем с is_confirmed: true)
+      // Подтверждаем поставку (обновляем статус на 'confirmed')
       if (supplyToConfirm) {
         await handleUpdateSupply(supplyToConfirm.id);
       }
@@ -317,8 +343,8 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
 
       toast({
-        title: 'Поставка подтверждена',
-        description: 'Поставка успешно подтверждена и принята',
+        title: 'Поставка принята',
+        description: 'Поставка успешно принята и переведена в статус "Ожидает оплаты"',
         variant: 'default',
         className: 'bg-green-500 text-white',
       });
@@ -331,7 +357,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
     } catch (error) {
       toast({
         title: 'Ошибка',
-        description: 'Не удалось подтвердить поставку',
+        description: 'Не удалось принять поставку',
         variant: 'destructive',
       });
     } finally {
@@ -369,9 +395,13 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
             <Package className="w-5 h-5 md:w-6 md:h-6" />
             Приёмка поставки
           </DialogTitle>
-          <p className="text-sm text-gray-500 mt-1">
-            Подтверждение поставки на сегодня ({today}). Работает только с неподтвержденными поставками.
-          </p>
+          <div className="text-sm text-gray-500 mt-1">
+            <p>Подтверждение поставки на сегодня ({today}). Работает только с поставками в статусе "Ожидает подтверждения".</p>
+            <div className="mt-2 flex items-center gap-2 text-amber-600">
+              <Clock className="w-4 h-4" />
+              <span>После приёмки поставка переходит в статус "Ожидает оплаты"</span>
+            </div>
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col h-[calc(90vh-120px)] md:h-[calc(90vh-140px)]">
@@ -384,15 +414,15 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                   Поставщик *
                 </Label>
                 <div className="flex gap-2">
-                 <Input
-  value={supplierName}
-  onChange={(e) => setSupplierName(capitalize(e.target.value))}
-  onKeyDown={handleKeyPress}
-  placeholder="Введите название поставщика..."
-  className="flex-1"
-  disabled={!!foundSupply || isLoading || creatingSupply}
-  autoFocus
-/>
+                  <Input
+                    value={supplierName}
+                    onChange={(e) => setSupplierName(capitalize(e.target.value))}
+                    onKeyDown={handleKeyPress}
+                    placeholder="Введите название поставщика..."
+                    className="flex-1"
+                    disabled={!!foundSupply || isLoading || creatingSupply}
+                    autoFocus
+                  />
                   {!foundSupply && (
                     <Button
                       type="button"
@@ -426,18 +456,23 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
               {/* Результаты поиска */}
               {searchResults.length > 0 && !foundSupply && (
                 <div className="border rounded-lg p-3 space-y-2">
-                  <Label className="text-sm font-medium">Найдены неподтвержденные поставки:</Label>
+                  <Label className="text-sm font-medium">Найдены поставки в статусе "Ожидает подтверждения":</Label>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {searchResults.map(supply => (
                       <div
                         key={supply.id}
-                        className="flex items-center justify-between p-2 border rounded hover:bg-gray-50 cursor-pointer"
-                        onClick={() => handleSelectSupply(supply)}
+                        className={`flex items-center justify-between p-2 border rounded hover:bg-gray-50 cursor-pointer ${
+                          supply.status !== 'pending' ? 'opacity-60' : ''
+                        }`}
+                        onClick={() => supply.status === 'pending' && handleSelectSupply(supply)}
                       >
                         <div>
                           <div className="font-medium">{supply.supplier}</div>
                           <div className="text-sm text-gray-500">
                             Бонус: {supply.bonus || 0}, Обмен: {supply.exchange || 0}
+                            <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-gray-100">
+                              {getStatusText(supply.status)}
+                            </span>
                             {supply.comment && `, Комментарий: ${supply.comment}`}
                           </div>
                         </div>
@@ -447,10 +482,13 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleSelectSupply(supply);
+                            if (supply.status === 'pending') {
+                              handleSelectSupply(supply);
+                            }
                           }}
+                          disabled={supply.status !== 'pending'}
                         >
-                          Выбрать
+                          {supply.status === 'pending' ? 'Выбрать' : 'Недоступно'}
                         </Button>
                       </div>
                     ))}
@@ -463,10 +501,13 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                 <div className="p-3 border border-green-200 rounded-lg bg-green-50">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium text-green-800">Выбрана поставка для подтверждения:</div>
+                      <div className="font-medium text-green-800">Выбрана поставка для приёмки:</div>
                       <div className="text-sm text-green-700">
                         {foundSupply.supplier} - 
                         Бонус: {foundSupply.bonus || 0}, Обмен: {foundSupply.exchange || 0}
+                        <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                          {getStatusText(foundSupply.status)}
+                        </span>
                         {foundSupply.comment && `, ${foundSupply.comment}`}
                       </div>
                     </div>
@@ -481,6 +522,16 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                       Изменить
                     </Button>
                   </div>
+                  
+                  {/* Предупреждение, если поставка уже не в статусе 'pending' */}
+                  {foundSupply.status !== 'pending' && (
+                    <div className="mt-2 p-2 border border-amber-200 rounded bg-amber-100">
+                      <div className="flex items-center gap-2 text-amber-800 text-sm">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>Эта поставка уже находится в статусе "{getStatusText(foundSupply.status)}"</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -501,10 +552,10 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
               {/* Сообщение о необходимости создания поставки */}
               {!foundSupply && supplierExists && searchResults.length === 0 && !isSearching && (
                 <div className="p-3 border border-amber-200 rounded-lg bg-amber-50">
-                  <div className="font-medium text-amber-800">Неподтвержденных поставок не найдено</div>
+                  <div className="font-medium text-amber-800">Поставок не найдено</div>
                   <div className="text-sm text-amber-700 mt-1">
-                    У поставщика "{supplierName}" нет неподтвержденных поставок на сегодня.
-                    Вы можете создать новую поставку и сразу её подтвердить.
+                    У поставщика "{supplierName}" нет поставок в статусе "Ожидает подтверждения" на сегодня.
+                    Вы можете создать новую поставку и сразу её принять.
                   </div>
                 </div>
               )}
@@ -621,7 +672,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
               <div className="flex gap-2 w-full md:w-auto">
                 <Button
                   type="submit"
-                  disabled={isLoading || creatingSupply || !supplierName.trim()}
+                  disabled={isLoading || creatingSupply || !supplierName.trim() || (foundSupply && foundSupply.status !== 'pending')}
                   className="flex-1 md:flex-none gap-2 bg-green-600 hover:bg-green-700"
                   size="sm"
                 >
@@ -638,7 +689,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                   ) : (
                     <>
                       <CheckCircle className="w-4 h-4" />
-                      {foundSupply ? 'Подтвердить поставку' : 'Создать и подтвердить'}
+                      {foundSupply ? 'Принять поставку' : 'Создать и принять'}
                     </>
                   )}
                 </Button>

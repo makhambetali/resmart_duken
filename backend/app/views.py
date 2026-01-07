@@ -3,6 +3,7 @@ from django.utils import timezone
 from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.db.models import Case, When, IntegerField
 from datetime import date
 from rest_framework import viewsets, generics, status
 from rest_framework.decorators import action
@@ -105,7 +106,22 @@ class LeadViewSet(viewsets.ModelViewSet):
     # 
 class SupplyViewSet(viewsets.ModelViewSet):
     serializer_class = SupplySerializer
-    queryset = Supply.objects.all().select_related("supplier").prefetch_related("images")
+    
+    queryset = (
+        Supply.objects
+        .select_related("supplier")
+        .prefetch_related("images")
+        .annotate(
+            status_order=Case(
+                When(status="confirmed", then=0),
+                When(status="delivered", then=1),
+                When(status="pending", then=2),
+                default=3,
+                output_field=IntegerField(),
+            )
+        )
+        .order_by("status_order")
+    )
     service_layer = SupplyService()
 
     def get_queryset(self):

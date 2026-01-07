@@ -11,6 +11,6 @@ class SupplyDTO:
     bonus: int
     exchange: int
     delivery_date: datetime
-    is_confirmed: bool
+    status: str
     arrival_date: Optional[str] 
     comment: Optional[str]

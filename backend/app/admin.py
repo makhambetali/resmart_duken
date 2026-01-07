@@ -106,17 +106,17 @@ class SupplierAdmin(admin.ModelAdmin):
 
 @admin.register(Supply)
 class SupplyAdmin(admin.ModelAdmin):
-    list_display = ('supplier_link', 'store', 'total_price', 'delivery_date', 'status_badge', 'arrival_date')
-    list_filter = ('is_confirmed', 'delivery_date', 'store', 'supplier')
+    list_display = ('supplier_link', 'store', 'total_price', 'delivery_date', 'status_badge', 'arrival_date', 'is_confirmed_badge')
+    list_filter = ('status', 'delivery_date', 'store', 'supplier')  # Изменено с is_confirmed на status
     search_fields = ('supplier__name', 'comment')
     date_hierarchy = 'delivery_date'
     ordering = ('-delivery_date',)
     inlines = [SupplyImageInline]
-    readonly_fields = ('date_added', 'arrival_date', 'rescheduled_cnt')
+    readonly_fields = ('date_added', 'arrival_date', 'rescheduled_cnt', 'status_display')
     list_per_page = 50
     fieldsets = (
         ('Основная информация', {
-            'fields': ('supplier', 'store', 'delivery_date', 'is_confirmed')
+            'fields': ('supplier', 'store', 'delivery_date', 'status')
         }),
         ('Финансы', {
             'fields': (
@@ -130,7 +130,7 @@ class SupplyAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Даты и счетчики', {
-            'fields': ('arrival_date', 'date_added', 'rescheduled_cnt'),
+            'fields': ('arrival_date', 'date_added', 'rescheduled_cnt', 'status_display'),
             'classes': ('collapse',)
         }),
     )
@@ -172,16 +172,33 @@ class SupplyAdmin(admin.ModelAdmin):
     total_amount.short_description = "Расчет суммы"
     
     def status_badge(self, obj):
-        if obj.is_confirmed:
+        if obj.status == 'confirmed':
             if obj.arrival_date:
                 arrival = timezone.localtime(obj.arrival_date).strftime('%d.%m.%Y %H:%M')
                 return format_html(
-                    '<span style="color: green; font-weight: bold;">✓ Доставлено</span><br>'
+                    '<span style="color: green; font-weight: bold;">✓ Подтверждена</span><br>'
                     '<small>{}</small>', arrival
                 )
-            return format_html('<span style="color: orange; font-weight: bold;">⚠ Подтверждено</span>')
-        return format_html('<span style="color: blue; font-weight: bold;">⏳ Ожидает</span>')
+            return format_html('<span style="color: green; font-weight: bold;">✓ Подтверждена</span>')
+        elif obj.status == 'pending':
+            return format_html('<span style="color: blue; font-weight: bold;">⏳ Ожидает</span>')
+        elif obj.status == 'delivered':
+            return format_html('<span style="color: purple; font-weight: bold;">🚚 Доставлена</span>')
+        elif obj.status == 'cancelled':
+            return format_html('<span style="color: red; font-weight: bold;">✗ Отменена</span>')
+        return format_html('<span style="color: gray;">{}</span>', obj.get_status_display())
     status_badge.short_description = "Статус"
+    
+    def is_confirmed_badge(self, obj):
+        """Поле для отображения подтверждения (обратная совместимость)"""
+        return obj.status == 'confirmed'
+    is_confirmed_badge.boolean = True
+    is_confirmed_badge.short_description = "Подтверждена"
+    
+    def status_display(self, obj):
+        """Отображение читаемого статуса"""
+        return obj.get_status_display()
+    status_display.short_description = "Статус (читаемый)"
 
 
 @admin.register(SupplyImage)
@@ -395,8 +412,20 @@ admin.site.index_title = "Главная панель управления"
 
 # Регистрация дополнительных действий
 def mark_as_confirmed(modeladmin, request, queryset):
-    queryset.update(is_confirmed=True)
+    queryset.update(status='confirmed', arrival_date=timezone.now())
 mark_as_confirmed.short_description = "✅ Отметить как подтвержденные"
+
+def mark_as_pending(modeladmin, request, queryset):
+    queryset.update(status='pending', arrival_date=None)
+mark_as_pending.short_description = "⏳ Отметить как ожидающие"
+
+def mark_as_delivered(modeladmin, request, queryset):
+    queryset.update(status='delivered')
+mark_as_delivered.short_description = "🚚 Отметить как доставленные"
+
+def mark_as_cancelled(modeladmin, request, queryset):
+    queryset.update(status='cancelled')
+mark_as_cancelled.short_description = "✗ Отметить как отмененные"
 
 def mark_as_paid(modeladmin, request, queryset):
     queryset.update(repaid_at=timezone.now())
@@ -407,6 +436,6 @@ def mark_as_invalid(modeladmin, request, queryset):
 mark_as_invalid.short_description = "✗ Отметить как недействительные"
 
 # Добавление действий к моделям
-SupplyAdmin.actions = [mark_as_confirmed]
+SupplyAdmin.actions = [mark_as_confirmed, mark_as_pending, mark_as_delivered, mark_as_cancelled]
 ClientDebtAdmin.actions = [mark_as_paid, mark_as_invalid]
 LeadAdmin.actions = ['delete_selected']

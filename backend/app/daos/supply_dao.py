@@ -37,7 +37,7 @@ class SupplyDAO:
         }
         query = Q(delivery_date=date)
         if only_confirmed:
-            query &= Q(is_confirmed=True)
+            query &= Q(status='delivered')
         
         query &= payment_type_to_logic.get(payment_type, Q())
 

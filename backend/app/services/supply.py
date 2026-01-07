@@ -44,7 +44,8 @@ class SupplyService:
             bonus=supply.bonus,
             exchange=supply.exchange,
             delivery_date=supply.delivery_date,
-            is_confirmed=supply.is_confirmed,
+            # is_confirmed=supply.is_confirmed,
+            status = supply.status,
             arrival_date=supply.arrival_date,
             comment=supply.comment
         )

@@ -60,7 +60,34 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
       currency: 'KZT',
       minimumFractionDigits: 0,
     }).format(amount).replace('KZT', '₸');
-  };
+  };const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'confirmed': return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    case 'delivered': return "bg-green-100 text-green-800 border-green-200";
+    case 'pending': return "bg-rose-100 text-rose-800 border-rose-200";
+    default: return "bg-gray-100 text-gray-800 border-gray-200";
+  }
+};
+
+// Простая функция для получения иконки статуса
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'confirmed': return <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
+    case 'delivered': return <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
+    case 'pending': return <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
+    default: return <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
+  }
+};
+
+// Простая функция для получения текста статуса
+const getStatusText = (status: string) => {
+  switch (status) {
+    case 'confirmed': return 'Ожидает оплаты';
+    case 'delivered': return 'Подтверждена';
+    case 'pending': return 'Не подтверждена';
+    default: return 'Неизвестный статус';
+  }
+};
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -378,36 +405,27 @@ export const SupplyTable: React.FC<SupplyTableProps> = ({
                           </TableCell>
                           <TableCell className="py-3 sm:py-4">
                             <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex justify-center">
-                                  <Badge 
-                                    className={cn(
-                                      "h-6 w-6 sm:h-7 sm:w-7 flex items-center justify-center rounded-full cursor-default p-0",
-                                      supply.is_confirmed 
-                                        ? "bg-green-100 text-green-800 border border-green-200" 
-                                        : "bg-rose-100 text-rose-800 border border-rose-200"
-                                    )}
-                                    variant="secondary"
-                                  >
-                                    {supply.is_confirmed ? (
-                                      <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                    ) : (
-                                      <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                    )}
-                                  </Badge>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent side="left">
-                                <div className="text-center">
-                                  <p className="font-medium">
-                                    {supply.is_confirmed ? 'Подтверждена' : 'Не подтверждена'}
-                                  </p>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    {formatArrivalDate((supply as any).arrival_date)}
-                                  </p>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
+  <TooltipTrigger asChild>
+    <div className="flex justify-center">
+      <Badge 
+        className={cn(
+          "h-6 w-6 sm:h-7 sm:w-7 flex items-center justify-center rounded-full cursor-default p-0",
+          getStatusColor(supply.status)
+        )}
+        variant="secondary"
+      >
+        {getStatusIcon(supply.status)}
+      </Badge>
+    </div>
+  </TooltipTrigger>
+  <TooltipContent side="left">
+    <div className="text-center min-w-[120px]">
+      <p className="font-medium">
+        {getStatusText(supply.status)}
+      </p>
+    </div>
+  </TooltipContent>
+</Tooltip>
                           </TableCell>
                         </TableRow>
                       ))
