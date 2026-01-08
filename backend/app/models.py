@@ -102,18 +102,18 @@ class Supply(models.Model):
     def __str__(self):
         return f"{self.supplier}|{self.comment}: {self.price_bank + self.price_cash}"
     
-    def save(self, *args, **kwargs):
-        local_time = timezone.localtime()
-        if self.status != 'pending' and not self.arrival_date:
-            self.arrival_date = local_time
+    # def save(self, *args, **kwargs):
+    #     local_time = timezone.localtime()
+    #     if self.status != 'pending' and not self.arrival_date:
+    #         self.arrival_date = local_time
 
-        elif self.status != 'pending':
-            self.arrival_date = None
+    #     elif self.status != 'pending':
+    #         self.arrival_date = None
 
-        self.supplier.last_accessed = local_time
-        self.supplier.save()
+    #     self.supplier.last_accessed = local_time
+    #     self.supplier.save()
         
-        super().save(*args, **kwargs)
+    #     super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Поставка"
