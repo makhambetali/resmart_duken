@@ -19,4 +19,5 @@ urlpatterns = [
     path('api/v1/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/auth/me/', CurrentUserView.as_view(), name='current_user'),
     path('api/v1/auth/profile/', UserProfileView.as_view(), name='user_profile'),
+    path('health/', checkHealth)
 ]

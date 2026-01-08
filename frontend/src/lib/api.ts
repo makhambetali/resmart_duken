@@ -1,8 +1,9 @@
 // api.ts
 import { Supply, AddSupplyForm, CashFlowOperation } from '@/types/supply';
 import { Client, ClientDebt, AddClientForm, ClientsResponse } from '@/types/client';
-import { CreateSupplierData, Supplier, SuppliersResponse } from '@/types/suppliers';
+import { CreateSupplierData, Supplier, SuppliersResponse, SupplierStats } from '@/types/suppliers';
 import { Employee } from '@/types/employees';
+import { toast } from 'sonner'; // Предполагаем использование sonner для toasts
 
 // Типы для аутентификации
 export interface User {
@@ -32,6 +33,7 @@ export interface RegisterData {
   password: string;
   password2: string;
 }
+
 // Типы для лидов (заявок с лендинга)
 export interface LeadData {
   name: string;
@@ -48,13 +50,154 @@ export interface LeadResponse {
   // status: 'new' | 'contacted' | 'converted' | 'rejected';
 }
 
-// Укажите ваш IP-адрес или домен
-const testOnMobile= import.meta.env.IS_MOBILE
-var API_BASE_URL =  import.meta.env.VITE_API_BASE_URL
-if(testOnMobile){
-  API_BASE_URL = "http://172.20.10.3:8000/api/v1" 
-}
-console.log(testOnMobile)
+// Утилита для проверки доступности бэкенда
+const checkBackendHealth = async (url: string): Promise<boolean> => {
+  try {
+    const healthUrl = url.replace('/api/v1', '/health');
+    const response = await fetch(healthUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // Короткий таймаут для быстрой проверки
+      signal: AbortSignal.timeout(3000)
+    });
+    return response.ok;
+  } catch (error) {
+    console.log(`Health check failed for ${url}:`, error);
+    return false;
+  }
+};
+
+// Определение API_BASE_URL с проверкой доступности бэкенда
+let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+const testOnMobile = import.meta.env.VITE_IS_MOBILE === 'true';
+
+// Функция для отображения toast с информацией о бэкенде
+const showBackendStatusToast = (url: string, isAvailable: boolean) => {
+  const status = isAvailable ? '✅' : '❌';
+  const message = isAvailable 
+    ? `Бэкенд настроен успешно: ${url}`
+    : `Бэкенд недоступен: ${url}`;
+  
+  toast[isAvailable ? 'success' : 'error'](message, {
+    description: `URL: ${url}`,
+    duration: isAvailable ? 4000 : 6000,
+  });
+  
+  console.log(`${status} ${message}`);
+};
+
+// Функция для инициализации API URL
+// ... предыдущий код без изменений до функции initializeApiUrl ...
+
+// Функция для инициализации API URL
+const initializeApiUrl = async (): Promise<void> => {
+  console.log('Проверка доступности бэкендов...');
+  
+  const urlsToCheck: string[] = [];
+  
+  // В мобильном режиме добавляем локальные адреса в начало списка (высший приоритет)
+  if (testOnMobile) {
+    console.log('Мобильный режим: проверка локальных адресов');
+    urlsToCheck.push(
+      "http://192.168.8.166:8000/api/v1",
+      "http://172.20.10.3:8000/api/v1"
+    );
+  }
+  
+  // Добавляем основной URL из env (средний приоритет)
+  if (API_BASE_URL && !urlsToCheck.includes(API_BASE_URL)) {
+    urlsToCheck.push(API_BASE_URL);
+  }
+  
+  // Добавляем localhost в конец (низший приоритет)
+  const localhostUrl = 'http://localhost:8000/api/v1';
+  if (!urlsToCheck.includes(localhostUrl)) {
+    urlsToCheck.push(localhostUrl);
+  }
+  
+  console.log('Будут проверены следующие URL (в порядке приоритета):', urlsToCheck);
+  
+  let foundWorkingUrl = null;
+  let checkResults: { url: string; available: boolean }[] = [];
+  
+  // Проверяем все URL последовательно
+  for (const url of urlsToCheck) {
+    console.log(`Проверяем доступность ${url}...`);
+    const isHealthy = await checkBackendHealth(url);
+    checkResults.push({ url, available: isHealthy });
+    
+    if (isHealthy && !foundWorkingUrl) {
+      foundWorkingUrl = url;
+      API_BASE_URL = url;
+      showBackendStatusToast(url, true);
+      
+      // Если нашли рабочий URL, проверяем остальные только для информации
+      // но не прерываем цикл, чтобы получить полную картину
+      console.log(`Найден рабочий URL: ${url}, продолжаем проверку остальных для информации...`);
+    }
+  }
+  
+  // Если не нашли ни одного рабочего URL, показываем ошибку для всех
+  if (!foundWorkingUrl) {
+    API_BASE_URL = urlsToCheck[0]; // Используем первый URL по умолчанию
+    const message = `⚠️ Все бэкенды недоступны! Используется URL по умолчанию: ${API_BASE_URL}`;
+    
+    toast.error('Бэкенд недоступен', {
+      description: message,
+      duration: 8000,
+    });
+    
+    console.warn(message);
+    
+    // Показываем результаты всех проверок
+    checkResults.forEach(result => {
+      showBackendStatusToast(result.url, result.available);
+    });
+  } else {
+    // Если нашли рабочий URL, показываем только его успешный toast
+    // и информационные сообщения в консоль об остальных
+    checkResults.forEach(result => {
+      if (result.url !== foundWorkingUrl) {
+        console.log(`${result.available ? '✅' : '❌'} ${result.url} ${result.available ? 'доступен' : 'недоступен'}`);
+      }
+    });
+  }
+  
+  console.log('Итоговый API_BASE_URL:', API_BASE_URL);
+};
+
+// ... остальной код без изменений ...
+
+// Вызываем инициализацию при импорте модуля
+// Но не блокируем загрузку приложения
+let apiInitialized = false;
+initializeApiUrl().then(() => {
+  apiInitialized = true;
+  console.log('API URL инициализирован');
+}).catch(error => {
+  console.error('Ошибка при инициализации API URL:', error);
+  toast.error('Ошибка инициализации API', {
+    description: error.message,
+    duration: 8000,
+  });
+});
+
+// Экспортируем функцию для проверки состояния инициализации
+export const apiInitialization = {
+  isInitialized: () => apiInitialized,
+  getBaseUrl: () => API_BASE_URL,
+  reinitialize: async () => {
+    try {
+      await initializeApiUrl();
+      return true;
+    } catch (error) {
+      console.error('Ошибка при повторной инициализации API:', error);
+      return false;
+    }
+  }
+};
 
 class ApiError extends Error {
   status: number;
@@ -109,6 +252,11 @@ const refreshAccessToken = async (): Promise<{ access: string }> => {
 // Общая функция для запросов с обработкой 401 ошибок
 const apiRequest = async <T>(endpoint: string, options: RequestInit = {}, retry = true): Promise<T> => {
   const url = `${API_BASE_URL}${endpoint}`;
+  
+  // Проверяем инициализацию API
+  if (!apiInitialized) {
+    console.warn('API еще не инициализирован, выполняем запрос с текущим URL:', API_BASE_URL);
+  }
   
   // Получаем текущий токен
   const token = localStorage.getItem('access_token');
@@ -173,18 +321,25 @@ const apiRequest = async <T>(endpoint: string, options: RequestInit = {}, retry 
     return await response.json();
   } catch (error) {
     console.error('API request failed:', error);
+    
+    // Показываем toast при ошибке сети (скорее всего бэкенд недоступен)
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      toast.error('Сервер недоступен', {
+        description: `Не удалось подключиться к ${API_BASE_URL}. Проверьте соединение.`,
+        duration: 5000,
+        action: {
+          label: 'Повторить',
+          onClick: () => apiInitialization.reinitialize()
+        }
+      });
+    }
+    
     throw error;
   }
 };
 
 // API для аутентификации
 export const authApi = {
-  // register: (data: RegisterData) => 
-  //   // apiRequest<AuthResponse>('/auth/register/', {
-  //   //   method: 'POST',
-  //   //   body: JSON.stringify(data),
-  //   // }),
-
   login: (data: LoginData) => 
     apiRequest<AuthResponse>('/auth/login/', {
       method: 'POST',
@@ -413,15 +568,12 @@ export const clientsApi = {
     apiRequest<ClientDebt[]>(`/clients/${id}/get_debts/`),
   
   addDebt: (id: string, debt_value: number, responsible_employee_id: string) => {
-
-  
     return apiRequest<ClientDebt>(`/clients/${id}/add_debt/`, {
       method: 'POST',
       body: JSON.stringify({ debt_value, responsible_employee_id }),
     });
   },
   
-    
   deleteDebt: (debtId: string) => 
     apiRequest(`/clients/delete_debt/${debtId}/`, {
       method: 'DELETE',
@@ -431,12 +583,11 @@ export const clientsApi = {
 export const employeesApi = {
   getEmployees: () => apiRequest<Employee[]>(`/employees/`)
 };
+
 export const leadsApi = {
   createLead: (data: LeadData) => 
     apiRequest<LeadResponse>('/leads/', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  
-
 };

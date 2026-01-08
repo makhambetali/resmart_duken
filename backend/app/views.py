@@ -36,6 +36,13 @@ def getServerTime(request):
         {"server_time": timezone.localtime()},
         status=200
     )
+
+def checkHealth(request):
+    return JsonResponse(
+        {'health': 'ok'},
+        status=200
+    )
+
 class SupplierViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierSerializer
     pagination_class = SupplierResultsPaginationPage

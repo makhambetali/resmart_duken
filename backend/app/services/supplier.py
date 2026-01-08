@@ -107,13 +107,13 @@ class SupplierStats:
         )
 
         count = stats["count"] or 1
-
+        # print(stats.get("rescheduled_cnt") or 0)
         return {
             "min": float(stats["min"] or 0),
             "max": float(stats["max"] or 0),
             "avg": round(stats["avg"], 2) if stats["avg"] else 0.0,
             "med": float(stats["med"] or 0),
-            "rescheduled_coef": round(stats["rescheduled_cnt"] / count, 2),
+            "rescheduled_coef": round((stats.get("rescheduled_cnt") or 0) / count, 2),
             "count": stats["count"],
         }
 
@@ -178,7 +178,7 @@ class SupplierStats:
     # enter point
     def execute(self) -> Dict:
         qs = self.get_queryset()
-
+        print(len(qs))
         return {
             "price": self.get_price_stats(qs),
             "arrival_time": self.get_arrival_time_stats(qs),
