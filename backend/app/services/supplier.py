@@ -139,7 +139,7 @@ class SupplierStats:
     #top3
     def get_arrival_prediction(self, qs) -> List[Dict]:
         arrivals = qs.values_list("arrival_date", flat=True)
-
+        print(arrivals)
         counter = Counter()
 
         for dt in arrivals:
@@ -179,6 +179,7 @@ class SupplierStats:
     def execute(self) -> Dict:
         qs = self.get_queryset()
         print(len(qs))
+        print(self.get_arrival_prediction(qs))
         return {
             "price": self.get_price_stats(qs),
             "arrival_time": self.get_arrival_time_stats(qs),
