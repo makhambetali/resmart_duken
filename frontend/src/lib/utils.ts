@@ -41,3 +41,4 @@ const capitalizeWords = (value: string) =>
   value.replace(/\p{L}+/gu, word =>
     word.charAt(0).toLocaleUpperCase() + word.slice(1).toLocaleLowerCase()
   );
+

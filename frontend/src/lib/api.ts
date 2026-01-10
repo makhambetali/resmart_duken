@@ -166,6 +166,7 @@ const initializeApiUrl = async (): Promise<void> => {
   }
   
   console.log('Итоговый API_BASE_URL:', API_BASE_URL);
+  console.log('Итоговый API_BASE_URL для фронта:', API_BASE_URL.replace(':8000/api/v1', ':5173/app'));
 };
 
 // ... остальной код без изменений ...
