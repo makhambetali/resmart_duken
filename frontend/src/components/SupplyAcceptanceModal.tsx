@@ -19,9 +19,9 @@ import {
   AlertCircle
 } from "lucide-react";
 import { ImageUpload } from '@/components/ImageUpload';
+import { SupplierSearchCombobox } from '@/components/SupplierSearchCombobox';
 import { suppliesApi, suppliersApi } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
-import { capitalize } from '@/lib/utils';
 
 interface SupplyAcceptanceModalProps {
   open: boolean;
@@ -281,6 +281,22 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
     }
   };
 
+  // Обработчик изменения поставщика через SupplierSearchCombobox
+  const handleSupplierChange = (value: string) => {
+    setSupplierName(value);
+    // Сбрасываем найденную поставку при изменении поставщика
+    if (foundSupply) {
+      setFoundSupply(null);
+      setSearchResults([]);
+      setExistingImages([]);
+      setFormData({
+        bonus: 0,
+        exchange: 0,
+        comment: '',
+      });
+    }
+  };
+
   // Основной обработчик подтверждения поставки
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -414,15 +430,15 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                   Поставщик *
                 </Label>
                 <div className="flex gap-2">
-                  <Input
-                    value={supplierName}
-                    onChange={(e) => setSupplierName(capitalize(e.target.value))}
-                    onKeyDown={handleKeyPress}
-                    placeholder="Введите название поставщика..."
-                    className="flex-1"
-                    disabled={!!foundSupply || isLoading || creatingSupply}
-                    autoFocus
-                  />
+                  <div className="flex-1">
+                    <SupplierSearchCombobox
+                      value={supplierName}
+                      onValueChange={handleSupplierChange}
+                      placeholder="Введите название поставщика или выберите из списка..."
+                      disabled={!!foundSupply || isLoading || creatingSupply}
+                      autoFocus={open && !supplierName}
+                    />
+                  </div>
                   {!foundSupply && (
                     <Button
                       type="button"
