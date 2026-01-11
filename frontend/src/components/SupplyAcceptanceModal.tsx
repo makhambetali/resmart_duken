@@ -16,7 +16,10 @@ import {
   MessageSquare,
   Search,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Info,
+  Check,
+  X
 } from "lucide-react";
 import { ImageUpload } from '@/components/ImageUpload';
 import { SupplierSearchCombobox } from '@/components/SupplierSearchCombobox';
@@ -42,7 +45,7 @@ const getTodayDate = () => {
 const getStatusText = (status: string): string => {
   switch (status) {
     case 'pending':
-      return 'Не подтверждена';
+      return 'Ожидает подтверждения';
     case 'confirmed':
       return 'Ожидает оплаты';
     case 'delivered':
@@ -134,7 +137,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
       // Фильтруем поставки: на сегодня, в статусе 'pending', и с указанным поставщиком
       const todayPendingSupplies = supplies.filter(supply => 
         supply.delivery_date === today && 
-        supply.status === 'pending' && // Используем status вместо is_confirmed
+        supply.status === 'pending' &&
         supply.supplier.toLowerCase().includes(supplierName.toLowerCase())
       );
 
@@ -142,16 +145,18 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
 
       if (todayPendingSupplies.length === 0) {
         if (exists) {
+          // Поставщик существует, но поставок нет
           toast({
-            title: 'Поставки не найдены',
-            description: `У поставщика "${supplierName}" нет поставок в статусе "Ожидает подтверждения" на сегодня`,
+            title: 'Поставок не найдено',
+            description: 'У поставщика нет поставок на сегодня',
             variant: 'default',
           });
         } else {
+          // Поставщик не существует
           toast({
             title: 'Поставщик не найден',
-            description: `Поставщик "${supplierName}" не существует`,
-            variant: 'destructive',
+            description: 'Поставщик не существует',
+            variant: 'default',
           });
         }
       } else if (todayPendingSupplies.length === 1) {
@@ -183,7 +188,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
     
     toast({
       title: 'Поставка найдена',
-      description: `Выбрана поставка от ${supply.supplier} в статусе "${getStatusText(supply.status)}"`,
+      description: 'Выбрана поставка для приёмки',
       variant: 'default',
     });
   };
@@ -200,7 +205,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
         exchange: formData.exchange,
         delivery_date: today,
         comment: formData.comment,
-        status: 'pending', // Сначала создаем в статусе 'pending'
+        status: 'pending',
         invoice_html: '',
       };
 
@@ -208,7 +213,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
       
       toast({
         title: 'Поставка создана',
-        description: `Поставка от ${supplierName} создана на сегодня в статусе "Ожидает подтверждения"`,
+        description: 'Поставка создана на сегодня',
         variant: 'default',
       });
       
@@ -230,7 +235,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
         bonus: formData.bonus,
         exchange: formData.exchange,
         comment: formData.comment,
-        status: 'confirmed', // Изменяем статус на 'confirmed' (Ожидает оплаты)
+        status: 'confirmed',
       };
 
       await suppliesApi.updateSupply(supplyId, updateData);
@@ -265,7 +270,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
       
       toast({
         title: 'Поставщик создан',
-        description: `Поставщик "${supplierName}" успешно создан`,
+        description: 'Поставщик успешно создан',
         variant: 'default',
       });
       
@@ -314,7 +319,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
     if (foundSupply && foundSupply.status !== 'pending') {
       toast({
         title: 'Поставка уже обработана',
-        description: `Эта поставка уже находится в статусе "${getStatusText(foundSupply.status)}" и не может быть подтверждена повторно`,
+        description: 'Эта поставка уже не может быть подтверждена',
         variant: 'destructive',
       });
       return;
@@ -360,7 +365,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
 
       toast({
         title: 'Поставка принята',
-        description: 'Поставка успешно принята и переведена в статус "Ожидает оплаты"',
+        description: 'Поставка успешно принята',
         variant: 'default',
         className: 'bg-green-500 text-white',
       });
@@ -395,33 +400,18 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
     setExistingImages([]);
   };
 
-  // Обработчик Enter для поиска
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !foundSupply) {
-      e.preventDefault();
-      handleSearchSupplies();
-    }
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-[95vw] md:max-w-2xl max-h-[90vh] p-0">
-        <DialogHeader className="px-4 md:px-6 py-3 md:py-4 border-b">
-          <DialogTitle className="text-lg md:text-xl font-semibold flex items-center gap-2 md:gap-3">
-            <Package className="w-5 h-5 md:w-6 md:h-6" />
-            Приёмка поставки
-          </DialogTitle>
-          <div className="text-sm text-gray-500 mt-1">
-            <p>Подтверждение поставки на сегодня ({today}). Работает только с поставками в статусе "Ожидает подтверждения".</p>
-            <div className="mt-2 flex items-center gap-2 text-amber-600">
-              <Clock className="w-4 h-4" />
-              <span>После приёмки поставка переходит в статус "Ожидает оплаты"</span>
-            </div>
-          </div>
-        </DialogHeader>
+      <DialogContent className="w-full max-w-[95vw] md:max-w-2xl max-h-[90vh] p-0" onInteractOutside={(e) => e.preventDefault()}>
+       <DialogHeader className="px-4 md:px-6 py-3 md:py-4 border-b">
+  <DialogTitle className="text-lg md:text-xl font-semibold flex items-center gap-2 md:gap-3">
+    <Package className="w-5 h-5 md:w-6 md:h-6" />
+    Приёмка поставки
+  </DialogTitle>
+</DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col h-[calc(90vh-120px)] md:h-[calc(90vh-140px)]">
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+           <div className="flex-1 overflow-y-auto px-4 md:px-6 pt-4 space-y-6">
             {/* Поиск поставщика */}
             <div className="space-y-4">
               <div className="space-y-2">
@@ -458,21 +448,29 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                 </div>
               </div>
 
-              {/* Информация о поставщике */}
+              {/* Краткий статус
               {supplierName && !foundSupply && !isSearching && (
-                <div className={`p-3 border rounded-lg ${supplierExists ? 'bg-blue-50 border-blue-200' : 'bg-yellow-50 border-yellow-200'}`}>
-                  <div className="text-sm">
-                    <span className="font-medium">Поставщик:</span> {supplierName}
-                    <br />
-                    <span className="font-medium">Статус:</span> {supplierExists ? 'Существует' : 'Не существует'}
-                  </div>
+                <div className={`p-3 rounded-lg flex items-center gap-2 ${
+                  supplierExists ? 'bg-blue-50 border border-blue-200' : 'bg-yellow-50 border border-yellow-200'
+                }`}>
+                  {supplierExists ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <X className="w-4 h-4 text-red-600" />
+                  )}
+                  <span className="text-sm font-medium">
+                    {supplierExists ? 'Поставщик существует' : 'Поставщика не существует'}
+                  </span>
                 </div>
-              )}
+              )} */}
 
               {/* Результаты поиска */}
               {searchResults.length > 0 && !foundSupply && (
                 <div className="border rounded-lg p-3 space-y-2">
-                  <Label className="text-sm font-medium">Найдены поставки в статусе "Ожидает подтверждения":</Label>
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Info className="w-4 h-4" />
+                    Найдены поставки ({searchResults.length})
+                  </Label>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {searchResults.map(supply => (
                       <div
@@ -482,14 +480,10 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                         }`}
                         onClick={() => supply.status === 'pending' && handleSelectSupply(supply)}
                       >
-                        <div>
+                        <div className="text-sm">
                           <div className="font-medium">{supply.supplier}</div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-gray-500">
                             Бонус: {supply.bonus || 0}, Обмен: {supply.exchange || 0}
-                            <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-gray-100">
-                              {getStatusText(supply.status)}
-                            </span>
-                            {supply.comment && `, Комментарий: ${supply.comment}`}
                           </div>
                         </div>
                         <Button
@@ -512,19 +506,17 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                 </div>
               )}
 
-              {/* Сообщение о найденной поставке */}
+              {/* Статус найденной поставки */}
               {foundSupply && (
                 <div className="p-3 border border-green-200 rounded-lg bg-green-50">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-green-800">Выбрана поставка для приёмки:</div>
-                      <div className="text-sm text-green-700">
-                        {foundSupply.supplier} - 
-                        Бонус: {foundSupply.bonus || 0}, Обмен: {foundSupply.exchange || 0}
-                        <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-800">
-                          {getStatusText(foundSupply.status)}
-                        </span>
-                        {foundSupply.comment && `, ${foundSupply.comment}`}
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-green-600" />
+                      <div>
+                        <div className="font-medium text-green-800">Поставка найдена</div>
+                        <div className="text-sm text-green-700">
+                          {foundSupply.supplier} • Бонус: {foundSupply.bonus || 0}, Обмен: {foundSupply.exchange || 0}
+                        </div>
                       </div>
                     </div>
                     <Button
@@ -544,7 +536,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                     <div className="mt-2 p-2 border border-amber-200 rounded bg-amber-100">
                       <div className="flex items-center gap-2 text-amber-800 text-sm">
                         <AlertCircle className="w-4 h-4" />
-                        <span>Эта поставка уже находится в статусе "{getStatusText(foundSupply.status)}"</span>
+                        <span>Эта поставка уже не может быть подтверждена</span>
                       </div>
                     </div>
                   )}
@@ -554,13 +546,9 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
               {/* Создание новой поставки */}
               {creatingSupply && (
                 <div className="p-3 border border-blue-200 rounded-lg bg-blue-50">
-                  <div className="font-medium text-blue-800 mb-2">Создание новой поставки</div>
-                  <div className="text-sm text-blue-700 mb-3">
-                    Создаём новую поставку от "{supplierName}" на сегодня...
-                  </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-sm">Создание поставки...</span>
+                    <span className="text-sm text-blue-800 font-medium">Создание поставки...</span>
                   </div>
                 </div>
               )}
@@ -568,10 +556,11 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
               {/* Сообщение о необходимости создания поставки */}
               {!foundSupply && supplierExists && searchResults.length === 0 && !isSearching && (
                 <div className="p-3 border border-amber-200 rounded-lg bg-amber-50">
-                  <div className="font-medium text-amber-800">Поставок не найдено</div>
-                  <div className="text-sm text-amber-700 mt-1">
-                    У поставщика "{supplierName}" нет поставок в статусе "Ожидает подтверждения" на сегодня.
-                    Вы можете создать новую поставку и сразу её принять.
+                  <div className="flex items-center gap-2">
+                    <Info className="w-4 h-4 text-amber-600" />
+                    <span className="text-sm font-medium text-amber-800">
+                      Поставок не найдено, можно создать новую
+                    </span>
                   </div>
                 </div>
               )}
@@ -671,7 +660,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
           </div>
 
           {/* Футер с кнопками */}
-          <div className="px-4 md:px-6 py-3 md:py-4 border-t bg-white flex-shrink-0">
+           <div className="px-4 md:px-6 py-3 md:py-4 border-t bg-white flex-shrink-0">
             <div className="flex flex-col-reverse md:flex-row justify-between items-center gap-3 md:gap-0">
               <div className="w-full md:w-auto">
                 <Button
