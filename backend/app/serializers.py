@@ -31,12 +31,24 @@ class SupplyImageSerializer(serializers.ModelSerializer):
         model = SupplyImage
         fields = ['id', 'image']
 
+class SupplierByNameAndStore(serializers.RelatedField):
+    def to_internal_value(self, data):
+        request = self.context["request"]
+        store = request.user.profile.store
+        try:
+            return Supplier.objects.get(name=data, store=store)
+        except Supplier.DoesNotExist:
+            raise serializers.ValidationError("Supplier not found")
+        except Supplier.MultipleObjectsReturned:
+            raise serializers.ValidationError("Ambiguous supplier")
+
+    def to_representation(self, value):
+        return value.name
+
 
 class SupplySerializer(serializers.ModelSerializer):
-    supplier = serializers.SlugRelatedField(
-        queryset=Supplier.objects.all(),
-        slug_field='name'
-    )
+    supplier = SupplierByNameAndStore(queryset=Supplier.objects.all())
+
     images = SupplyImageSerializer(many=True, required=False)
 
     class Meta:
