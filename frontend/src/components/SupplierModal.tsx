@@ -66,7 +66,18 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ open, onOpenChange
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] sm:max-h-[85vh] overflow-y-auto p-4 sm:p-6">
+      <DialogContent 
+        className="max-w-2xl max-h-[90vh] sm:max-h-[85vh] overflow-y-auto p-4 sm:p-6"
+        onInteractOutside={(e) => {
+          e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+           onOpenChange(false);
+}}
+        onPointerDownOutside={(e) => {
+          e.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="text-lg sm:text-xl">
             {supplier ? 'Редактировать поставщика' : 'Новый поставщик'}

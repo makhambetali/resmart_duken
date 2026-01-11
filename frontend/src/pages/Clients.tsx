@@ -186,7 +186,7 @@ const Clients = () => {
               size="sm"
             >
               <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Добавить клиента</span>
+              <span className="hidden sm:inline">Добавить долг</span>
               <span className="sm:hidden">Добавить</span>
             </Button>
           </div>

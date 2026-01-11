@@ -427,7 +427,22 @@ export const SupplierViewModal: React.FC<SupplierViewModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 sm:max-w-[95vw]">
+      <DialogContent 
+        className="max-w-4xl max-h-[90vh] flex flex-col p-0 sm:max-w-[95vw]"
+        onInteractOutside={(e) => {
+          e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+  // Оставляем возможность закрытия по Escape
+  if (!isLoadingStats) {
+    // Закрыть только если не идет загрузка статистики
+    onOpenChange(false);
+  }
+}}
+        onPointerDownOutside={(e) => {
+          e.preventDefault();
+        }}
+      >
         {/* Заголовок (фиксированный) */}
         <DialogHeader className="px-4 sm:px-6 py-4 border-b shrink-0">
           <div className="flex items-center justify-between">

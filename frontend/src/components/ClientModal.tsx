@@ -415,7 +415,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
           e.preventDefault();
         }}
         onEscapeKeyDown={(e) => {
-          e.preventDefault();
+           onOpenChange(false);
         }}
         onPointerDownOutside={(e) => {
           e.preventDefault();
