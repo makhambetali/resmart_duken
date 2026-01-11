@@ -2,7 +2,7 @@
   "name": "dukenCRM — автоматизация поставок",
   "short_name": "dukenCRM",
   "description": "Система для управления поставками, поставщиками и финансами",
-  "start_url": "/",
+  "start_url": "/app",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0f172a",
