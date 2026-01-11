@@ -53,19 +53,11 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
       switch (e.key) {
         case 'ArrowLeft':
           e.preventDefault();
-          if (e.ctrlKey) {
-            handleRotateLeft();
-          } else {
-            handlePrev();
-          }
+          handlePrev();
           break;
         case 'ArrowRight':
           e.preventDefault();
-          if (e.ctrlKey) {
-            handleRotateRight();
-          } else {
-            handleNext();
-          }
+          handleNext();
           break;
         case 'Escape':
           onOpenChange(false);
@@ -82,23 +74,12 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         case 'r':
         case 'R':
           e.preventDefault();
-          if (e.shiftKey) {
-            handleRotateLeft();
-          } else {
-            handleRotateRight();
-          }
+          handleRotateRight();
           break;
         case '0':
           e.preventDefault();
-          if (e.ctrlKey) {
-            // Ctrl+0: сброс всего
-            setScale(1);
-            setPosition({ x: 0, y: 0 });
-            setRotation(0);
-          } else {
-            setScale(1);
-            setPosition({ x: 0, y: 0 });
-          }
+          setScale(1);
+          setPosition({ x: 0, y: 0 });
           break;
       }
     };
@@ -137,21 +118,6 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
     setRotation((prev) => (prev - 90 + 360) % 360);
   }, []);
 
-  const handleResetZoom = () => {
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
-  };
-
-  const handleResetRotation = () => {
-    setRotation(0);
-  };
-
-  const handleResetAll = () => {
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
-    setRotation(0);
-  };
-
   const handleMouseDown = (e: React.MouseEvent) => {
     if (scale <= 1 && rotation === 0) return;
     setIsDragging(true);
@@ -176,25 +142,6 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
       const delta = e.deltaY > 0 ? -0.1 : 0.1;
       setScale((prev) => Math.max(0.5, Math.min(3, prev + delta)));
     }
-  };
-
-  // Функция для определения стилей трансформации с учетом поворота
-  const getTransformStyle = () => {
-    const transforms = [];
-    
-    if (rotation !== 0) {
-      transforms.push(`rotate(${rotation}deg)`);
-    }
-    
-    if (scale !== 1) {
-      transforms.push(`scale(${scale})`);
-    }
-    
-    if (position.x !== 0 || position.y !== 0) {
-      transforms.push(`translate(${position.x}px, ${position.y}px)`);
-    }
-    
-    return transforms.length > 0 ? transforms.join(' ') : 'none';
   };
 
   if (!open || images.length === 0) return null;
@@ -226,7 +173,6 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
             size="icon"
             onClick={handleRotateLeft}
             className="text-white hover:bg-white/20"
-            title="Повернуть влево (Ctrl+← или Shift+R)"
           >
             <RotateCcw className="h-5 w-5" />
           </Button>
@@ -236,23 +182,9 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
             size="icon"
             onClick={handleRotateRight}
             className="text-white hover:bg-white/20"
-            title="Повернуть вправо (Ctrl+→ или R)"
           >
             <RotateCw className="h-5 w-5" />
           </Button>
-
-          {/* Индикатор угла поворота */}
-          {rotation !== 0 && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleResetRotation}
-              className="text-white hover:bg-white/20 text-sm"
-              title="Сбросить поворот"
-            >
-              <span className="text-xs">{rotation}°</span>
-            </Button>
-          )}
 
           {/* Кнопки масштабирования */}
           <Button
@@ -261,20 +193,13 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
             onClick={handleZoomOut}
             className="text-white hover:bg-white/20"
             disabled={scale <= 0.5}
-            title="Уменьшить (-)"
           >
             <ZoomOut className="h-5 w-5" />
           </Button>
           
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleResetZoom}
-            className="text-white hover:bg-white/20"
-            title="Сбросить масштаб (0)"
-          >
-            <span className="text-sm">{Math.round(scale * 100)}%</span>
-          </Button>
+          <div className="text-white text-sm min-w-[50px] text-center">
+            {Math.round(scale * 100)}%
+          </div>
           
           <Button
             variant="ghost"
@@ -282,23 +207,9 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
             onClick={handleZoomIn}
             className="text-white hover:bg-white/20"
             disabled={scale >= 3}
-            title="Увеличить (+)"
           >
             <ZoomIn className="h-5 w-5" />
           </Button>
-
-          {/* Кнопка сброса всего */}
-          {(scale !== 1 || rotation !== 0 || position.x !== 0 || position.y !== 0) && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleResetAll}
-              className="text-white hover:bg-white/20"
-              title="Сбросить все (Ctrl+0)"
-            >
-              <span className="text-xs">Сброс</span>
-            </Button>
-          )}
         </div>
       </div>
 
@@ -310,7 +221,6 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
             size="icon"
             onClick={handlePrev}
             className="absolute left-4 top-1/2 -translate-y-1/2 z-50 text-white hover:bg-white/20 h-12 w-12"
-            title="Предыдущее фото (←)"
           >
             <ChevronLeft className="h-6 w-6" />
           </Button>
@@ -319,7 +229,6 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
             size="icon"
             onClick={handleNext}
             className="absolute right-4 top-1/2 -translate-y-1/2 z-50 text-white hover:bg-white/20 h-12 w-12"
-            title="Следующее фото (→)"
           >
             <ChevronRight className="h-6 w-6" />
           </Button>
@@ -338,7 +247,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         <div
           className="relative transition-transform duration-200 ease-out"
           style={{
-            transform: getTransformStyle(),
+            transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
             transformOrigin: 'center center',
           }}
         >
@@ -347,9 +256,6 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
             alt={`Изображение ${currentIndex + 1}`}
             className="max-w-[90vw] max-h-[90vh] object-contain select-none"
             draggable="false"
-            style={{
-              transform: rotation !== 0 ? `rotate(${rotation}deg)` : 'none',
-            }}
           />
         </div>
       </div>
@@ -368,7 +274,6 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
                   setRotation(0);
                 }}
                 className={`relative flex-shrink-0 transition-all ${index === currentIndex ? 'ring-2 ring-white scale-110' : 'opacity-60 hover:opacity-100'}`}
-                title={`Перейти к фото ${index + 1}`}
               >
                 <img
                   src={image.image}
@@ -384,12 +289,9 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
       {/* Горячие клавиши */}
       <div className="absolute bottom-4 left-4 text-white/60 text-xs hidden md:block">
         <div>← → для навигации</div>
-        <div>Ctrl+←/→ для поворота</div>
         <div>+ - для масштабирования</div>
         <div>R для поворота вправо</div>
-        <div>Shift+R для поворота влево</div>
         <div>ESC для выхода</div>
-        <div>Ctrl+0 для сброса</div>
       </div>
     </div>
   );
