@@ -64,6 +64,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchPerformed, setSearchPerformed] = useState(false);
   
   const [supplierName, setSupplierName] = useState('');
   const [foundSupply, setFoundSupply] = useState<Supply | null>(null);
@@ -89,6 +90,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
       setFoundSupply(null);
       setSearchResults([]);
       setSupplierExists(false);
+      setSearchPerformed(false);
       setFormData({
         bonus: 0,
         exchange: 0,
@@ -142,6 +144,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
       );
 
       setSearchResults(todayPendingSupplies);
+      setSearchPerformed(true);
 
       if (todayPendingSupplies.length === 0) {
         if (exists) {
@@ -289,6 +292,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
   // Обработчик изменения поставщика через SupplierSearchCombobox
   const handleSupplierChange = (value: string) => {
     setSupplierName(value);
+    setSearchPerformed(false);
     // Сбрасываем найденную поставку при изменении поставщика
     if (foundSupply) {
       setFoundSupply(null);
@@ -391,6 +395,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
   const handleReset = () => {
     setFoundSupply(null);
     setSearchResults([]);
+    setSearchPerformed(false);
     setFormData({
       bonus: 0,
       exchange: 0,
@@ -677,7 +682,13 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
               <div className="flex gap-2 w-full md:w-auto">
                 <Button
                   type="submit"
-                  disabled={isLoading || creatingSupply || !supplierName.trim() || (foundSupply && foundSupply.status !== 'pending')}
+                  disabled={
+                    isLoading || 
+                    creatingSupply || 
+                    !supplierName.trim() || 
+                    (foundSupply && foundSupply.status !== 'pending') ||
+                    (!foundSupply && !searchPerformed)
+                  }
                   className="flex-1 md:flex-none gap-2 bg-green-600 hover:bg-green-700"
                   size="sm"
                 >
