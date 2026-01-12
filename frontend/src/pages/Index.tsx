@@ -6,13 +6,13 @@ import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { SupplyModal } from '@/components/SupplyModal';
 import { CashFlowModal } from '@/components/CashFlowModal';
 import { SupplierViewModal } from '@/components/SupplierViewModal';
-import { SupplyAcceptanceModal } from '@/components/SupplyAcceptanceModal'; // Импорт нового компонента
+import { SupplyAcceptanceModal } from '@/components/SupplyAcceptanceModal';
 import { Supply, AddSupplyForm } from '@/types/supply';
 import { suppliesApi, suppliersApi, cashFlowApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Archive, Search, DollarSign, Filter, Plus, ChevronDown, CheckCircle } from 'lucide-react';
+import { Archive, Search, DollarSign, Filter, Plus, ChevronDown, CheckCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -51,18 +51,20 @@ const Index = () => {
   const [isSupplyModalOpen, setIsSupplyModalOpen] = useState(false);
   const [isCashFlowModalOpen, setIsCashFlowModalOpen] = useState(false);
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
-  const [isAcceptanceModalOpen, setIsAcceptanceModalOpen] = useState(false); // Состояние для модалки приёмки
+  const [isAcceptanceModalOpen, setIsAcceptanceModalOpen] = useState(false);
   const [editingSupply, setEditingSupply] = useState<Supply | null>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<any | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [confirmationFilter, setConfirmationFilter] = useState<'all' | 'confirmed' | 'unconfirmed' | 'pending_payment'>('all');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { 
     data: supplies = [], 
     isLoading: suppliesLoading, 
-    error: suppliesError 
+    error: suppliesError,
+    refetch: refetchSupplies
   } = useQuery({
     queryKey: ['supplies'],
     queryFn: suppliesApi.getSupplies,
@@ -82,6 +84,32 @@ const Index = () => {
     gcTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
   });
+
+  // Функция обновления данных
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        refetchSupplies(),
+        queryClient.invalidateQueries({ queryKey: ['suppliers'] }),
+        queryClient.invalidateQueries({ queryKey: ['supplies'] })
+      ]);
+      toast({
+        title: 'Данные обновлены',
+        description: 'Список поставок обновлен',
+        variant: 'default',
+        className: 'bg-green-500 text-white',
+      });
+    } catch (error) {
+      toast({
+        title: 'Ошибка обновления',
+        description: 'Не удалось обновить данные',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const createSupplyMutation = useMutation({
     mutationFn: suppliesApi.createSupply,
@@ -240,6 +268,17 @@ const Index = () => {
           {/* Десктопные кнопки */}
           <div className="hidden sm:flex gap-2">
             <Button 
+              onClick={handleRefresh}
+              variant="outline"
+              className="gap-2"
+              size="default"
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Обновить
+            </Button>
+            
+            <Button 
               onClick={() => setIsAcceptanceModalOpen(true)}
               variant="outline"
               className="gap-2"
@@ -261,6 +300,15 @@ const Index = () => {
           
           {/* Мобильные кнопки */}
           <div className="flex gap-2 sm:hidden">
+            <Button 
+              onClick={handleRefresh}
+              variant="outline"
+              size="sm"
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            
             <Button 
               onClick={() => setIsAcceptanceModalOpen(true)}
               variant="outline"
@@ -373,6 +421,17 @@ const Index = () => {
               {/* Кнопки действий на мобильных */}
               <div className="flex gap-3 mt-4 sm:hidden">
                 <Button 
+                  onClick={handleRefresh}
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  size="sm"
+                  disabled={isRefreshing}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  Обновить
+                </Button>
+                
+                <Button 
                   onClick={() => setIsCashFlowModalOpen(true)}
                   variant="outline"
                   className="flex-1 gap-2"
@@ -381,6 +440,7 @@ const Index = () => {
                   <DollarSign className="h-4 w-4" />
                   Касса
                 </Button>
+                
                 <Button 
                   onClick={() => setIsAcceptanceModalOpen(true)}
                   variant="outline"
@@ -390,6 +450,7 @@ const Index = () => {
                   <CheckCircle className="h-4 w-4" />
                   Приёмка
                 </Button>
+                
                 <Button 
                   onClick={handleAddSupply}
                   className="flex-1 gap-2"
@@ -413,6 +474,21 @@ const Index = () => {
               </span>
             )}
           </div>
+          
+          {/* Десктопная кнопка обновить */}
+          <div className="hidden sm:block">
+            <Button
+              onClick={handleRefresh}
+              variant="ghost"
+              size="sm"
+              disabled={isRefreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Обновить данные
+            </Button>
+          </div>
+          
           {confirmationFilter !== 'all' && (
             <div className="text-xs sm:text-sm bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
               {confirmationFilter === 'confirmed' ? 'Подтвержденные' : 'Неподтвержденные'}
