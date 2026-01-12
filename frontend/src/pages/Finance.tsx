@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cashFlowApi, suppliesApi } from '@/lib/api';
 import { CashFlowOperation, Supply } from '@/types/supply';
-import { PlusCircle, AlertTriangle, ChevronsDown, ChevronsUp, Info, FileText, Eye, Lock, Calendar, DollarSign, Package, Download, MoreVertical, Filter, EyeOff, Shield } from 'lucide-react';
+import { PlusCircle, AlertTriangle, ChevronsDown, ChevronsUp, Info, FileText, Eye, Lock, Calendar, DollarSign, Package, Download, MoreVertical, Filter, EyeOff, Shield, Search, X } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { CashFlowModal } from '@/components/CashFlowModal';
@@ -260,6 +260,7 @@ const FinancePage = () => {
 
   const [cashFlowFilter, setCashFlowFilter] = useState('all');
   const [supplyFilter, setSupplyFilter] = useState('all');
+  const [supplierSearch, setSupplierSearch] = useState('');
 
   const [selectedSupply, setSelectedSupply] = useState<Supply | null>(null);
   const [isSupplyFullViewOpen, setIsSupplyFullViewOpen] = useState(false);
@@ -300,6 +301,16 @@ const FinancePage = () => {
     }
   };
 
+  // Функция для поиска поставщиков
+  const searchSuppliers = (supplies: Supply[], search: string) => {
+    if (!search.trim()) return supplies;
+    
+    const searchLower = search.toLowerCase().trim();
+    return supplies.filter(s => 
+      s.supplier.toLowerCase().includes(searchLower)
+    );
+  };
+
   const { 
     data: cashFlows, 
     isLoading: cashFlowsLoading, 
@@ -326,17 +337,25 @@ const FinancePage = () => {
     enabled: !!selectedDate,
   });
 
-  // Применяем фильтр к поставкам
+  // Применяем фильтры и поиск к поставкам
   const supplies = useMemo(() => {
     if (!allSupplies) return [];
-    return filterSupplies(allSupplies, supplyFilter);
-  }, [allSupplies, supplyFilter]);
+    
+    // Сначала применяем фильтр по типу оплаты
+    let filtered = filterSupplies(allSupplies, supplyFilter);
+    
+    // Затем применяем поиск по поставщику
+    filtered = searchSuppliers(filtered, supplierSearch);
+    
+    return filtered;
+  }, [allSupplies, supplyFilter, supplierSearch]);
 
   useEffect(() => {
     if (selectedDate) {
       setIsCashFlowsExpanded(false);
       setCashFlowFilter('all');
       setSupplyFilter('all');
+      setSupplierSearch('');
       
       if (isAdmin) {
         queryClient.prefetchQuery({
@@ -396,6 +415,10 @@ const FinancePage = () => {
   const handleViewSupply = (supply: Supply) => {
     setSelectedSupply(supply);
     setIsSupplyFullViewOpen(true);
+  };
+
+  const handleClearSearch = () => {
+    setSupplierSearch('');
   };
 
   const isLoading = suppliesLoading || (isAdmin && cashFlowsLoading);
@@ -746,6 +769,54 @@ const FinancePage = () => {
           </CardHeader>
           
           <CardContent>
+            {/* Поиск по поставщику */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Поиск по поставщику..."
+                  value={supplierSearch}
+                  onChange={(e) => setSupplierSearch(e.target.value)}
+                  className="pl-10 pr-10"
+                />
+                {supplierSearch && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleClearSearch}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Информация о результатах поиска */}
+            {supplierSearch && supplies && supplies.length > 0 && (
+              <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <Info className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm text-blue-700">
+                    Найдено поставок: {supplies.length} по запросу "{supplierSearch}"
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {supplierSearch && supplies && supplies.length === 0 && (
+              <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <span className="text-sm text-amber-700">
+                    Поставки по запросу "{supplierSearch}" не найдены
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Stat Cards для админов - Mobile (вертикальная версия) */}
             {isAdmin && (
               <div className="sm:hidden space-y-3 mb-4">
@@ -870,7 +941,10 @@ const FinancePage = () => {
                 ))
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  Нет поставок за выбранный день
+                  {supplierSearch 
+                    ? `Нет поставок по запросу "${supplierSearch}"`
+                    : 'Нет поставок за выбранный день'
+                  }
                 </div>
               )}
             </div>
@@ -975,7 +1049,10 @@ const FinancePage = () => {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={isAdmin ? 8 : 6} className="text-center p-8">
-                        Нет поставок за выбранный день.
+                        {supplierSearch 
+                          ? `Нет поставок по запросу "${supplierSearch}"`
+                          : 'Нет поставок за выбранный день.'
+                        }
                       </TableCell>
                     </TableRow>
                   )}
