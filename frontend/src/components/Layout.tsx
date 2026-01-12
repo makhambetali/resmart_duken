@@ -85,9 +85,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddSupplyClick }) =>
                   </Link>
                 </DropdownMenuItem>
                 
-                {isAdmin && (
-                  <>
-                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-800">
+                 <div className="px-2 py-1.5 text-xs font-semibold text-gray-800">
                       Администрирование
                     </div>
                     <DropdownMenuItem asChild>
@@ -95,8 +93,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddSupplyClick }) =>
                         Финансы
                       </Link>
                     </DropdownMenuItem>
-                  </>
-                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -345,15 +341,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddSupplyClick }) =>
               <span className="text-xs font-medium">Поставщики</span>
             </Link>
             
-            {isAdmin && (
-              <Link 
+            <Link 
                 to="/finance" 
                 className="flex flex-col items-center space-y-1 p-2 text-gray-800"
               >
                 <Shield className="h-5 w-5" />
                 <span className="text-xs font-medium">Финансы</span>
               </Link>
-            )}
           </div>
         </div>
       )}
