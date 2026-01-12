@@ -19,12 +19,15 @@ import {
   AlertCircle,
   Info,
   Check,
-  X
+  X,
+  DollarSign,
+  CreditCard
 } from "lucide-react";
 import { ImageUpload } from '@/components/ImageUpload';
 import { SupplierSearchCombobox } from '@/components/SupplierSearchCombobox';
 import { suppliesApi, suppliersApi } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
+import { Badge } from '@/components/ui/badge';
 
 interface SupplyAcceptanceModalProps {
   open: boolean;
@@ -41,18 +44,20 @@ const getTodayDate = () => {
   return new Date().toISOString().split('T')[0];
 };
 
-// Функция для получения текста статуса
-const getStatusText = (status: string): string => {
-  switch (status) {
-    case 'pending':
-      return 'Ожидает подтверждения';
-    case 'confirmed':
-      return 'Ожидает оплаты';
-    case 'delivered':
-      return 'Подтверждена';
-    default:
-      return status;
-  }
+// Функция для форматирования цены
+const formatCurrency = (amount: number | string) => {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  return new Intl.NumberFormat('ru-RU', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(num) + ' ₸';
+};
+
+// Функция для определения типа оплаты
+const getPaymentType = (price_cash: number, price_bank: number) => {
+  if (price_cash > 0 && price_bank > 0) return 'Смешанная';
+  if (price_bank > 0) return 'Банк';
+  return 'Наличные';
 };
 
 export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
@@ -408,15 +413,15 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-[95vw] md:max-w-2xl max-h-[90vh] p-0" onInteractOutside={(e) => e.preventDefault()}>
-       <DialogHeader className="px-4 md:px-6 py-3 md:py-4 border-b">
-  <DialogTitle className="text-lg md:text-xl font-semibold flex items-center gap-2 md:gap-3">
-    <Package className="w-5 h-5 md:w-6 md:h-6" />
-    Приёмка поставки
-  </DialogTitle>
-</DialogHeader>
+        <DialogHeader className="px-4 md:px-6 py-3 md:py-4 border-b">
+          <DialogTitle className="text-lg md:text-xl font-semibold flex items-center gap-2 md:gap-3">
+            <Package className="w-5 h-5 md:w-6 md:h-6" />
+            Приёмка поставки
+          </DialogTitle>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col h-[calc(90vh-120px)] md:h-[calc(90vh-140px)]">
-           <div className="flex-1 overflow-y-auto px-4 md:px-6 pt-4 space-y-6">
+          <div className="flex-1 overflow-y-auto px-4 md:px-6 pt-4 space-y-6">
             {/* Поиск поставщика */}
             <div className="space-y-4">
               <div className="space-y-2">
@@ -453,22 +458,6 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                 </div>
               </div>
 
-              {/* Краткий статус
-              {supplierName && !foundSupply && !isSearching && (
-                <div className={`p-3 rounded-lg flex items-center gap-2 ${
-                  supplierExists ? 'bg-blue-50 border border-blue-200' : 'bg-yellow-50 border border-yellow-200'
-                }`}>
-                  {supplierExists ? (
-                    <Check className="w-4 h-4 text-green-600" />
-                  ) : (
-                    <X className="w-4 h-4 text-red-600" />
-                  )}
-                  <span className="text-sm font-medium">
-                    {supplierExists ? 'Поставщик существует' : 'Поставщика не существует'}
-                  </span>
-                </div>
-              )} */}
-
               {/* Результаты поиска */}
               {searchResults.length > 0 && !foundSupply && (
                 <div className="border rounded-lg p-3 space-y-2">
@@ -480,15 +469,38 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                     {searchResults.map(supply => (
                       <div
                         key={supply.id}
-                        className={`flex items-center justify-between p-2 border rounded hover:bg-gray-50 cursor-pointer ${
+                        className={`flex items-center justify-between p-3 border rounded hover:bg-gray-50 cursor-pointer ${
                           supply.status !== 'pending' ? 'opacity-60' : ''
                         }`}
                         onClick={() => supply.status === 'pending' && handleSelectSupply(supply)}
                       >
-                        <div className="text-sm">
-                          <div className="font-medium">{supply.supplier}</div>
-                          <div className="text-gray-500">
-                            Бонус: {supply.bonus || 0}, Обмен: {supply.exchange || 0}
+                        <div className="flex-1">
+                          <div className="font-medium text-sm mb-1">{supply.supplier}</div>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-gray-600">
+                           
+                            
+                            {supply.price_cash > 0 && (
+                              <div className="flex items-center gap-1">
+                                <DollarSign className="w-3 h-3 text-green-600" />
+                                <span className="font-medium">Наличные:</span>
+                                <span className="text-green-700 font-medium">{formatCurrency(supply.price_cash)}</span>
+                              </div>
+                            )}
+                            
+                            {supply.price_bank > 0 && (
+                              <div className="flex items-center gap-1">
+                                <CreditCard className="w-3 h-3 text-blue-600" />
+                                <span className="font-medium">Банк:</span>
+                                <span className="text-blue-700 font-medium">{formatCurrency(supply.price_bank)}</span>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">Итого:</span>
+                              <span className="font-bold">
+                                {formatCurrency(supply.price_cash + supply.price_bank)}
+                              </span>
+                            </div>
                           </div>
                         </div>
                         <Button
@@ -502,6 +514,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                             }
                           }}
                           disabled={supply.status !== 'pending'}
+                          className="ml-2 flex-shrink-0"
                         >
                           {supply.status === 'pending' ? 'Выбрать' : 'Недоступно'}
                         </Button>
@@ -515,12 +528,37 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
               {foundSupply && (
                 <div className="p-3 border border-green-200 rounded-lg bg-green-50">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-600" />
-                      <div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Check className="w-4 h-4 text-green-600" />
                         <div className="font-medium text-green-800">Поставка найдена</div>
-                        <div className="text-sm text-green-700">
-                          {foundSupply.supplier} • Бонус: {foundSupply.bonus || 0}, Обмен: {foundSupply.exchange || 0}
+                      </div>
+                      <div className="space-y-2 ml-6">
+                        <div className="text-sm font-medium text-green-900">{foundSupply.supplier} - {foundSupply.price_cash} ₸</div>
+                        
+                        {/* Информация о цене найденной поставки */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                         
+                          
+                          {foundSupply.price_cash > 0 && (
+                            <div className="bg-green-50 p-2 rounded border border-green-200">
+                              <div className="text-xs text-green-600 mb-1">Наличные</div>
+                              <div className="text-sm font-bold text-green-700">
+                                {formatCurrency(foundSupply.price_cash)}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {foundSupply.price_bank > 0 && (
+                            <div className="bg-blue-50 p-2 rounded border border-blue-200">
+                              <div className="text-xs text-blue-600 mb-1">Банк</div>
+                              <div className="text-sm font-bold text-blue-700">
+                                {formatCurrency(foundSupply.price_bank)}
+                              </div>
+                            </div>
+                          )}
+                          
+                          
                         </div>
                       </div>
                     </div>
@@ -529,7 +567,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={handleReset}
-                      className="text-red-600 hover:text-red-700"
+                      className="text-red-600 hover:text-red-700 flex-shrink-0 ml-2"
                       disabled={isLoading || creatingSupply}
                     >
                       Изменить
@@ -538,7 +576,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                   
                   {/* Предупреждение, если поставка уже не в статусе 'pending' */}
                   {foundSupply.status !== 'pending' && (
-                    <div className="mt-2 p-2 border border-amber-200 rounded bg-amber-100">
+                    <div className="mt-3 p-2 border border-amber-200 rounded bg-amber-100">
                       <div className="flex items-center gap-2 text-amber-800 text-sm">
                         <AlertCircle className="w-4 h-4" />
                         <span>Эта поставка уже не может быть подтверждена</span>
@@ -665,7 +703,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
           </div>
 
           {/* Футер с кнопками */}
-           <div className="px-4 md:px-6 py-3 md:py-4 border-t bg-white flex-shrink-0">
+          <div className="px-4 md:px-6 py-3 md:py-4 border-t bg-white flex-shrink-0">
             <div className="flex flex-col-reverse md:flex-row justify-between items-center gap-3 md:gap-0">
               <div className="w-full md:w-auto">
                 <Button
