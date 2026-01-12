@@ -1,4 +1,4 @@
-// [file name]: SupplierTable.tsx
+
 import React, { useState } from 'react';
 import { Supplier } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -202,13 +202,13 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                           История поставок
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        {canEdit && (
+                        
                           <DropdownMenuItem onClick={() => onEdit(supplier)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Редактировать
                           </DropdownMenuItem>
-                        )}
-                        {canDelete && (
+                        
+                        
                           <DropdownMenuItem 
                             onClick={() => onDelete(supplier.id)}
                             className="text-red-600"
@@ -216,7 +216,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                             <Trash2 className="h-4 w-4 mr-2" />
                             Удалить
                           </DropdownMenuItem>
-                        )}
+                        
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
