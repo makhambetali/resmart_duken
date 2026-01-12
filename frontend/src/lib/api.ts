@@ -80,10 +80,10 @@ const showBackendStatusToast = (url: string, isAvailable: boolean) => {
     ? `Бэкенд настроен успешно: ${url}`
     : `Бэкенд недоступен: ${url}`;
   
-  toast[isAvailable ? 'success' : 'error'](message, {
-    description: `URL: ${url}`,
-    duration: isAvailable ? 4000 : 6000,
-  });
+  // toast[isAvailable ? 'success' : 'error'](message, {
+  //   description: `URL: ${url}`,
+  //   duration: isAvailable ? 4000 : 6000,
+  // });
   
   console.log(`${status} ${message}`);
 };
