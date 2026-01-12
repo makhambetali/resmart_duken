@@ -117,13 +117,12 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                   История
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {canEdit && (
+                
                   <DropdownMenuItem onClick={() => onEdit(supplier)}>
                     <Edit className="h-4 w-4 mr-2" />
                     Редактировать
                   </DropdownMenuItem>
-                )}
-                {canDelete && (
+              
                   <DropdownMenuItem 
                     onClick={() => onDelete(supplier.id)}
                     className="text-red-600"
@@ -131,7 +130,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                     <Trash2 className="h-4 w-4 mr-2" />
                     Удалить
                   </DropdownMenuItem>
-                )}
+                
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
