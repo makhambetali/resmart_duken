@@ -282,9 +282,9 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
       };
 
       const supply = await suppliesApi.createSupply(supplyData);
-      
+      console.log(supply.id)
       toast({
-        title: 'Поставка создана',
+        title: `Поставка создана: ${supply.id}`,
         description: `Поставка создана на сегодня${hasPaymentData ? ' и сразу подтверждена' : ''}`,
         variant: 'default',
       });
@@ -431,10 +431,8 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
         }
         supplyToConfirm = createdSupply;
         setCreatingSupply(false);
-      } else {
-        // Обновляем существующую поставку
-        await handleUpdateSupply(supplyToConfirm!.id);
-      }
+      } 
+      await handleUpdateSupply(supplyToConfirm!.id);
 
       // Обновляем кэш запросов
       queryClient.invalidateQueries({ queryKey: ['supplies'] });
