@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Loader2,
@@ -21,7 +22,10 @@ import {
   Check,
   X,
   DollarSign,
-  CreditCard
+  CreditCard,
+  Wallet,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { ImageUpload } from '@/components/ImageUpload';
 import { SupplierSearchCombobox } from '@/components/SupplierSearchCombobox';
@@ -60,6 +64,9 @@ const getPaymentType = (price_cash: number, price_bank: number) => {
   return 'Наличные';
 };
 
+// @/components/SupplyAcceptanceModal.tsx - исправленная версия
+// ... предыдущие импорты ...
+
 export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
   open,
   onOpenChange,
@@ -70,6 +77,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
+  const [showPaymentSection, setShowPaymentSection] = useState(false);
   
   const [supplierName, setSupplierName] = useState('');
   const [foundSupply, setFoundSupply] = useState<Supply | null>(null);
@@ -80,6 +88,13 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
     bonus: 0,
     exchange: 0,
     comment: '',
+  });
+
+  // Поля для способа оплаты и суммы (только для новой поставки)
+  const [paymentData, setPaymentData] = useState({
+    paymentType: 'cash' as 'cash' | 'bank' | 'mixed',
+    price_cash: '',
+    price_bank: '',
   });
   
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
@@ -96,10 +111,16 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
       setSearchResults([]);
       setSupplierExists(false);
       setSearchPerformed(false);
+      setShowPaymentSection(false);
       setFormData({
         bonus: 0,
         exchange: 0,
         comment: '',
+      });
+      setPaymentData({
+        paymentType: 'cash',
+        price_cash: '',
+        price_bank: '',
       });
       setSelectedImages([]);
       setExistingImages([]);
@@ -193,6 +214,9 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
       exchange: supply.exchange || 0,
       comment: supply.comment || '',
     });
+
+    // Скрываем секцию оплаты при выборе существующей поставки
+    setShowPaymentSection(false);
     
     toast({
       title: 'Поставка найдена',
@@ -201,19 +225,59 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
     });
   };
 
+  // Обработчик изменения типа оплаты
+  const handlePaymentTypeChange = (value: 'cash' | 'bank' | 'mixed') => {
+    setPaymentData(prev => ({
+      ...prev,
+      paymentType: value,
+      // Сбрасываем значения при смене типа оплаты
+      price_cash: value === 'bank' ? '' : prev.price_cash,
+      price_bank: value === 'cash' ? '' : prev.price_bank,
+    }));
+  };
+
+  // Форматирование суммы для отображения
+  const formatPrice = (value: string): string => {
+    const numeric = value.replace(/\D/g, '');
+    if (!numeric) return '';
+    
+    const number = parseInt(numeric, 10);
+    return new Intl.NumberFormat('ru-RU').format(number);
+  };
+
+  // Обработчик ввода суммы
+  const handlePriceChange = (field: 'price_cash' | 'price_bank', value: string) => {
+    const formatted = formatPrice(value);
+    setPaymentData(prev => ({
+      ...prev,
+      [field]: formatted
+    }));
+  };
+
+  // Конвертация форматированной суммы обратно в число
+  const parsePrice = (value: string): number => {
+    const numeric = value.replace(/\s/g, '').replace('₸', '').trim();
+    return numeric ? parseInt(numeric, 10) : 0;
+  };
+
   // Создание новой поставки
   const handleCreateSupply = async (): Promise<Supply | null> => {
     try {
+      // Если введены данные оплаты, статус будет 'delivered' (подтверждена)
+      // Иначе 'pending' (ожидает подтверждения)
+      const hasPaymentData = parsePrice(paymentData.price_cash) > 0 || parsePrice(paymentData.price_bank) > 0;
+      const status = hasPaymentData ? 'delivered' : 'pending';
+
       const supplyData: AddSupplyForm = {
         supplier: supplierName,
-        paymentType: 'cash',
-        price_cash: '0',
-        price_bank: '0',
+        paymentType: paymentData.paymentType,
+        price_cash: parsePrice(paymentData.price_cash).toString(),
+        price_bank: parsePrice(paymentData.price_bank).toString(),
         bonus: formData.bonus,
         exchange: formData.exchange,
         delivery_date: today,
         comment: formData.comment,
-        status: 'pending',
+        status: status,
         invoice_html: '',
       };
 
@@ -221,7 +285,7 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
       
       toast({
         title: 'Поставка создана',
-        description: 'Поставка создана на сегодня',
+        description: `Поставка создана на сегодня${hasPaymentData ? ' и сразу подтверждена' : ''}`,
         variant: 'default',
       });
       
@@ -308,6 +372,12 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
         exchange: 0,
         comment: '',
       });
+      setPaymentData({
+        paymentType: 'cash',
+        price_cash: '',
+        price_bank: '',
+      });
+      setShowPaymentSection(false);
     }
   };
 
@@ -361,20 +431,22 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
         }
         supplyToConfirm = createdSupply;
         setCreatingSupply(false);
-      }
-      
-      // Подтверждаем поставку (обновляем статус на 'confirmed')
-      if (supplyToConfirm) {
-        await handleUpdateSupply(supplyToConfirm.id);
+      } else {
+        // Обновляем существующую поставку
+        await handleUpdateSupply(supplyToConfirm!.id);
       }
 
       // Обновляем кэш запросов
       queryClient.invalidateQueries({ queryKey: ['supplies'] });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
 
+      const hasPaymentData = parsePrice(paymentData.price_cash) > 0 || parsePrice(paymentData.price_bank) > 0;
+      
       toast({
         title: 'Поставка принята',
-        description: 'Поставка успешно принята',
+        description: hasPaymentData 
+          ? 'Поставка успешно принята и сразу подтверждена' 
+          : 'Поставка успешно принята',
         variant: 'default',
         className: 'bg-green-500 text-white',
       });
@@ -401,14 +473,31 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
     setFoundSupply(null);
     setSearchResults([]);
     setSearchPerformed(false);
+    setShowPaymentSection(false);
     setFormData({
       bonus: 0,
       exchange: 0,
       comment: '',
     });
+    setPaymentData({
+      paymentType: 'cash',
+      price_cash: '',
+      price_bank: '',
+    });
     setSelectedImages([]);
     setExistingImages([]);
   };
+
+  // Проверяем, заполнены ли данные об оплате
+  const hasPaymentData = parsePrice(paymentData.price_cash) > 0 || parsePrice(paymentData.price_bank) > 0;
+
+  // Определяем, когда показывать блок оплаты
+  // Должен показываться когда: 
+  // 1. Это десктоп (скрыто на мобилках)
+  // 2. Не найдена поставка (!foundSupply)
+  // 3. Не в процессе поиска (!isSearching)
+  // 4. Поставщик введен и поиск выполнен (supplierName && searchPerformed)
+  const shouldShowPaymentSection =!isSearching && supplierName && searchPerformed;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -607,6 +696,167 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Секция способа оплаты и суммы (только для десктопа и при создании новой поставки) */}
+              <div className="hidden md:block">
+                {shouldShowPaymentSection && (
+                  <div className="space-y-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowPaymentSection(!showPaymentSection)}
+                      className="w-full justify-between"
+                      size="sm"
+                    >
+                      <span className="flex items-center gap-2">
+                        <DollarSign className="w-4 h-4" />
+                        Способ оплаты и сумма (опционально)
+                        {hasPaymentData && (
+                          <Badge variant="outline" className="ml-2 bg-green-50 text-green-700">
+                            Заполнено
+                          </Badge>
+                        )}
+                      </span>
+                      {showPaymentSection ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                    </Button>
+
+                    {showPaymentSection && (
+                      <div className="border rounded-lg p-4 space-y-4 bg-gray-50">
+                        <div className="space-y-3">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Способ оплаты</Label>
+                            <Select 
+                              value={paymentData.paymentType} 
+                              onValueChange={handlePaymentTypeChange}
+                              disabled={isLoading || creatingSupply}
+                            >
+                              <SelectTrigger className="h-10">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="cash">
+                                  <div className="flex items-center gap-2">
+                                    <Wallet className="w-4 h-4" />
+                                    Наличные
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="bank">
+                                  <div className="flex items-center gap-2">
+                                    <CreditCard className="w-4 h-4" />
+                                    Банк
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="mixed">
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex items-center">
+                                      <Wallet className="w-3 h-3" />
+                                      <span className="mx-1">+</span>
+                                      <CreditCard className="w-3 h-3" />
+                                    </div>
+                                    Смешанная
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {paymentData.paymentType === 'cash' && (
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Сумма наличными</Label>
+                              <div className="relative">
+                                <Input
+                                  type="text"
+                                  placeholder="0 ₸"
+                                  value={paymentData.price_cash}
+                                  onChange={(e) => handlePriceChange('price_cash', e.target.value)}
+                                  disabled={isLoading || creatingSupply}
+                                  className="pr-10"
+                                />
+                                {paymentData.price_cash && (
+                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                                    ₸
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {paymentData.paymentType === 'bank' && (
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Сумма банковской картой</Label>
+                              <div className="relative">
+                                <Input
+                                  type="text"
+                                  placeholder="0 ₸"
+                                  value={paymentData.price_bank}
+                                  onChange={(e) => handlePriceChange('price_bank', e.target.value)}
+                                  disabled={isLoading || creatingSupply}
+                                  className="pr-10"
+                                />
+                                {paymentData.price_bank && (
+                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                                    ₸
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {paymentData.paymentType === 'mixed' && (
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">Наличные</Label>
+                                <div className="relative">
+                                  <Input
+                                    type="text"
+                                    placeholder="0 ₸"
+                                    value={paymentData.price_cash}
+                                    onChange={(e) => handlePriceChange('price_cash', e.target.value)}
+                                    disabled={isLoading || creatingSupply}
+                                    className="pr-10"
+                                  />
+                                  {paymentData.price_cash && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                                      ₸
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">Банк</Label>
+                                <div className="relative">
+                                  <Input
+                                    type="text"
+                                    placeholder="0 ₸"
+                                    value={paymentData.price_bank}
+                                    onChange={(e) => handlePriceChange('price_bank', e.target.value)}
+                                    disabled={isLoading || creatingSupply}
+                                    className="pr-10"
+                                  />
+                                  {paymentData.price_bank && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                                      ₸
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="text-xs text-gray-500 pt-2 border-t">
+                            <Info className="w-3 h-3 inline mr-1" />
+                            Если заполнены данные об оплате, поставка будет сразу подтверждена
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Основная форма для ввода данных */}
@@ -744,6 +994,11 @@ export const SupplyAcceptanceModal: React.FC<SupplyAcceptanceModalProps> = ({
                     <>
                       <CheckCircle className="w-4 h-4" />
                       {foundSupply ? 'Принять поставку' : 'Создать и принять'}
+                      {hasPaymentData && (
+                        <Badge variant="secondary" className="ml-2 bg-white text-green-600">
+                          С оплатой
+                        </Badge>
+                      )}
                     </>
                   )}
                 </Button>
